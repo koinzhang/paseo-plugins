@@ -89,17 +89,36 @@ function MenuRow({
   chevronColor,
 }: {
   label: string;
-  value: string;
+  value?: string;
   onPress: () => void;
-  styles: { menuRow: ViewStyle; menuLabel: TextStyle; menuValue: TextStyle };
+  styles: {
+    menuRow: ViewStyle;
+    menuRowHighlighted: ViewStyle;
+    menuLabel: TextStyle;
+    menuValue: TextStyle;
+    menuTrailing: ViewStyle;
+  };
   chevronColor: string;
 }): ReactNode {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={styles.menuRow}>
-      <Text style={styles.menuLabel}>{label}</Text>
-      <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 4 }}>
-        <Text style={styles.menuValue}>{value}</Text>
-        <Icon name="ChevronRight" size={16} color={chevronColor} />
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+        styles.menuRow,
+        pressed || hovered ? styles.menuRowHighlighted : null,
+      ]}
+    >
+      <Text style={styles.menuLabel} numberOfLines={1}>
+        {label}
+      </Text>
+      <View style={styles.menuTrailing}>
+        {value ? (
+          <Text style={styles.menuValue} numberOfLines={1}>
+            {value}
+          </Text>
+        ) : null}
+        <Icon name="ChevronRight" size={14} color={chevronColor} />
       </View>
     </Pressable>
   );
@@ -388,51 +407,86 @@ export function WorkspaceActivityPanel({
         paddingTop: 12,
         paddingBottom: 2,
       },
+      menuPage: {
+        paddingVertical: 4,
+      },
+      // Matches host MenuItem: inset chip fill, 28/40 row height, 6pt radius.
       menuRow: {
         flexDirection: "row" as const,
         alignItems: "center" as const,
-        justifyContent: "space-between" as const,
-        gap: 12,
-        paddingHorizontal: layout.compact ? 16 : 20,
-        paddingVertical: 14,
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border,
+        minHeight: layout.compact ? 40 : 28,
+        gap: 8,
+        marginHorizontal: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderWidth: 1,
+        borderColor: "transparent",
+        borderRadius: 6,
+      },
+      menuRowHighlighted: {
+        backgroundColor: theme.colors.surface2,
       },
       menuLabel: {
+        flexShrink: 1,
+        minWidth: 0,
         color: theme.colors.foreground,
-        fontSize: 15,
+        fontSize: 14,
+        lineHeight: 18,
+        fontWeight: "normal" as const,
       },
       menuValue: {
         color: theme.colors.foregroundMuted,
         fontSize: 14,
+        lineHeight: 18,
+        flexShrink: 1,
       },
-      menuBackRow: {
+      menuTrailing: {
         flexDirection: "row" as const,
         alignItems: "center" as const,
-        gap: 4,
-        paddingHorizontal: layout.compact ? 16 : 20,
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border,
+        gap: 6,
+        marginLeft: "auto" as const,
+        flexShrink: 0,
       },
-      menuBack: {
-        color: theme.colors.foregroundMuted,
-        fontSize: 13,
+      // Compact in-panel stand-in for MenuSheetHeader (desktop uses flyouts).
+      menuBackHeader: {
+        flexDirection: "row" as const,
+        alignItems: "center" as const,
+        gap: 8,
+        paddingHorizontal: 12,
+        paddingTop: 4,
+        paddingBottom: 12,
+      },
+      menuBackButton: {
+        width: 24,
+        height: 24,
+        alignItems: "center" as const,
+        justifyContent: "center" as const,
+      },
+      menuBackTitle: {
+        color: theme.colors.foreground,
+        fontSize: 14,
         fontWeight: "500" as const,
+        flexShrink: 1,
       },
       menuOption: {
         flexDirection: "row" as const,
         alignItems: "center" as const,
-        justifyContent: "space-between" as const,
-        gap: 12,
-        paddingHorizontal: layout.compact ? 16 : 20,
-        paddingVertical: 14,
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border,
+        minHeight: layout.compact ? 40 : 28,
+        gap: 8,
+        marginHorizontal: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderWidth: 1,
+        borderColor: "transparent",
+        borderRadius: 6,
       },
       menuOptionLabel: {
+        flexShrink: 1,
+        minWidth: 0,
         color: theme.colors.foreground,
-        fontSize: 15,
+        fontSize: 14,
+        lineHeight: 18,
+        fontWeight: "normal" as const,
       },
       agentsSection: {
         gap: 12,
@@ -450,19 +504,24 @@ export function WorkspaceActivityPanel({
         bottom: 0,
         zIndex: 10,
       },
+      // Matches host MenuSurface / FloatingSurface chrome (sidebar display menu).
       menuCard: {
         position: "absolute" as const,
         top: "100%" as const,
         right: 0,
-        marginTop: 8,
-        minWidth: 240,
+        marginTop: 4,
+        width: 232,
         maxWidth: "100%" as const,
         zIndex: 20,
+        borderRadius: 8,
         borderWidth: 1,
         borderColor: theme.colors.border,
-        borderRadius: 12,
         backgroundColor: theme.colors.surface1,
         overflow: "hidden" as const,
+        shadowColor: "rgba(0, 0, 0, 0.04)",
+        shadowOffset: { width: 0, height: 4 },
+        shadowRadius: 16,
+        elevation: 4,
       },
     }),
     [theme, layout.compact, padding],
@@ -573,13 +632,13 @@ export function WorkspaceActivityPanel({
                 }}
                 style={styles.titleAction}
               >
-                <Icon name="Settings2" size={16} color={theme.colors.foregroundMuted} />
+                <Icon name="Settings2" size={14} color={theme.colors.foregroundMuted} />
               </Pressable>
             </View>
             {menuOpen ? (
               <View style={styles.menuCard}>
                 {menuPage === "root" ? (
-                  <View>
+                  <View style={styles.menuPage}>
                     <MenuRow
                       label="Sort"
                       value={optionLabel(SORT_OPTIONS, agentSort)}
@@ -604,28 +663,43 @@ export function WorkspaceActivityPanel({
                   </View>
                 ) : (
                   <View>
-                    <Pressable
-                      accessibilityRole="button"
-                      onPress={() => setMenuPage("root")}
-                      style={styles.menuBackRow}
-                    >
-                      <Icon name="ChevronLeft" size={16} color={theme.colors.foregroundMuted} />
-                      <Text style={styles.menuBack}>{menuTitle}</Text>
-                    </Pressable>
-                    {menuOptions.map((option) => (
+                    <View style={styles.menuBackHeader}>
                       <Pressable
-                        key={option.id}
                         accessibilityRole="button"
-                        accessibilityState={{ selected: menuValue === option.id }}
-                        onPress={() => selectMenuOption(option.id)}
-                        style={styles.menuOption}
+                        accessibilityLabel="Back"
+                        hitSlop={8}
+                        onPress={() => setMenuPage("root")}
+                        style={styles.menuBackButton}
                       >
-                        <Text style={styles.menuOptionLabel}>{option.label}</Text>
-                        {menuValue === option.id ? (
-                          <Icon name="Check" size={16} color={theme.colors.accent} />
-                        ) : null}
+                        <Icon name="ChevronLeft" size={18} color={theme.colors.foregroundMuted} />
                       </Pressable>
-                    ))}
+                      <Text style={styles.menuBackTitle} numberOfLines={1}>
+                        {menuTitle}
+                      </Text>
+                    </View>
+                    <View style={styles.menuPage}>
+                      {menuOptions.map((option) => (
+                        <Pressable
+                          key={option.id}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: menuValue === option.id }}
+                          onPress={() => selectMenuOption(option.id)}
+                          style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+                            styles.menuOption,
+                            pressed || hovered ? styles.menuRowHighlighted : null,
+                          ]}
+                        >
+                          <Text style={styles.menuOptionLabel} numberOfLines={1}>
+                            {option.label}
+                          </Text>
+                          {menuValue === option.id ? (
+                            <View style={styles.menuTrailing}>
+                              <Icon name="Check" size={16} color={theme.colors.foregroundMuted} />
+                            </View>
+                          ) : null}
+                        </Pressable>
+                      ))}
+                    </View>
                   </View>
                 )}
               </View>

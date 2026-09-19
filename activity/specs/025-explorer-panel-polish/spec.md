@@ -10,7 +10,7 @@
 |---|---|
 | G1 | 面板内不再显示 Activity 页标题；左侧只显示分支/workspace 名（字体与时间 chips 一致：14 / 500 / muted），与右侧时间 chips 同一行、底部（基线）对齐；窄宽度允许换行；chips 与全局 Activity 页 TextTabs 同款：无下划线，仅颜色/字重区分选中 |
 | G2 | KPI 栏用 dense 尺寸（`UsageStats` 新增可选 `dense`）：更小的数值 / 标签 / 内边距；指标只保留 **Shell calls / File reads / File writes / Messages**（不含 skill / MCP / agents） |
-| G3 | Agents 区默认按 **创建时间倒序**；标题右侧设置图标展开**悬浮菜单卡片**（absolute 定位于图标下方，不把列表顶下去；点卡片外关闭；再点图标收起并回到 root），行样式为 label 左 + 当前值 + `ChevronRight` 右，可进子页选择并返回 |
+| G3 | Agents 区默认按 **创建时间倒序**；标题右侧设置图标展开**悬浮菜单卡片**（absolute 定位于图标下方，不把列表顶下去；点卡片外关闭；再点图标收起并回到 root），视觉对齐宿主侧边栏 `SidebarDisplayPreferencesMenu`（`MenuSurface` / `MenuItem`）：232 宽、8 圆角、`border` 描边、md 阴影、行 inset hover chip（4/8/6）、14/18 字号、muted 值 + 14 chevron；子页用 sheet 式返回头（面板内无法做 flyout）；行样式为 label 左 + 当前值 + `ChevronRight` 右，可进子页选择并返回 |
 | G4 | Skills / MCP 合并为一个排行区：默认 **Skills**，点标题右侧图标切到 **MCP**（同全局 Activity 的 rank 图标切换；标题保持 Skills / MCP，不用 "Most used" 前缀），不再上下堆叠 |
 | G5 | **Sort**：Created（默认，创建时间倒序）/ Updated（更新时间倒序）/ Name（字典序）/ Messages（消息数倒序）/ Status（值得关注的状态置顶） |
 | G6 | **Group**：None（默认）/ Provider（按 provider 分组，组标题为 providerLabel） |
