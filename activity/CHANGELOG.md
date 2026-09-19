@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Coding vs chat now counts active agents instead of ops: an agent counts as coding when it has a file write/edit/delete or a mutating shell command; created-only agents are excluded from both buckets.
 - Insights rows reordered (calendar → preference → structure); Top provider restored (messages-weighted, All view only) and Tools per message removed.
-- Command Center items renamed: Open Activity (all providers) → All Activity, Activity → Agent Activity.
+- Command Center items renamed: Open Activity (all providers) → Activity, Activity → Agent Activity.
 - Heatmap title renamed from Tool activity to Activity.
 - Smaller headings and tighter section spacing across the global surface and heatmap.
 - Explorer Activity panel: header removed (branch / workspace name and Today / 7D / 30D / All chips) so KPIs cover the workspace's full history; denser KPIs (shell / file reads / file writes / messages only); Active agent rows open the conversation from anywhere in the row; agent display menu (floating card below the header icon with hover flyout submenus matching the host sidebar menu; sort by updated / created / name / messages / status with attention-worthy agents first; group by None / Provider / Status; multi-select Status Active / Archived and Lifecycle Idle / Running / Error / Closed; Show toggles for provider / calls / messages / updated; `usage.agents` returns `updatedAt` and `archivedAt`); Command Center item Workspace Activity opens the panel in the Explorer; skills / MCP share one ranked list toggled by the header icon; hidden scrollbars avoid layout shift when filters change.

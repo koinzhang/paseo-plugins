@@ -34,7 +34,7 @@ export default function contribute(client: PluginClientContext) {
 
   client.addCommandCenterItem({
     id: "open-usage-global",
-    title: "All Activity",
+    title: "Activity",
     icon: "Activity",
     keywords: ["activity", "tool", "usage", "provider", "all", "global", "sidebar"],
     context: "global",

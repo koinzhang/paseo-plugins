@@ -52,6 +52,7 @@
 | [028-explorer-display-settings](./028-explorer-display-settings/) | 已实现 | Explorer Agents 显示偏好 host settings 持久化 |
 | [027-agent-activity-title](./027-agent-activity-title/) | 已实现 | Command Center 项改名 Current Activity → Agent Activity |
 | [029-explorer-agent-search](./029-explorer-agent-search/) | 已实现 | Explorer Agents 按标题搜索（图标展开输入框） |
+| [030-command-center-activity-title](./030-command-center-activity-title/) | 已实现 | Command Center 项改名 All Activity → Activity |
 
 ## 约定
 
