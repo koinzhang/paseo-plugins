@@ -33,6 +33,9 @@ export const RANK_ROW_ESTIMATE = 54;
 /** Visible agents per page in Explorer; pager hidden when pageCount ≤ 1. */
 export const AGENT_PAGE_SIZE = 40;
 export const HOST_AGENT_PAGE_LIMIT = 200;
+/** Open terminals poll cadence; the capture preview polls at the same rate while expanded. */
+export const TERMINAL_REFETCH_MS = 5_000;
+export const TERMINAL_PREVIEW_LINES = 8;
 
 export const SORT_OPTIONS: ReadonlyArray<MenuOption & { id: AgentSort }> = [
   { id: "updated", label: "Updated", icon: "Clock" },

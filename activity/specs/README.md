@@ -56,6 +56,7 @@
 | [029-explorer-agent-search](./029-explorer-agent-search/) | 已实现 | Explorer Agents 按标题搜索（图标展开输入框） |
 | [030-command-center-activity-title](./030-command-center-activity-title/) | 已实现 | Command Center 项改名 All Activity → Activity |
 | [031-scope-architecture-remediation](./031-scope-architecture-remediation/) | 已实现 | 架构文档；拆分 workspace panel；agents 翻页；Agent Messages KPI |
+| [032-terminals-section](./032-terminals-section/) | 已实现 | Workspace 面板 Terminals 区块：host SDK 只读列出 + 展开输出预览 |
 
 ## 约定
 

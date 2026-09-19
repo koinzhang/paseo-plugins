@@ -42,6 +42,7 @@ import {
   SHOW_FIELD_OPTIONS,
   SORT_OPTIONS,
   STATUS_FILTER_OPTIONS,
+  TERMINAL_REFETCH_MS,
   agentUpdatedAt,
   matchesAgentFilters,
   optionLabel,
@@ -57,8 +58,11 @@ import { MenuOptionList, MenuSubTrigger } from "./display-menu.tsx";
 import { matchesAgentTitle } from "./filters.ts";
 import { loadWorkspaceAgentStatuses } from "./list-host-agents.ts";
 import { RankSection } from "./rank-section.tsx";
+import { TerminalsSection, type TerminalListItem } from "./terminals-section.tsx";
 
 type RankKind = "skills" | "mcp";
+
+const MONO = Platform.select({ ios: "Menlo", default: "monospace" });
 
 /** Workspace-scoped Activity for the Explorer (024 / 031). */
 export function WorkspaceActivityPanel({
@@ -92,6 +96,7 @@ export function WorkspaceActivityPanel({
   const [agentSearchQuery, setAgentSearchQuery] = useState("");
   const [rankKind, setRankKind] = useState<RankKind>("skills");
   const [busyAgentId, setBusyAgentId] = useState<string | null>(null);
+  const [busyTerminalId, setBusyTerminalId] = useState<string | null>(null);
   const padding = layout.compact ? 16 : 24;
   const locale = useAppLanguage();
   const toast = useToast();
@@ -112,6 +117,7 @@ export function WorkspaceActivityPanel({
   const mcpRpc = useRpc(usageMcpByToolRpc);
 
   const agentsQueryKey = ["activity", "workspace-agents", workspaceId] as const;
+  const terminalsQueryKey = ["activity", "workspace-terminals", workspaceId] as const;
 
   const summary = useQuery({
     refetchInterval: 15_000,
@@ -142,6 +148,13 @@ export function WorkspaceActivityPanel({
   });
 
   const paseo = usePaseo();
+  const terminals = useQuery({
+    refetchInterval: TERMINAL_REFETCH_MS,
+    retry: false,
+    queryKey: terminalsQueryKey,
+    queryFn: () => paseo.terminals.list({ workspaceId }),
+  });
+
   const statuses = useQuery({
     refetchInterval: 15_000,
     retry: false,
@@ -213,9 +226,11 @@ export function WorkspaceActivityPanel({
     },
   ];
 
+  const terminalItems = terminals.data?.entries ?? [];
   const showAgents = agentItems.length > 0;
   const showRank = skillItems.length > 0 || mcpItems.length > 0;
-  const showContent = showAgents || showRank;
+  const showTerminals = terminalItems.length > 0;
+  const showContent = showAgents || showRank || showTerminals;
 
   const styles = useMemo(
     () => ({
@@ -344,6 +359,27 @@ export function WorkspaceActivityPanel({
       listMeta: {
         color: theme.colors.foregroundMuted,
         fontSize: 12,
+      },
+      terminalRow: {
+        flexDirection: "row" as const,
+        alignItems: "center" as const,
+        gap: 10,
+        paddingVertical: 6,
+      },
+      terminalPreview: {
+        marginLeft: 28,
+        marginBottom: 4,
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        borderRadius: 6,
+        backgroundColor: theme.colors.surface1,
+        gap: 2,
+      },
+      terminalLine: {
+        color: theme.colors.foregroundMuted,
+        fontFamily: MONO,
+        fontSize: 11,
+        lineHeight: 15,
       },
       countText: {
         color: theme.colors.foregroundMuted,
@@ -653,6 +689,38 @@ export function WorkspaceActivityPanel({
     }
   }
 
+  function patchTerminalRemoved(terminalId: string) {
+    queryClient.setQueryData<{ entries: TerminalListItem[]; requestId: string }>(
+      terminalsQueryKey,
+      (prev) =>
+        prev
+          ? { ...prev, entries: prev.entries.filter((entry) => entry.id !== terminalId) }
+          : prev,
+    );
+  }
+
+  async function closeTerminal(item: TerminalListItem) {
+    if (busyTerminalId != null) return;
+    setBusyTerminalId(item.id);
+    const previous = queryClient.getQueryData<{
+      entries: TerminalListItem[];
+      requestId: string;
+    }>(terminalsQueryKey);
+    patchTerminalRemoved(item.id);
+    try {
+      await paseo.terminals.ref(item.id).kill();
+      queryClient.removeQueries({
+        queryKey: ["activity", "terminal-capture", workspaceId, item.id],
+      });
+      await queryClient.invalidateQueries({ queryKey: terminalsQueryKey });
+    } catch (err) {
+      if (previous) queryClient.setQueryData(terminalsQueryKey, previous);
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyTerminalId(null);
+    }
+  }
+
   return (
     <View ref={rootRef} collapsable={false} style={styles.shell}>
       <View style={styles.screen}>
@@ -703,6 +771,17 @@ export function WorkspaceActivityPanel({
               onArchive={(item) => void archiveAgent(item)}
               onUnarchive={(item) => void unarchiveAgent(item)}
               resetKey={workspaceId}
+            />
+          ) : null}
+
+          {showTerminals ? (
+            <TerminalsSection
+              workspaceId={workspaceId}
+              terminalItems={terminalItems}
+              busyTerminalId={busyTerminalId}
+              mutedColor={theme.colors.foregroundMuted}
+              styles={styles}
+              onClose={(item) => void closeTerminal(item)}
             />
           ) : null}
 

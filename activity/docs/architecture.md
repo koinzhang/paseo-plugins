@@ -13,14 +13,14 @@
 
 ```text
 Global Activity     → 跨 workspace · 习惯 / provider 对比 · 热力图 / Insights / Models
-Workspace Activity  → 单 workspace · Agents 运营（排序筛选归档）· KPI · Top skills/MCP
+Workspace Activity  → 单 workspace · Agents 运营（排序筛选归档）· KPI · Terminals（host SDK：列表 / 预览 / 关闭）· Top skills/MCP
 Agent Activity      → 单 agent · 工具明细（Skills / MCP）· Pill 快捷入口
 ```
 
 分工原则：
 
 - Global = 习惯与 provider 对比（热力图、Insights、Models）
-- Workspace = **竖向 Agents 运营页**（列表、搜索、筛选、归档、显示偏好）+ 本仓 KPI；**不做**热力图 / provider·model 拆分 / 时间窗（024 / 027）
+- Workspace = **竖向 Agents 运营页**（列表、搜索、筛选、归档、显示偏好）+ 本仓 KPI + 打开中的 Terminals（032，host SDK 直连：列表 / 预览 / 关闭，不进本地库）；**不做**热力图 / provider·model 拆分 / 时间窗（024 / 027）
 - Agent = 当前会话工具明细 + pill；Messages 计入 KPI（031），Models 仍仅全局（015）
 
 产品定位已超出「纯统计」：Workspace 面把 activity 数据接到 agent 管理上。对外说明见 [`README.md`](../README.md)。

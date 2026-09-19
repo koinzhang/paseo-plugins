@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Workspace Activity panel Terminals section: lists the workspace's open terminals through the host SDK (`paseo.terminals.list`), with a tap-to-expand live output preview (`capture`, latest 8 lines, ANSI stripped, 5s polling) and a per-row close button (`kill`, optimistic removal with rollback toast); hidden when no terminals are open.
+
 ## [0.2.0] - 2026-09-19
 
 ### Added
