@@ -43,3 +43,27 @@ export function formatDayTime(
   if (date.getFullYear() === now.getFullYear()) return `${monthDay} ${time}`;
   return `${date.getFullYear()}-${monthDay} ${time}`;
 }
+
+/**
+ * Agent list "Updated" stamp: app locale + local timezone.
+ * Same calendar year → month/day + time; otherwise also includes the year.
+ */
+export function formatUpdatedAt(
+  iso: string | null | undefined,
+  locale = "en",
+  now: Date = new Date(),
+): string {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const options: Intl.DateTimeFormatOptions = {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  };
+  if (date.getFullYear() !== now.getFullYear()) {
+    options.year = "numeric";
+  }
+  return date.toLocaleString(locale, options);
+}

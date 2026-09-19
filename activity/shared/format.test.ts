@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { formatDayTime, formatDisplayName } from "./format.ts";
+import { formatDayTime, formatDisplayName, formatUpdatedAt } from "./format.ts";
 
 const NOW = new Date(2026, 8, 18, 15, 30);
 
@@ -26,6 +26,27 @@ describe("formatDayTime", () => {
     assert.equal(formatDayTime(null, NOW), "—");
     assert.equal(formatDayTime(undefined, NOW), "—");
     assert.equal(formatDayTime("not-a-date", NOW), "not-a-date");
+  });
+});
+
+describe("formatUpdatedAt", () => {
+  it("uses locale month/day + time for the same year", () => {
+    const text = formatUpdatedAt(new Date(2026, 8, 17, 14, 2).toISOString(), "en", NOW);
+    assert.match(text, /Sep/);
+    assert.match(text, /17/);
+    assert.doesNotMatch(text, /2026/);
+  });
+
+  it("includes the year when the date is not this year", () => {
+    const text = formatUpdatedAt(new Date(2025, 11, 31, 23, 59).toISOString(), "en", NOW);
+    assert.match(text, /2025/);
+    assert.match(text, /Dec/);
+  });
+
+  it("returns the placeholder for empty and keeps invalid input", () => {
+    assert.equal(formatUpdatedAt(null, "en", NOW), "—");
+    assert.equal(formatUpdatedAt(undefined, "en", NOW), "—");
+    assert.equal(formatUpdatedAt("not-a-date", "en", NOW), "not-a-date");
   });
 });
 
