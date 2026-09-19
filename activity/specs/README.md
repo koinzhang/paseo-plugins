@@ -39,6 +39,8 @@
 | [015-model-usage](./015-model-usage/) | 已实现 | user_message 打 model 戳；Most used models / Top model |
 | [016-provider-filter-limit](./016-provider-filter-limit/) | 已实现 | Provider 筛选栏最多 5 个，按 agent / message 数排名 |
 | [017-insights-reorder](./017-insights-reorder/) | 已实现 | 恢复 Top provider；去掉 Tools per message；日历→偏好→结构重排 |
+| [018-coding-vs-chat-agents](./018-coding-vs-chat-agents/) | 已实现 | Coding vs chat 按 agent 会话二分；空会话排除 |
+| [019-coding-mutating-ops](./019-coding-mutating-ops/) | 已实现 | Coding = 写/改文件或写盘 shell（白名单启发式） |
 
 ## 约定
 

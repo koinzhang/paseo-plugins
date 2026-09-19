@@ -7,10 +7,12 @@ import {
   aggregateShellTop,
   aggregateSkillsByName,
   formatUsagePillLabel,
+  isCodingOp,
   isFileRead,
   isFileWrite,
   isShellCall,
   shellCommandHead,
+  shellLooksMutating,
 } from "./usage.ts";
 import { summarizeRows } from "../server/handlers.ts";
 import type { ToolCallRow } from "../server/store.ts";
@@ -380,6 +382,47 @@ describe("shell / file KPI exclusivity (014)", () => {
   });
 });
 
+describe("shellLooksMutating / isCodingOp (019)", () => {
+  it("flags common mutating heads, git write subs, redirects, and sudo", () => {
+    assert.equal(shellLooksMutating("rm -rf dist"), true);
+    assert.equal(shellLooksMutating("npm install"), true);
+    assert.equal(shellLooksMutating("/usr/local/bin/pnpm add lodash"), true);
+    assert.equal(shellLooksMutating("git commit -m 'x'"), true);
+    assert.equal(shellLooksMutating("git -C repo commit -m x"), true);
+    assert.equal(shellLooksMutating("echo hi > out.txt"), true);
+    assert.equal(shellLooksMutating("cat a | tee b"), true);
+    assert.equal(shellLooksMutating("sudo rm foo"), true);
+  });
+
+  it("does not flag read-only shell", () => {
+    assert.equal(shellLooksMutating("ls"), false);
+    assert.equal(shellLooksMutating("cat README.md"), false);
+    assert.equal(shellLooksMutating("git status"), false);
+    assert.equal(shellLooksMutating("git log --oneline"), false);
+    assert.equal(shellLooksMutating("python script.py"), false);
+    assert.equal(shellLooksMutating(null), false);
+  });
+
+  it("isCodingOp accepts file writes and mutating shell only", () => {
+    assert.equal(
+      isCodingOp({ category: "regular", detailType: "edit", command: null }),
+      true,
+    );
+    assert.equal(
+      isCodingOp({ category: "regular", detailType: "read", command: null }),
+      false,
+    );
+    assert.equal(
+      isCodingOp({ category: "regular", detailType: "shell", command: "ls" }),
+      false,
+    );
+    assert.equal(
+      isCodingOp({ category: "regular", detailType: "shell", command: "mv a b" }),
+      true,
+    );
+  });
+});
+
 describe("shellCommandHead", () => {
   it("takes first token basename", () => {
     assert.equal(shellCommandHead("/usr/bin/git status"), "git");
@@ -428,6 +471,7 @@ describe("aggregateByProvider", () => {
           detailType: "shell",
           category: "regular",
           status: "failed",
+          command: "rm -rf dist",
         }),
         row({
           callId: "2",
@@ -470,6 +514,7 @@ describe("aggregateByProvider", () => {
           provider: "codebuddy-code",
           detailType: "shell",
           category: "regular",
+          command: "ls",
         }),
       ],
       [
@@ -492,6 +537,8 @@ describe("aggregateByProvider", () => {
     assert.equal(claude.shellFailures, 1);
     assert.equal(claude.skillCalls.exact, 2);
     assert.equal(claude.agentCount, 2);
+    assert.equal(claude.codingAgentCount, 1); // a1 rm → coding; a4 empty
+    assert.equal(claude.chatAgentCount, 0);
     assert.equal(claude.workspaceCount, 2);
     assert.equal(claude.callCount, 3);
     assert.equal(claude.skills.length, 1);
@@ -508,14 +555,110 @@ describe("aggregateByProvider", () => {
     assert.equal(opencode.mcpTools[0]?.tool, "t");
     assert.equal(opencode.mcpTools[0]?.count, 1);
     assert.equal(opencode.workspaceCount, 1);
+    assert.equal(opencode.codingAgentCount, 0);
+    assert.equal(opencode.chatAgentCount, 1); // MCP-only → chat
 
     const codebuddy = result.providers.find((p) => p.provider === "codebuddy");
     assert.ok(codebuddy);
     assert.equal(codebuddy.shellCalls, 1);
     assert.equal(codebuddy.label, "CodeBuddy");
     assert.equal(codebuddy.workspaceCount, 1);
+    assert.equal(codebuddy.codingAgentCount, 0); // ls → not mutating
+    assert.equal(codebuddy.chatAgentCount, 1);
 
     assert.equal(result.providers[0]?.provider, "claude");
+  });
+
+  it("codingAgentCount uses mutating shell / file write only (019)", () => {
+    const result = aggregateByProvider(
+      [
+        row({
+          callId: "1",
+          agentId: "chat-only",
+          provider: "claude",
+          category: "skill",
+          confidence: "inferred",
+          detailType: "read",
+          skillName: "x",
+          name: "Read",
+          command: null,
+        }),
+        row({
+          callId: "2",
+          agentId: "chat-low",
+          provider: "codex",
+          category: "skill",
+          confidence: "low",
+          detailType: "shell",
+          skillName: "review",
+          command: "cat SKILL.md",
+        }),
+        row({
+          callId: "3",
+          agentId: "reader",
+          provider: "cursor",
+          category: "regular",
+          detailType: "read",
+          name: "Read",
+          command: null,
+        }),
+        row({
+          callId: "4",
+          agentId: "coder-write",
+          provider: "claude",
+          category: "regular",
+          detailType: "edit",
+          name: "Edit",
+          command: null,
+        }),
+        row({
+          callId: "5",
+          agentId: "coder-shell",
+          provider: "codex",
+          category: "regular",
+          detailType: "shell",
+          command: "npm install",
+        }),
+        row({
+          callId: "6",
+          agentId: "status",
+          provider: "cursor",
+          category: "regular",
+          detailType: "shell",
+          command: "git status",
+        }),
+      ],
+      [
+        { agentId: "chat-only", provider: "claude" },
+        { agentId: "chat-low", provider: "codex" },
+        { agentId: "reader", provider: "cursor" },
+        { agentId: "coder-write", provider: "claude" },
+        { agentId: "coder-shell", provider: "codex" },
+        { agentId: "status", provider: "cursor" },
+        { agentId: "idle", provider: "claude" },
+      ],
+    );
+    assert.equal(result.providers.find((p) => p.provider === "claude")?.codingAgentCount, 1);
+    assert.equal(result.providers.find((p) => p.provider === "claude")?.chatAgentCount, 1); // chat-only; idle empty
+    assert.equal(result.providers.find((p) => p.provider === "codex")?.codingAgentCount, 1);
+    assert.equal(result.providers.find((p) => p.provider === "codex")?.chatAgentCount, 1); // chat-low
+    assert.equal(result.providers.find((p) => p.provider === "cursor")?.codingAgentCount, 0);
+    assert.equal(result.providers.find((p) => p.provider === "cursor")?.chatAgentCount, 2); // reader + status
+  });
+
+  it("message-only agents count as chat; empty creations are excluded", () => {
+    const result = aggregateByProvider(
+      [],
+      [
+        { agentId: "msg", provider: "claude" },
+        { agentId: "empty", provider: "claude" },
+      ],
+      [{ agentId: "msg", provider: "claude", model: "opus" }],
+    );
+    const claude = result.providers.find((p) => p.provider === "claude");
+    assert.equal(claude?.agentCount, 2);
+    assert.equal(claude?.codingAgentCount, 0);
+    assert.equal(claude?.chatAgentCount, 1);
   });
 
   it("includes providers that only have agent creations (no tool calls or messages)", () => {
@@ -527,6 +670,8 @@ describe("aggregateByProvider", () => {
     assert.equal(result.providers.length, 1);
     assert.equal(result.providers[0]?.provider, "pi");
     assert.equal(result.providers[0]?.agentCount, 1);
+    assert.equal(result.providers[0]?.codingAgentCount, 0);
+    assert.equal(result.providers[0]?.chatAgentCount, 0);
     assert.equal(result.providers[0]?.workspaceCount, 1);
     assert.equal(result.providers[0]?.callCount, 0);
     assert.equal(result.providers[0]?.messageCount, 0);

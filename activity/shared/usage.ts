@@ -168,6 +168,13 @@ export const ProviderUsageItemSchema = z.object({
   /** Messages-weighted model ranks (015); empty when no stamped models. */
   models: z.array(ModelByNameItemSchema),
   agentCount: z.number().int().nonnegative(),
+  /**
+   * Agents with ≥1 coding op in-window (019: file write/edit/delete or mutating shell).
+   * Empty (created-only) agents are excluded from coding and chat. See 018/019.
+   */
+  codingAgentCount: z.number().int().nonnegative(),
+  /** Active non-coding agents: has message or tool_call, but no coding op. */
+  chatAgentCount: z.number().int().nonnegative(),
   /** Distinct non-null workspace_id among agents for this provider (same window). */
   workspaceCount: z.number().int().nonnegative(),
   messageCount: z.number().int().nonnegative(),
@@ -233,6 +240,137 @@ export function isFileWrite(row: { category: string; detailType: string | null }
   );
 }
 
+/** Common development commands that usually mutate the filesystem (019). */
+const MUTATING_SHELL_HEADS = new Set([
+  "rm",
+  "rmdir",
+  "mv",
+  "cp",
+  "mkdir",
+  "touch",
+  "chmod",
+  "chown",
+  "ln",
+  "unlink",
+  "install",
+  "tee",
+  "truncate",
+  "dd",
+  "sed",
+  "perl",
+  "npm",
+  "npx",
+  "pnpm",
+  "yarn",
+  "bun",
+  "pip",
+  "pip3",
+  "poetry",
+  "uv",
+  "cargo",
+  "composer",
+  "bundle",
+  "make",
+  "cmake",
+  "ninja",
+  "tsc",
+  "webpack",
+  "vite",
+  "esbuild",
+  "rollup",
+]);
+
+/** git subcommands that typically write objects / worktree / index. */
+const GIT_MUTATING_SUBCOMMANDS = new Set([
+  "add",
+  "commit",
+  "checkout",
+  "switch",
+  "merge",
+  "rebase",
+  "cherry-pick",
+  "stash",
+  "clean",
+  "reset",
+  "restore",
+  "mv",
+  "rm",
+  "pull",
+  "push",
+  "clone",
+  "init",
+  "fetch",
+  "am",
+  "apply",
+  "revert",
+  "submodule",
+  "worktree",
+]);
+
+const SHELL_REDIRECT_RE = />|>>|\|\s*tee\b/i;
+
+/** git flags that take a following argument before the subcommand. */
+const GIT_VALUE_FLAGS = new Set(["-C", "-c", "--git-dir", "--work-tree"]);
+
+function shellHeadAndRest(command: string): { head: string; tokens: string[] } {
+  const tokens = command.trim().split(/\s+/).filter(Boolean);
+  const raw = tokens[0] ?? "";
+  const head = raw.replace(/^.*\//, "") || raw;
+  return { head, tokens };
+}
+
+function firstGitSubcommand(tokens: readonly string[]): string | undefined {
+  for (let i = 1; i < tokens.length; i++) {
+    const token = tokens[i]!;
+    if (token === "--") {
+      return tokens[i + 1];
+    }
+    if (GIT_VALUE_FLAGS.has(token)) {
+      i += 1; // skip flag value
+      continue;
+    }
+    if (token.startsWith("-")) continue;
+    return token;
+  }
+  return undefined;
+}
+
+/**
+ * Heuristic: shell command likely mutates the filesystem (019).
+ * Prefers covering common dev write paths; unknown scripts may under-count.
+ */
+export function shellLooksMutating(command: string | null | undefined): boolean {
+  if (!command?.trim()) return false;
+  if (SHELL_REDIRECT_RE.test(command)) return true;
+
+  const { head, tokens } = shellHeadAndRest(command);
+  if (!head) return false;
+
+  if (head === "sudo" || head === "doas") {
+    const rest = tokens.slice(1).join(" ");
+    return rest.length > 0 && shellLooksMutating(rest);
+  }
+
+  if (MUTATING_SHELL_HEADS.has(head)) return true;
+
+  if (head === "git") {
+    const sub = firstGitSubcommand(tokens);
+    return sub != null && GIT_MUTATING_SUBCOMMANDS.has(sub);
+  }
+
+  return false;
+}
+
+/** Session coding op (019): native file write/edit/delete, or mutating shell. */
+export function isCodingOp(row: {
+  category: string;
+  detailType: string | null;
+  command?: string | null;
+}): boolean {
+  if (isFileWrite(row)) return true;
+  return isShellCall(row) && shellLooksMutating(row.command);
+}
+
 /** Aggregate tool_calls by normalizeProvider(provider).
  * `agentCount` / `workspaceCount` come from `agents` (created registry), not tool_call distinct ids.
  */
@@ -257,7 +395,7 @@ export function aggregateByProvider(
     provider: string;
     workspaceId?: string | null;
   }> = [],
-  messages: ReadonlyArray<{ provider: string; model?: string | null }> = [],
+  messages: ReadonlyArray<{ agentId?: string; provider: string; model?: string | null }> = [],
 ): {
   totals: {
     shellCalls: number;
@@ -271,7 +409,14 @@ export function aggregateByProvider(
 } {
   type Acc = Omit<
     ProviderUsageItem,
-    "skills" | "mcpTools" | "shellTop" | "models" | "agentCount" | "workspaceCount"
+    | "skills"
+    | "mcpTools"
+    | "shellTop"
+    | "models"
+    | "agentCount"
+    | "codingAgentCount"
+    | "chatAgentCount"
+    | "workspaceCount"
   > & {
     agents: Set<string>;
     workspaces: Set<string>;
@@ -299,6 +444,8 @@ export function aggregateByProvider(
   };
   const map = new Map<string, Acc>();
   const allWorkspaces = new Set<string>();
+  const codingAgentIds = new Set<string>();
+  const activeAgentIds = new Set<string>();
   const totals = {
     shellCalls: 0,
     fileReads: 0,
@@ -339,6 +486,7 @@ export function aggregateByProvider(
     const provider = normalizeProvider(row.provider);
     const acc = ensure(provider);
     acc.callCount += 1;
+    activeAgentIds.add(row.agentId);
 
     if (row.category === "skill") {
       acc.skillRows.push(row);
@@ -378,6 +526,9 @@ export function aggregateByProvider(
       acc.fileWrites += 1;
       totals.fileWrites += 1;
     }
+    if (isCodingOp(row)) {
+      codingAgentIds.add(row.agentId);
+    }
   }
 
   for (const agent of agents) {
@@ -395,20 +546,35 @@ export function aggregateByProvider(
     const acc = ensure(normalizeProvider(message.provider));
     acc.messageCount += 1;
     acc.messageRows.push({ model: message.model });
+    const agentId = message.agentId?.trim();
+    if (agentId) activeAgentIds.add(agentId);
   }
 
   totals.workspaceCount = allWorkspaces.size;
 
   const providers = [...map.values()]
-    .map(({ agents: agentSet, workspaces, skillRows, mcpRows, shellRows, messageRows, ...rest }) => ({
-      ...rest,
-      agentCount: agentSet.size,
-      workspaceCount: workspaces.size,
-      skills: aggregateSkillsByName(skillRows),
-      mcpTools: aggregateMcpByTool(mcpRows),
-      shellTop: aggregateShellTop(shellRows),
-      models: aggregateModelsByName(messageRows),
-    }))
+    .map(({ agents: agentSet, workspaces, skillRows, mcpRows, shellRows, messageRows, ...rest }) => {
+      let codingAgentCount = 0;
+      let chatAgentCount = 0;
+      for (const id of agentSet) {
+        if (codingAgentIds.has(id)) {
+          codingAgentCount += 1;
+        } else if (activeAgentIds.has(id)) {
+          chatAgentCount += 1;
+        }
+      }
+      return {
+        ...rest,
+        agentCount: agentSet.size,
+        codingAgentCount,
+        chatAgentCount,
+        workspaceCount: workspaces.size,
+        skills: aggregateSkillsByName(skillRows),
+        mcpTools: aggregateMcpByTool(mcpRows),
+        shellTop: aggregateShellTop(shellRows),
+        models: aggregateModelsByName(messageRows),
+      };
+    })
     .sort(
       (a, b) =>
         b.callCount - a.callCount ||

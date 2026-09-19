@@ -52,6 +52,8 @@ function emptyProviderUsage(provider: string, label?: string): ProviderUsageItem
     shellTop: [],
     models: [],
     agentCount: 0,
+    codingAgentCount: 0,
+    chatAgentCount: 0,
     workspaceCount: 0,
     messageCount: 0,
     callCount: 0,
@@ -405,6 +407,8 @@ export function GlobalUsageSurface({ theme, layout }: PluginSurfaceProps) {
     let fileReads = 0;
     let fileWrites = 0;
     let agents = 0;
+    let codingAgents = 0;
+    let chatAgents = 0;
     let messages = 0;
     for (const item of filteredProviders) {
       skills += item.skillCalls.exact + item.skillCalls.inferred;
@@ -413,13 +417,26 @@ export function GlobalUsageSurface({ theme, layout }: PluginSurfaceProps) {
       fileReads += item.fileReads;
       fileWrites += item.fileWrites;
       agents += item.agentCount;
+      codingAgents += item.codingAgentCount;
+      chatAgents += item.chatAgentCount;
       messages += item.messageCount;
     }
     const workspaces =
       providerFilter === "all"
         ? (query.data?.totals.workspaceCount ?? 0)
         : (filteredProviders[0]?.workspaceCount ?? 0);
-    return { skills, mcp, shell, fileReads, fileWrites, agents, messages, workspaces };
+    return {
+      skills,
+      mcp,
+      shell,
+      fileReads,
+      fileWrites,
+      agents,
+      codingAgents,
+      chatAgents,
+      messages,
+      workspaces,
+    };
   }, [filteredProviders, providerFilter, query.data?.totals.workspaceCount]);
 
   const streaks = useMemo(
@@ -435,9 +452,8 @@ export function GlobalUsageSurface({ theme, layout }: PluginSurfaceProps) {
         mcp: summary.mcp,
         agents: summary.agents,
         messages: summary.messages,
-        shell: summary.shell,
-        fileReads: summary.fileReads,
-        fileWrites: summary.fileWrites,
+        codingAgents: summary.codingAgents,
+        chatAgents: summary.chatAgents,
         longestStreak: streaks.longest,
       },
       providers: filteredProviders,

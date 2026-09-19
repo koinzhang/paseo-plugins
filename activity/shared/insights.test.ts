@@ -17,6 +17,8 @@ function provider(partial: Partial<ProviderUsageItem> & Pick<ProviderUsageItem, 
     shellTop: [],
     models: [],
     agentCount: 0,
+    codingAgentCount: 0,
+    chatAgentCount: 0,
     workspaceCount: 0,
     messageCount: 0,
     callCount: 0,
@@ -36,11 +38,10 @@ describe("buildActivityInsights", () => {
       summary: {
         skills: 2,
         mcp: 3,
-        agents: 2,
+        agents: 5,
         messages: 14,
-        shell: 10,
-        fileReads: 3,
-        fileWrites: 2,
+        codingAgents: 3,
+        chatAgents: 1,
         longestStreak: 6,
       },
       providers: [
@@ -48,12 +49,18 @@ describe("buildActivityInsights", () => {
           provider: "codex",
           label: "Codex",
           messageCount: 10,
+          agentCount: 3,
+          codingAgentCount: 2,
+          chatAgentCount: 1,
           models: [{ model: "gpt-5.4", count: 10 }],
         }),
         provider({
           provider: "claude",
           label: "Claude",
           messageCount: 4,
+          agentCount: 2,
+          codingAgentCount: 1,
+          chatAgentCount: 0,
           models: [{ model: "opus", count: 4 }],
         }),
       ],
@@ -81,20 +88,31 @@ describe("buildActivityInsights", () => {
     assert.equal(rows[3]?.value, "Mon");
     assert.equal(rows[4]?.value, "Codex · 71%");
     assert.equal(rows[5]?.value, "Gpt 5.4 · 71%");
-    assert.equal(rows[6]?.value, "7");
-    // coding=15, messages=14 → 15/29 ≈ 52%
-    assert.equal(rows[7]?.value, "52% coding");
+    assert.equal(rows[6]?.value, "2.8");
+    // 3 coding / (3+1) active → 75%
+    assert.equal(rows[7]?.value, "75% coding");
   });
 
   it("hides Top provider when filtered; Top model stays scoped", () => {
     const rows = buildActivityInsights({
       days: [{ date: "2026-03-07", skills: 0, mcp: 0, agents: 0, messages: 10, total: 0 }],
-      summary: { skills: 0, mcp: 0, agents: 0, messages: 10, longestStreak: 1 },
+      summary: {
+        skills: 0,
+        mcp: 0,
+        agents: 1,
+        messages: 10,
+        codingAgents: 0,
+        chatAgents: 1,
+        longestStreak: 1,
+      },
       providers: [
         provider({
           provider: "codex",
           label: "Codex",
           messageCount: 10,
+          agentCount: 1,
+          codingAgentCount: 0,
+          chatAgentCount: 1,
           models: [{ model: "gpt-5.4", count: 10 }],
         }),
       ],
@@ -103,22 +121,22 @@ describe("buildActivityInsights", () => {
     assert.equal(rows.length, ACTIVITY_LIST_LIMIT);
     assert.equal(rows.find((r) => r.label === "Top provider")?.value, "—");
     assert.equal(rows.find((r) => r.label === "Top model")?.value, "Gpt 5.4 · 100%");
+    assert.equal(rows.find((r) => r.label === "Coding vs chat")?.value, "0% coding");
   });
 
   it("uses dashes for zero denominators and falls back busiest day", () => {
     const rows = buildActivityInsights({
       days: [{ date: "2026-03-08", skills: 3, mcp: 1, agents: 2, messages: 0, total: 4 }],
-      summary: { skills: 3, mcp: 1, agents: 0, messages: 0, shell: 0, fileReads: 0, fileWrites: 0 },
+      summary: { skills: 3, mcp: 1, agents: 2, messages: 0, codingAgents: 0, chatAgents: 0 },
       providers: [],
       providerFilter: "all",
       locale: "en",
     });
     assert.equal(rows.find((r) => r.label === "Busiest day")?.value, "Mar 8 · 4 calls");
-    assert.equal(rows.find((r) => r.label === "Messages per agent")?.value, "—");
+    assert.equal(rows.find((r) => r.label === "Messages per agent")?.value, "0");
     assert.equal(rows.find((r) => r.label === "Coding vs chat")?.value, "—");
     assert.equal(rows.find((r) => r.label === "Top provider")?.value, "—");
     assert.equal(rows.find((r) => r.label === "Top model")?.value, "—");
     assert.equal(rows.find((r) => r.label === "Peak weekday")?.value, "Sun");
-    assert.equal(rows.find((r) => r.label === "Tools per message"), undefined);
   });
 });

@@ -9,9 +9,10 @@ export type InsightSummary = {
   mcp: number;
   agents: number;
   messages: number;
-  shell?: number;
-  fileReads?: number;
-  fileWrites?: number;
+  /** Agents with ≥1 coding op in-window (019: file write or mutating shell). */
+  codingAgents?: number;
+  /** Active non-coding agents (018); empty creations excluded. */
+  chatAgents?: number;
   longestStreak?: number;
 };
 
@@ -116,12 +117,11 @@ function topModelValue(
   return `${formatDisplayName(top[0])} · ${pct}%`;
 }
 
-/** coding = shell + file ops; share of coding among coding+messages. */
-function codingVsChatValue(shell: number, fileOps: number, messages: number): string {
-  const coding = shell + fileOps;
-  const total = coding + messages;
+/** Share of active agents that are coding (018); empty creations excluded. */
+function codingVsChatValue(codingAgents: number, chatAgents: number): string {
+  const total = codingAgents + chatAgents;
   if (total <= 0) return "—";
-  const pct = Math.round((coding / total) * 100);
+  const pct = Math.round((codingAgents / total) * 100);
   return `${pct}% coding`;
 }
 
@@ -164,9 +164,9 @@ export function buildActivityInsights(input: {
   const limit = input.limit ?? ACTIVITY_LIST_LIMIT;
   const activeDays = input.days.filter(isActiveDay).length;
   const busiest = pickBusiestDay(input.days);
-  const shell = input.summary.shell ?? 0;
-  const fileOps = (input.summary.fileReads ?? 0) + (input.summary.fileWrites ?? 0);
   const longest = input.summary.longestStreak;
+  const codingAgents = input.summary.codingAgents ?? 0;
+  const chatAgents = input.summary.chatAgents ?? 0;
 
   const rows: InsightRow[] = [
     { label: "Active days", value: String(activeDays) },
@@ -199,7 +199,7 @@ export function buildActivityInsights(input: {
     },
     {
       label: "Coding vs chat",
-      value: codingVsChatValue(shell, fileOps, input.summary.messages),
+      value: codingVsChatValue(codingAgents, chatAgents),
     },
   ];
 
