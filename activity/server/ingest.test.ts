@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
+import type { AgentTimelineItem } from "./host-types.ts";
 import type { PluginHookAgent } from "@getpaseo/plugin/server";
 import { ingestTimeline } from "./ingest.ts";
 import type { ToolCallRow, UsageStore } from "./store.ts";

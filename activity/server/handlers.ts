@@ -1,4 +1,4 @@
-import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
+import type { AgentTimelineItem } from "./host-types.ts";
 import type { RpcInput, RpcOutput } from "@getpaseo/plugin";
 import type { PluginHandlerContext, PluginHookAgent } from "@getpaseo/plugin/server";
 import { homedir } from "node:os";

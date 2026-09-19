@@ -1,4 +1,4 @@
-import type { PaseoApi } from "@getpaseo/client";
+import type { PaseoApi } from "./host-types.ts";
 
 /** Read the agent's current model id from the daemon snapshot. */
 export async function resolveAgentModel(

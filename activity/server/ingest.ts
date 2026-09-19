@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
+import type { AgentTimelineItem } from "./host-types.ts";
 import type { PluginHookAgent } from "@getpaseo/plugin/server";
 import { classifyToolCall, DEFAULT_SKILL_ROOTS, type ToolCallInput } from "../shared/classify.ts";
 import { resolveMcpServers } from "./mcp-servers.ts";
