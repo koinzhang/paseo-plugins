@@ -143,5 +143,5 @@ export function agentUpdatedAt(
   item: AgentUsageItem,
   byId: Record<string, AgentStatusInfo> | undefined,
 ): string | null {
-  return item.updatedAt ?? byId?.[item.agentId]?.updatedAt ?? item.lastActivityAt ?? null;
+  return byId?.[item.agentId]?.updatedAt ?? item.updatedAt ?? item.lastActivityAt ?? null;
 }

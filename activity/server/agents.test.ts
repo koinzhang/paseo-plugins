@@ -84,3 +84,19 @@ describe("agentRowFromSnapshot", () => {
     assert.equal(archived.archivedAt, "2026-09-19T00:00:00.000Z");
   });
 });
+
+describe("agent activity timestamps", () => {
+  it("preserves snapshot time and uses creation time only when absent", () => {
+    const agent = { id: "a", provider: "codex", createdAt: "2026-01-01T00:00:00Z", updatedAt: "2026-01-02T00:00:00Z" };
+    assert.equal(agentRowFromSnapshot(agent).updatedAt, agent.updatedAt);
+    assert.equal(agentRowFromSnapshot({ ...agent, updatedAt: undefined }).updatedAt, agent.createdAt);
+  });
+  it("derives last activity from tool history regardless of input order", () => {
+    const calls = [row({ ts: "2026-01-03T00:00:00Z" }), row({ ts: "2026-01-01T00:00:00Z" }), row({ ts: "2026-01-04T00:00:00Z" })];
+    for (const ordered of [calls, calls.slice().reverse()]) {
+      const agent = agentsFromToolCalls(ordered)[0]!;
+      assert.equal(agent.createdAt, "2026-01-01T00:00:00Z");
+      assert.equal(agent.updatedAt, "2026-01-04T00:00:00Z");
+    }
+  });
+});

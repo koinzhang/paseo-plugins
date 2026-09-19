@@ -29,9 +29,10 @@ export function agentRowFromSnapshot(agent: {
   provider: string;
   title?: string | null;
   createdAt: string;
+  updatedAt?: string;
   archivedAt?: string | null;
 }): AgentRow {
-  const updatedAt = nowIso();
+  const updatedAt = agent.updatedAt ?? agent.createdAt;
   return {
     agentId: agent.id,
     workspaceId: agent.workspaceId ?? null,
@@ -48,7 +49,7 @@ export function agentRowFromSnapshot(agent: {
 export function agentsFromToolCalls(rows: readonly ToolCallRow[]): AgentRow[] {
   const earliest = new Map<
     string,
-    { provider: string; workspaceId: string | null; createdAt: string }
+    { provider: string; workspaceId: string | null; createdAt: string; updatedAt: string }
   >();
   for (const row of rows) {
     const t = row.ts ?? row.ingestedAt;
@@ -58,10 +59,12 @@ export function agentsFromToolCalls(rows: readonly ToolCallRow[]): AgentRow[] {
         provider: row.provider,
         workspaceId: row.workspaceId,
         createdAt: t,
+        updatedAt: prev && prev.updatedAt > t ? prev.updatedAt : t,
       });
+    } else if (t > prev.updatedAt) {
+      prev.updatedAt = t;
     }
   }
-  const updatedAt = nowIso();
   return [...earliest.entries()].map(([agentId, info]) => ({
     agentId,
     workspaceId: info.workspaceId,
@@ -70,7 +73,7 @@ export function agentsFromToolCalls(rows: readonly ToolCallRow[]): AgentRow[] {
     title: null,
     createdAt: info.createdAt,
     archivedAt: null,
-    updatedAt,
+    updatedAt: info.updatedAt,
   }));
 }
 

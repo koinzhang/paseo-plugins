@@ -7,3 +7,8 @@
 - [ ] T5 真机交互验收（未执行）：timeline 完成/失败/取消、permission/attention、远端环境矩阵。
 
 - [x] T6 修复项目过滤回归。验证：daemon 源码 placement.projectKey=projectId；真实 loader 返回目标 agent permissionCount=1 / rank=0 / attentionKind=permission；152 tests pass、typecheck pass、reload running。未声称完成真机 UI 目视验收。
+
+- [x] T7 修复旧轮询覆盖实时推送。验证：真实 QueryClient 晚返回竞态、首屏分页事件重放、失败释放监听。
+- [x] T8 修复更新时间语义。验证：保留 snapshot updatedAt、缺失回退、历史首末时间及 live 时间优先。
+- [x] T9 修复空 pill 周期显示，保留隐藏补查。验证：快照去重、新活动/重新添加、延迟 ingest、合并并发与卸载晚返回。
+- [x] T10 本轮 typecheck / 全量测试 / reload。验证：161 tests pass、activity running / Plugin ready；用户所报 agent 的 loader 输出与 daemon 当前快照一致。

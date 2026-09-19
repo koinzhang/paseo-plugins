@@ -14,3 +14,9 @@
 ## 2026-09-19 状态回归修正
 
 实测同一 agent：无过滤可见，projects.list 的 remote: key 过滤为 0 条。daemon session.buildProjectPlacementFromRecords 将 project.projectId 写入 placement.projectKey。之前错误的过滤导致每 15s 清空状态缓存，覆盖推送所得 permission 状态。本次移除 projects.list 映射与等待；使用 workspace.projectId，测试必须以 daemon 的 placement 形状为基准，并进行真实只读查询验证。
+
+## 同类问题修复
+
+- 有缓存时，推送先取消正在执行的旧状态查询，再从取消前捕获的最新缓存合并事件并更新缓存；首次加载期间重放收到的推送。
+- Snapshot updatedAt 使用 daemon 时间；缺失时回退 createdAt。工具调用推导的记录使用最后活动时间。UI 优先 live 时间，避免已有错误库值盖住实时状态。
+- Pill 对相同 agent 版本只通知一次；有新活动即使轮询错过 running 阶段，也能唤醒隐藏 pill。删除后清除版本记录。

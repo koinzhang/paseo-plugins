@@ -17,8 +17,13 @@ export type HostAgentEntry = {
   };
 };
 
+export type HostAgentUpdate =
+  | { kind: "remove"; agentId: string }
+  | { kind: "upsert"; agent: HostAgentEntry["agent"] };
+
 type HostAgentsApi = {
   agents: {
+    subscribe?: (handler: (update: HostAgentUpdate) => void) => () => void;
     list: (options: {
       filter?: { includeArchived?: boolean; projectKeys?: string[] };
       page?: { limit: number; cursor?: string };
@@ -39,23 +44,38 @@ export async function loadWorkspaceAgentStatuses(
   workspaceId: string,
   projectId?: string | null,
 ): Promise<Record<string, AgentStatusInfo>> {
-  const entries = await listAllAgentPages(
-    async (cursor) => {
-      const result = await paseo.agents.list({
-        filter: { includeArchived: true, ...(projectId ? { projectKeys: [projectId] } : {}) },
-        page: { limit: HOST_AGENT_PAGE_LIMIT, ...(cursor ? { cursor } : {}) },
-      });
-      return { entries: result.entries, pageInfo: result.pageInfo };
-    },
-  );
+  const pending: HostAgentUpdate[] = [];
+  const unsubscribe = paseo.agents.subscribe?.((update) => pending.push(update));
+  try {
+    const entries = await listAllAgentPages(
+      async (cursor) => {
+        const result = await paseo.agents.list({
+          filter: { includeArchived: true, ...(projectId ? { projectKeys: [projectId] } : {}) },
+          page: { limit: HOST_AGENT_PAGE_LIMIT, ...(cursor ? { cursor } : {}) },
+        });
+        return { entries: result.entries, pageInfo: result.pageInfo };
+      },
+    );
 
-  const map: Record<string, AgentStatusInfo> = {};
-  for (const entry of entries) {
-    const agent = entry.agent;
-    if (agent.workspaceId !== workspaceId) continue;
-    map[agent.id] = agentStatusInfo(agent);
+    const map: Record<string, AgentStatusInfo> = {};
+    for (const entry of entries) {
+      const agent = entry.agent;
+      if (agent.workspaceId !== workspaceId) continue;
+      map[agent.id] = agentStatusInfo(agent);
+    }
+    for (const update of pending) applyAgentStatusUpdate(map, workspaceId, update);
+    return map;
+  } finally {
+    unsubscribe?.();
   }
-  return map;
+}
+
+export function applyAgentStatusUpdate(
+  map: Record<string, AgentStatusInfo>, workspaceId: string, update: HostAgentUpdate,
+): void {
+  const id = update.kind === "remove" ? update.agentId : update.agent.id;
+  if (update.kind === "remove" || update.agent.workspaceId !== workspaceId) delete map[id];
+  else map[id] = agentStatusInfo(update.agent);
 }
 
 export function agentStatusInfo(agent: HostAgentEntry["agent"]): AgentStatusInfo {

@@ -111,27 +111,21 @@ function UsagePopoverAgent(
         minWidth: compact ? undefined : 300,
         maxWidth: compact ? undefined : 380,
       },
-      rangeBar: {
+      tabRow: {
         flexDirection: "row" as const,
+        flexWrap: "wrap" as const,
         alignItems: "center" as const,
         alignSelf: "flex-start" as const,
-        gap: 20,
+        gap: compact ? 12 : 16,
       },
-      rangeSegment: {
-        paddingVertical: 8,
-      },
-      rangeSegmentActive: {
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.foreground,
-      },
-      chipText: {
+      tab: {
         color: theme.colors.foregroundMuted,
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: "500" as const,
       },
-      chipTextActive: {
+      tabActive: {
         color: theme.colors.foreground,
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: "600" as const,
       },
       list: {
@@ -155,11 +149,6 @@ function UsagePopoverAgent(
         gap: 2,
       },
       rowTitle: {
-        color: theme.colors.foreground,
-        fontSize: 13,
-        fontWeight: "500" as const,
-      },
-      rowLink: {
         color: theme.colors.foreground,
         fontSize: 13,
         fontWeight: "500" as const,
@@ -277,14 +266,8 @@ function UsagePopoverAgent(
 
   return (
     <View style={styles.root}>
-      {!compact ? (
-        <View style={{ gap: 4 }}>
-          <Text style={styles.title}>Activity</Text>
-          <Text style={styles.rowMeta}>Current conversation</Text>
-        </View>
-      ) : null}
       {showTabs ? (
-        <View style={styles.rangeBar}>
+        <View style={styles.tabRow}>
           {(
             [
               ["skills", "Skills"],
@@ -298,9 +281,9 @@ function UsagePopoverAgent(
                 accessibilityRole="tab"
                 accessibilityState={{ selected: active }}
                 onPress={() => setTab(id)}
-                style={[styles.rangeSegment, active ? styles.rangeSegmentActive : null]}
+                style={{ paddingVertical: 6 }}
               >
-                <Text style={active ? styles.chipTextActive : styles.chipText}>{label}</Text>
+                <Text style={active ? styles.tabActive : styles.tab}>{label}</Text>
               </Pressable>
             );
           })}
@@ -322,33 +305,39 @@ function UsagePopoverAgent(
         <View style={styles.list}>
           {skillItems.map((item, index) => {
             const name = formatDisplayName(item.skillName);
-            const title = item.skillPath ? (
-              <Pressable
-                accessibilityRole="link"
-                accessibilityLabel={`Open ${name} SKILL.md`}
-                onPress={() =>
-                  setSkillDetail({ skillName: item.skillName, path: item.skillPath! })
-                }
-              >
-                <Text style={styles.rowLink} numberOfLines={1}>
-                  {name}
-                </Text>
-              </Pressable>
-            ) : (
-              <Text style={styles.rowTitle} numberOfLines={1}>
-                {name}
-              </Text>
-            );
-            return (
-              <View key={item.skillName} style={[styles.row, index === 0 ? styles.rowFirst : null]}>
+            const rowStyle = [styles.row, index === 0 ? styles.rowFirst : null];
+            const content = (
+              <>
                 <Icon name="Sparkles" size={16} color={theme.colors.foregroundMuted} />
                 <View style={styles.rowMain}>
-                  {title}
+                  <Text style={styles.rowTitle} numberOfLines={1}>
+                    {name}
+                  </Text>
                   {item.lastUsedAt ? (
                     <Text style={styles.rowMeta}>{formatDayTime(item.lastUsedAt)}</Text>
                   ) : null}
                 </View>
                 <CountBadge value={item.total} styles={styles} />
+              </>
+            );
+            if (item.skillPath) {
+              return (
+                <Pressable
+                  key={item.skillName}
+                  accessibilityRole="link"
+                  accessibilityLabel={`Open ${name} SKILL.md`}
+                  onPress={() =>
+                    setSkillDetail({ skillName: item.skillName, path: item.skillPath! })
+                  }
+                  style={rowStyle}
+                >
+                  {content}
+                </Pressable>
+              );
+            }
+            return (
+              <View key={item.skillName} style={rowStyle}>
+                {content}
               </View>
             );
           })}

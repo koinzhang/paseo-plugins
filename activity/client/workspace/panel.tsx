@@ -1,3 +1,4 @@
+import { updateWorkspaceStatusCache } from "./status-cache.ts";
 import {
   type PluginWorkspacePanelProps,
   usePaseo,
@@ -49,7 +50,6 @@ import {
   agentUpdatedAt,
   matchesAgentFilters,
   optionLabel,
-  type AgentStatusInfo,
   type AgentGroup,
   type AgentLifecycleFilter,
   type AgentShowField,
@@ -60,7 +60,7 @@ import {
 } from "./constants.ts";
 import { MenuOptionList, MenuSubTrigger } from "./display-menu.tsx";
 import { matchesAgentTitle } from "./filters.ts";
-import { agentStatusInfo, loadWorkspaceAgentStatuses } from "./list-host-agents.ts";
+import { loadWorkspaceAgentStatuses } from "./list-host-agents.ts";
 import { RankSection } from "./rank-section.tsx";
 import { TerminalsSection, type TerminalListItem } from "./terminals-section.tsx";
 
@@ -184,17 +184,7 @@ export function WorkspaceActivityPanel({
   useEffect(() => paseo.agents.subscribe((update) => {
     // This local listener accelerates the owned polling query without taking the
     // daemon's shared observation slot or re-fetching the directory on each push.
-    queryClient.setQueryData<Record<string, AgentStatusInfo>>(statusQueryKey, (previous) => {
-      if (!previous) return previous;
-      const id = update.kind === "remove" ? update.agentId : update.agent.id;
-      if (update.kind === "remove" || update.agent.workspaceId !== workspaceId) {
-        if (!(id in previous)) return previous;
-        const next = { ...previous };
-        delete next[id];
-        return next;
-      }
-      return { ...previous, [id]: agentStatusInfo(update.agent) };
-    });
+    updateWorkspaceStatusCache(queryClient, statusQueryKey, workspaceId, update);
   }), [paseo, queryClient, workspaceId, statusQueryKey]);
 
   useWorkspaceActivityRefresh(workspaceId, () => {

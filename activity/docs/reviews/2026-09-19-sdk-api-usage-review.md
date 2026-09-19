@@ -28,13 +28,13 @@
 ### 本次验证
 
 - `npm run typecheck`：通过。
-- `npm test`：152 项全部通过；新增项目 SKILL.md 解析、元信息缺失回退、pill 分页/并发 remove/卸载/无推送轮询、workspace 分页过滤及两个 projectKey 不同的等待输入回归测试。
+- `npm test`：161 项全部通过；新增项目 SKILL.md 解析、元信息缺失回退、pill 分页/并发 remove/卸载/无推送轮询、workspace 分页过滤及两个 projectKey 不同的等待输入回归测试。
 - `paseo plugin reload activity` / `paseo plugin ls`：`running`，加载日志出现 `store ready` / `Plugin ready`。
 - 未执行真机多端 UI 交互验收、远端/自定义 daemon 环境矩阵；不将这些项目视为已验证。
 
 ### 保留的兼容性边界
 
-0.8.0 的目录流仍只有共享 slot。插件不覆盖宿主订阅，也没有宣称实现独立目录 observation。目录推送缺失时，workspace 状态由 15s 轮询恢复；pill 每轮完整分页结束后 15s 再同步（请求耗时另计），隐藏 pill 也会重新查询。权限计数和归档 agent 不保证秒级更新。升级独立 observation 不属于本次依赖版本范围。
+0.8.0 的目录流仍只有共享 slot。插件不覆盖宿主订阅，也没有宣称实现独立目录 observation。目录推送缺失时，workspace 状态由 15s 轮询恢复；pill 每轮完整分页结束后 15s 再同步（请求耗时另计），隐藏 pill 也会静默重新查询，只有非空数据才重新显示。权限计数和归档 agent 不保证秒级更新。升级独立 observation 不属于本次依赖版本范围。
 
 ---
 
@@ -218,6 +218,16 @@ const snapshot = handle.current() ?? (await handle.refresh())?.agent;
 | `useRpc` / `defineRpc` / zod 契约 | `shared/usage.ts`、`index.server.ts` | 双端校验、无客户端直连 daemon 私有 API |
 
 ---
+
+## 同类问题复查与修复
+
+| 问题 | 根因 | 修复与验证 |
+|---|---|---|
+| 旧轮询覆盖新 permission/remove 推送 | queryFn 晚返回覆盖 setQueryData | 有缓存时先取消旧查询，再从取消前捕获的最新缓存应用推送；首屏 loader 缓存并重放分页期间事件。真实 QueryClient 测试验证 permission=1 不退回 0，删除项不复活，查询保持 success/idle；异常时释放监听。 |
+| 同步时间混作 agent 更新时间 | agentRowFromSnapshot 使用 now，UI 优先本地库 | 保存 daemon updatedAt，缺失时使用 createdAt；工具历史推导记录保存最后活动时间；UI 优先 live updatedAt，避免旧库同步时间盖过实时值。测试覆盖原时间、缺失回退、乱序历史。现存 active 记录在后续后台同步时纠正；未做全库迁移。 |
+| 不变 idle 快照反复唤醒空 pill | 每轮目录轮询无条件调用显示逻辑 | 目录按 agent 版本去重；新 idle 活动仍触发。隐藏 pill 保留静默用量补查，非空才显示，覆盖延迟 ingest；并发合并，删除/卸载后晚返回不显示。测试覆盖不变快照、重新添加、延迟非空与卸载。 |
+
+以上为本轮已实现修复；类型检查及 161 项测试通过。未补做真机 UI 目视验收。
 
 ## 后续验收
 

@@ -11,18 +11,31 @@ export function watchPillDirectory(
   onAgent: (agent: Agent) => void,
   onRemove: (agentId: string) => void,
   intervalMs = 15_000,
+  onPolled?: (agent: Agent) => void,
 ): () => void {
   let disposed = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let pending: Update[] | null = null;
   let known = new Set<string>();
+  const versions = new Map<string, string>();
+  function publish(agent: Agent) {
+    const version = JSON.stringify([agent.workspaceId, agent.status, agent.updatedAt,
+      agent.lastUserMessageAt, agent.activeTurn?.turnId]);
+    if (versions.get(agent.id) === version) return;
+    versions.set(agent.id, version);
+    onAgent(agent);
+  }
+  function remove(id: string) {
+    versions.delete(id);
+    onRemove(id);
+  }
   function apply(update: Update) {
     if (update.kind === "remove") {
       known.delete(update.agentId);
-      onRemove(update.agentId);
+      remove(update.agentId);
     } else {
       known.add(update.agent.id);
-      onAgent(update.agent);
+      publish(update.agent);
     }
   }
   // Opportunistic acceleration only; correctness does not depend on host observation.
@@ -44,9 +57,12 @@ export function watchPillDirectory(
         if (update.kind === "remove") snapshot.delete(update.agentId);
         else snapshot.set(update.agent.id, update.agent);
       }
-      for (const id of known) if (!snapshot.has(id)) onRemove(id);
+      for (const id of known) if (!snapshot.has(id)) remove(id);
       known = new Set(snapshot.keys());
-      for (const agent of snapshot.values()) onAgent(agent);
+      for (const agent of snapshot.values()) {
+        publish(agent);
+        onPolled?.(agent);
+      }
     } catch (error) {
       if (!disposed) console.error("[activity] could not sync composer pills", error);
     } finally {

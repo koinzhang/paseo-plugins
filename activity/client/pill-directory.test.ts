@@ -61,3 +61,32 @@ test("polling discovers agents without any directory push", async () => {
   const stop = watchPillDirectory(api, () => found(), () => {}, 1);
   try { await discovery; assert.equal(reads, 2); } finally { stop(); }
 });
+
+test("unchanged idle polls do not revive a pill; new activity and re-add still notify", async () => {
+  let listener!: (update: Update) => void;
+  let reads = 0;
+  let thirdRead!: () => void;
+  const polled = new Promise<void>(resolve => { thirdRead = resolve; });
+  const agent = { id: "a", workspaceId: "w", status: "idle", updatedAt: "old" };
+  let callbacks = 0;
+  const stop = watchPillDirectory({
+    subscribe: (handler: typeof listener) => { listener = handler; return () => {}; },
+    list: async () => {
+      if (++reads === 3) thirdRead();
+      return { entries: [{ agent }], pageInfo: { hasMore: false, nextCursor: null } };
+    },
+  } as unknown as Api, () => { callbacks++; }, () => {}, 1);
+  try {
+    await polled;
+    await setImmediate();
+    assert.equal(callbacks, 1);
+    listener({ kind: "upsert", agent } as Update);
+    assert.equal(callbacks, 1);
+    // Polling can miss the running transition: newer idle timestamp must revive.
+    listener({ kind: "upsert", agent: { ...agent, updatedAt: "new" } } as Update);
+    assert.equal(callbacks, 2);
+    listener({ kind: "remove", agentId: "a" } as Update);
+    listener({ kind: "upsert", agent: { ...agent, updatedAt: "new" } } as Update);
+    assert.equal(callbacks, 3);
+  } finally { stop(); }
+});

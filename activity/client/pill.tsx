@@ -1,3 +1,5 @@
+import { createHiddenPillRecheck } from "./hidden-pill-recheck.ts";
+import { writePillDataCache } from "./pill-data-cache.ts";
 import { watchPillDirectory } from "./pill-directory.ts";
 import {
   type PluginButtonContentProps,
@@ -7,7 +9,7 @@ import {
 } from "@getpaseo/plugin/client";
 import { Icon } from "@getpaseo/plugin/client/react-native";
 import { useEffect, useRef } from "react";
-import { formatUsagePillLabel } from "../shared/usage.ts";
+import { formatUsagePillLabel, usageSkillsByNameRpc, usageMcpByToolRpc } from "../shared/usage.ts";
 import { useUsagePillData, clearPillDataCache } from "./usage-query.tsx";
 import { UsagePopover, type SkillDetail } from "./usage-popover.tsx";
 import { requestOpenSkillInPanel } from "./pending-skill.ts";
@@ -24,6 +26,7 @@ const EMPTY_GRACE_MS_RECHECK = 4_000;
 
 type PillEntry = {
   registration?: PluginButtonRegistration;
+  recheck?: () => Promise<void>;
   /** Host unmounted the icon after a settled empty hide. */
   hidden: boolean;
   /** Already completed one empty grace → hide cycle for this agent. */
@@ -162,6 +165,16 @@ export function contributePills(client: PluginClientContext) {
       },
     });
     pills.set(agentId, entry);
+    entry.recheck = createHiddenPillRecheck(async () => {
+      const [skills, mcp] = await Promise.all([
+        client.rpc(usageSkillsByNameRpc, { agentId }),
+        client.rpc(usageMcpByToolRpc, { agentId }),
+      ]);
+      return { skills: skills.items, mcpTools: mcp.items };
+    }, () => pills.get(agentId) === entry && entry.hidden, (data) => {
+      writePillDataCache(agentId, data);
+      reviveHiddenPill(agentId);
+    });
   }
 
   function removePill(agentId: string) {
@@ -184,7 +197,11 @@ export function contributePills(client: PluginClientContext) {
     addPill(id, workspaceId);
     // A read/push is a refresh hint, not proof of turn completion.
     if (status === "idle") reviveHiddenPill(id);
-  }, removePill);
+  }, removePill, 15_000, (agent) => {
+    // Ingest can finish after the empty grace period without another agent update.
+    // Keep the fallback query, but only make the pill visible when data exists.
+    if (agent.status === "idle") void pills.get(agent.id)?.recheck?.();
+  });
 
   return () => {
     unsubscribe();

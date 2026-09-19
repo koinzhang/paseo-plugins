@@ -295,12 +295,9 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
     );
   }
 
-  const compact = layout.compact;
-
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={{ gap: 6 }}>
-        {!compact ? <Text style={styles.sectionTitle}>Activity</Text> : null}
         {openAgent ? (
           <Text
             accessibilityRole="link"
@@ -350,10 +347,7 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
       ) : null}
 
       {!loading && !error && tabs.length === 0 ? (
-        <View style={{ gap: 12 }}>
-          {!compact ? <Text style={styles.sectionTitle}>Activity</Text> : null}
-          <Text style={styles.empty}>No skill or MCP calls yet</Text>
-        </View>
+        <Text style={styles.empty}>No skill or MCP calls yet</Text>
       ) : null}
 
       {tab === "skills" ? (
