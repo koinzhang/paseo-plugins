@@ -160,33 +160,31 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
       },
       sectionTitle: {
         color: theme.colors.foreground,
-        fontSize: layout.compact ? 18 : 20,
+        fontSize: 14,
         fontWeight: "600" as const,
         flexShrink: 1,
         letterSpacing: -0.3,
       },
-      rangeBar: {
+      listSectionTitle: {
+        color: theme.colors.foreground,
+        fontSize: 15,
+        fontWeight: "600" as const,
+        flexShrink: 1,
+        letterSpacing: -0.3,
+      },
+      sectionHeaderRow: {
         flexDirection: "row" as const,
         alignItems: "center" as const,
-        alignSelf: "flex-start" as const,
-        gap: 20,
+        justifyContent: "space-between" as const,
+        gap: 8,
       },
-      rangeSegment: {
-        paddingVertical: 8,
-      },
-      rangeSegmentActive: {
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.foreground,
-      },
-      chipText: {
-        color: theme.colors.foregroundMuted,
-        fontSize: 13,
-        fontWeight: "500" as const,
-      },
-      chipTextActive: {
-        color: theme.colors.foreground,
-        fontSize: 13,
-        fontWeight: "600" as const,
+      titleAction: {
+        width: 24,
+        height: 24,
+        alignItems: "center" as const,
+        justifyContent: "center" as const,
+        borderRadius: 6,
+        flexShrink: 0,
       },
       panel: {
         gap: 4,
@@ -264,6 +262,11 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
 
   const loading = skillsByName.isLoading || mcpByTool.isLoading;
   const error = skillsByName.error ?? mcpByTool.error;
+  const showToggle = tabs.length > 1;
+  const toggleAction =
+    tab === "skills"
+      ? { icon: "Plug" as const, accessibilityLabel: "Show MCP", next: "mcp" as const }
+      : { icon: "Sparkles" as const, accessibilityLabel: "Show skills", next: "skills" as const };
 
   if (skillDetail) {
     return (
@@ -320,24 +323,6 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
         { label: "Messages", value: (usageSummary.data?.messageCount ?? 0).toLocaleString() },
         { label: "Tools explored", value: String(skillItems.length + mcpItems.length) },
       ]} /> : null}
-      {tabs.length > 1 ? (
-        <View style={styles.rangeBar}>
-          {tabs.map((item) => {
-            const active = tab === item.id;
-            return (
-              <Pressable
-                key={item.id}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
-                onPress={() => setTab(item.id)}
-                style={[styles.rangeSegment, active ? styles.rangeSegmentActive : null]}
-              >
-                <Text style={active ? styles.chipTextActive : styles.chipText}>{item.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      ) : null}
 
       {loading ? <ActivityIndicator color={theme.colors.accent} /> : null}
       {error ? (
@@ -350,75 +335,89 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
         <Text style={styles.empty}>No skill or MCP calls yet</Text>
       ) : null}
 
-      {tab === "skills" ? (
+      {tab ? (
         <View style={{ gap: 12 }}>
-          <Text style={styles.sectionTitle}>Skills</Text>
-          <View style={styles.panel}>
-            {skillItems.map((item, index) => {
-              const name = formatDisplayName(item.skillName);
-              const title = item.skillPath ? (
-                <Pressable
-                  accessibilityRole="link"
-                  accessibilityLabel={`Open ${name} SKILL.md`}
-                  onPress={() =>
-                    setSkillDetail({ skillName: item.skillName, path: item.skillPath! })
-                  }
-                >
-                  <Text style={styles.listLink} numberOfLines={1}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.listSectionTitle}>{tab === "skills" ? "Skills" : "MCP"}</Text>
+            {showToggle ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={toggleAction.accessibilityLabel}
+                hitSlop={8}
+                onPress={() => setTab(toggleAction.next)}
+                style={styles.titleAction}
+              >
+                <Icon
+                  name={toggleAction.icon}
+                  size={16}
+                  color={theme.colors.foregroundMuted}
+                />
+              </Pressable>
+            ) : null}
+          </View>
+          {tab === "skills" ? (
+            <View style={styles.panel}>
+              {skillItems.map((item, index) => {
+                const name = formatDisplayName(item.skillName);
+                const title = item.skillPath ? (
+                  <Pressable
+                    accessibilityRole="link"
+                    accessibilityLabel={`Open ${name} SKILL.md`}
+                    onPress={() =>
+                      setSkillDetail({ skillName: item.skillName, path: item.skillPath! })
+                    }
+                  >
+                    <Text style={styles.listLink} numberOfLines={1}>
+                      {name}
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <Text style={styles.listTitle} numberOfLines={1}>
                     {name}
                   </Text>
-                </Pressable>
-              ) : (
-                <Text style={styles.listTitle} numberOfLines={1}>
-                  {name}
-                </Text>
-              );
-              return (
+                );
+                return (
+                  <View
+                    key={item.skillName}
+                    style={[styles.listRow, index === 0 ? styles.listRowFirst : null]}
+                  >
+                    <Icon name="Sparkles" size={18} color={theme.colors.foregroundMuted} />
+                    <View style={styles.listMain}>
+                      {title}
+                      <Text style={styles.listMeta}>
+                        Last {formatLocalDateTime(item.lastUsedAt)}
+                      </Text>
+                    </View>
+                    <CountText value={item.total} styles={styles} />
+                  </View>
+                );
+              })}
+            </View>
+          ) : (
+            <View style={styles.panel}>
+              {mcpItems.map((item, index) => (
                 <View
-                  key={item.skillName}
+                  key={`${item.server}.${item.tool}`}
                   style={[styles.listRow, index === 0 ? styles.listRowFirst : null]}
                 >
-                  <Icon name="Sparkles" size={18} color={theme.colors.foregroundMuted} />
+                  <Icon name="Plug" size={18} color={theme.colors.foregroundMuted} />
                   <View style={styles.listMain}>
-                    {title}
+                    <Text style={styles.listTitle} numberOfLines={1}>
+                      {formatDisplayName(`${item.server}.${item.tool}`)}
+                    </Text>
                     <Text style={styles.listMeta}>
-                      Last {formatLocalDateTime(item.lastUsedAt)}
+                      {item.failures > 0
+                        ? `${item.failures} failed`
+                        : item.lastUsedAt
+                          ? `Last ${formatLocalDateTime(item.lastUsedAt)}`
+                          : "—"}
                     </Text>
                   </View>
-                  <CountText value={item.total} styles={styles} />
+                  <CountText value={item.count} styles={styles} />
                 </View>
-              );
-            })}
-          </View>
-        </View>
-      ) : null}
-
-      {tab === "mcp" ? (
-        <View style={{ gap: 12 }}>
-          <Text style={styles.sectionTitle}>MCP</Text>
-          <View style={styles.panel}>
-            {mcpItems.map((item, index) => (
-              <View
-                key={`${item.server}.${item.tool}`}
-                style={[styles.listRow, index === 0 ? styles.listRowFirst : null]}
-              >
-                <Icon name="Plug" size={18} color={theme.colors.foregroundMuted} />
-                  <View style={styles.listMain}>
-                  <Text style={styles.listTitle} numberOfLines={1}>
-                    {formatDisplayName(`${item.server}.${item.tool}`)}
-                  </Text>
-                  <Text style={styles.listMeta}>
-                    {item.failures > 0
-                      ? `${item.failures} failed`
-                      : item.lastUsedAt
-                        ? `Last ${formatLocalDateTime(item.lastUsedAt)}`
-                        : "—"}
-                  </Text>
-                </View>
-                <CountText value={item.count} styles={styles} />
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
+          )}
         </View>
       ) : null}
     </ScrollView>

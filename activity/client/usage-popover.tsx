@@ -111,22 +111,25 @@ function UsagePopoverAgent(
         minWidth: compact ? undefined : 300,
         maxWidth: compact ? undefined : 380,
       },
-      tabRow: {
+      sectionHeaderRow: {
         flexDirection: "row" as const,
-        flexWrap: "wrap" as const,
         alignItems: "center" as const,
-        alignSelf: "flex-start" as const,
-        gap: compact ? 12 : 16,
+        justifyContent: "space-between" as const,
+        gap: 8,
       },
-      tab: {
-        color: theme.colors.foregroundMuted,
-        fontSize: 14,
-        fontWeight: "500" as const,
-      },
-      tabActive: {
+      sectionTitle: {
         color: theme.colors.foreground,
         fontSize: 14,
         fontWeight: "600" as const,
+        flexShrink: 1,
+      },
+      titleAction: {
+        width: 24,
+        height: 24,
+        alignItems: "center" as const,
+        justifyContent: "center" as const,
+        borderRadius: 6,
+        flexShrink: 0,
       },
       list: {
         gap: 0,
@@ -188,17 +191,16 @@ function UsagePopoverAgent(
         fontWeight: "500" as const,
       },
       panelButton: {
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        borderRadius: 8,
-        backgroundColor: theme.colors.surface2,
-        flexDirection: "row" as const,
+        width: 24,
+        height: 24,
         alignItems: "center" as const,
-        gap: 6,
+        justifyContent: "center" as const,
+        borderRadius: 6,
+        flexShrink: 0,
       },
       title: {
         color: theme.colors.foreground,
-        fontSize: compact ? 15 : 16,
+        fontSize: 14,
         fontWeight: "600" as const,
         flexShrink: 1,
       },
@@ -215,11 +217,13 @@ function UsagePopoverAgent(
     [theme, compact],
   );
 
-  // Cached pill data (QueryClient or module cache) must paint immediately; only
-  // spin when we have nothing to show yet.
   const loading = !usage.data && usage.isLoading;
   const error = usage.error;
-  const showTabs = skillItems.length > 0 && mcpItems.length > 0;
+  const showToggle = skillItems.length > 0 && mcpItems.length > 0;
+  const toggleAction =
+    tab === "skills"
+      ? { icon: "Plug" as const, accessibilityLabel: "Show MCP", next: "mcp" as const }
+      : { icon: "Sparkles" as const, accessibilityLabel: "Show skills", next: "skills" as const };
 
   if (skillDetail) {
     return (
@@ -237,14 +241,14 @@ function UsagePopoverAgent(
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Open SKILL.md in panel"
+              hitSlop={8}
               style={styles.panelButton}
               onPress={() => {
                 openSkillInPanel(skillDetail);
                 close();
               }}
             >
-              <Icon name="ArrowUpRight" size={14} color={theme.colors.foregroundMuted} />
-              <Text style={styles.back}>Open in tab</Text>
+              <Icon name="ArrowUpRight" size={16} color={theme.colors.foregroundMuted} />
             </Pressable>
           ) : null}
         </View>
@@ -266,27 +270,24 @@ function UsagePopoverAgent(
 
   return (
     <View style={styles.root}>
-      {showTabs ? (
-        <View style={styles.tabRow}>
-          {(
-            [
-              ["skills", "Skills"],
-              ["mcp", "MCP"],
-            ] as const
-          ).map(([id, label]) => {
-            const active = tab === id;
-            return (
-              <Pressable
-                key={id}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
-                onPress={() => setTab(id)}
-                style={{ paddingVertical: 6 }}
-              >
-                <Text style={active ? styles.tabActive : styles.tab}>{label}</Text>
-              </Pressable>
-            );
-          })}
+      {tab && (skillItems.length > 0 || mcpItems.length > 0) ? (
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>{tab === "skills" ? "Skills" : "MCP"}</Text>
+          {showToggle ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={toggleAction.accessibilityLabel}
+              hitSlop={8}
+              onPress={() => setTab(toggleAction.next)}
+              style={styles.titleAction}
+            >
+              <Icon
+                name={toggleAction.icon}
+                size={16}
+                color={theme.colors.foregroundMuted}
+              />
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
 
