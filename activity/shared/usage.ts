@@ -242,6 +242,18 @@ export const usageAgentsRpc = defineRpc({
   }),
 });
 
+/** Unarchive via host `refreshAgent` (CLI: `paseo agent reload`). */
+export const usageAgentUnarchiveRpc = defineRpc({
+  name: "usage.agent.unarchive",
+  input: z.object({
+    agentId: z.string().min(1),
+  }),
+  output: z.object({
+    agentId: z.string(),
+    ok: z.literal(true),
+  }),
+});
+
 const PROVIDER_LABELS: Record<string, string> = {
   claude: "Claude",
   opencode: "OpenCode",

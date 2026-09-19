@@ -3,6 +3,7 @@
 - 状态：已实现
 - 日期：2026-09-19
 - 依赖：001（Command Center 入口）、022（移除 export 入口）
+- 后续：agent 项 Current Activity 由 [027](../027-agent-activity-title/) 改名为 Agent Activity
 
 ## 1. 目标
 

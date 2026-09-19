@@ -148,6 +148,19 @@ test("sqlite: upsertAgents keeps earliest createdAt and sets archivedAt", () => 
   assert.equal(agent?.archivedAt, "2026-09-20T00:00:00.000Z");
   assert.equal(agent?.title, "One renamed");
   assert.equal(store.selectAgents({ from: "2026-09-18T00:00:00.000Z" }).length, 1);
+  store.upsertAgents([
+    {
+      agentId: "a1",
+      workspaceId: "w1",
+      parentAgentId: null,
+      provider: "claude",
+      title: "One renamed",
+      createdAt: "2026-09-19T12:00:00.000Z",
+      archivedAt: null,
+      updatedAt: "2026-09-20T01:00:00.000Z",
+    },
+  ]);
+  assert.equal(store.getAgent("a1")?.archivedAt, null);
   store.close();
 });
 

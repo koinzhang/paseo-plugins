@@ -360,7 +360,7 @@ export function mergeAgentRow(previous: AgentRow, next: AgentRow): AgentRow {
     provider: next.provider || previous.provider,
     title: next.title ?? previous.title,
     createdAt: previous.createdAt <= next.createdAt ? previous.createdAt : next.createdAt,
-    archivedAt: next.archivedAt ?? previous.archivedAt,
+    archivedAt: next.archivedAt,
     updatedAt: next.updatedAt >= previous.updatedAt ? next.updatedAt : previous.updatedAt,
   };
 }
@@ -431,7 +431,7 @@ ON CONFLICT(agent_id) DO UPDATE SET
                       WHEN excluded.created_at < agents.created_at THEN excluded.created_at
                       ELSE agents.created_at
                     END,
-  archived_at     = COALESCE(excluded.archived_at, agents.archived_at),
+  archived_at     = excluded.archived_at,
   updated_at      = excluded.updated_at
 `;
 

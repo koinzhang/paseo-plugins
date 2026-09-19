@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { agentsFromToolCalls, agentRowFromHook } from "./agents.ts";
+import { agentsFromToolCalls, agentRowFromHook, agentRowFromSnapshot } from "./agents.ts";
 import type { ToolCallRow } from "./store.ts";
 
 function row(over: Partial<ToolCallRow> = {}): ToolCallRow {
@@ -63,5 +63,24 @@ describe("agentRowFromHook", () => {
     assert.equal(row.agentId, "x");
     assert.equal(row.title, "Hello");
     assert.equal(row.createdAt, "2026-09-18T00:00:00.000Z");
+  });
+});
+
+describe("agentRowFromSnapshot", () => {
+  it("passes through archivedAt", () => {
+    const active = agentRowFromSnapshot({
+      id: "a1",
+      provider: "claude",
+      createdAt: "2026-09-18T00:00:00.000Z",
+      archivedAt: null,
+    });
+    assert.equal(active.archivedAt, null);
+    const archived = agentRowFromSnapshot({
+      id: "a2",
+      provider: "claude",
+      createdAt: "2026-09-18T00:00:00.000Z",
+      archivedAt: "2026-09-19T00:00:00.000Z",
+    });
+    assert.equal(archived.archivedAt, "2026-09-19T00:00:00.000Z");
   });
 });

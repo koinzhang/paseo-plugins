@@ -66,7 +66,7 @@ Paseo 把所有 provider 的工具调用统一规范化为 timeline 的 `tool_ca
 - Then 在 composer 上方打开 **popover**（宽屏锚定浮层；compact 为底部 sheet），展示本 agent 的 Skills / MCP
   - 已知宿主缺陷：重挂时可能留下左上角幽灵层；不在插件侧绕行，见 [013](../013-pill-modal/)
 - And 每行行首带类型图标（skill = `Sparkles`，MCP = `Plug`）；无分区标题行，无 resync / export 按钮（完整操作仍在 panel / Command Center）
-- And Command Center「Current Activity」仍可打开 agent workspace panel（完整详情 / SKILL.md；命名见 [023](../023-command-center-titles/)）
+- And Command Center「Agent Activity」仍可打开 agent workspace panel（完整详情 / SKILL.md；命名见 [027](../027-agent-activity-title/)）
 
 ### US-3 查看 skill 使用情况（按 skill 名）
 作为用户，我想知道每个 skill 被调用的次数与置信档位。

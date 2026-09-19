@@ -16,6 +16,7 @@ import {
   isShellCall,
   usageActivityByDayRpc,
   usageAgentsRpc,
+  usageAgentUnarchiveRpc,
   usageByProviderRpc,
   usageExportRpc,
   usageListRpc,
@@ -37,6 +38,10 @@ import type { QueryFilter, ToolCallRow, UserMessageRow, UsageStore } from "./sto
 import { formatLocalDateTime } from "../shared/format.ts";
 import { agentRowFromSnapshot } from "./agents.ts";
 import { readFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
 
 type PaseoApi = PluginHandlerContext["paseo"];
 
@@ -233,6 +238,35 @@ export function createAgentsHandler(store: UsageStore) {
       to: input.to,
     });
     return { items: aggregateAgents(rows, agents, messages) };
+  };
+}
+
+/** Host Unarchive ≡ refreshAgent; CLI surface is `paseo agent reload`. */
+export function createUnarchiveAgentHandler(store: UsageStore) {
+  return async (
+    input: RpcInput<typeof usageAgentUnarchiveRpc>,
+  ): Promise<RpcOutput<typeof usageAgentUnarchiveRpc>> => {
+    try {
+      await execFileAsync("paseo", ["agent", "reload", input.agentId], {
+        timeout: 120_000,
+        maxBuffer: 1024 * 1024,
+      });
+    } catch (error) {
+      const err = error as { stderr?: string; message?: string };
+      const detail = (err.stderr?.trim() || err.message || String(error)).trim();
+      throw new Error(detail || `Failed to unarchive agent ${input.agentId}`);
+    }
+    const existing = store.getAgent(input.agentId);
+    if (existing) {
+      store.upsertAgents([
+        {
+          ...existing,
+          archivedAt: null,
+          updatedAt: new Date().toISOString(),
+        },
+      ]);
+    }
+    return { agentId: input.agentId, ok: true };
   };
 }
 

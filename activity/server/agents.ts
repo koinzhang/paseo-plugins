@@ -29,6 +29,7 @@ export function agentRowFromSnapshot(agent: {
   provider: string;
   title?: string | null;
   createdAt: string;
+  archivedAt?: string | null;
 }): AgentRow {
   const updatedAt = nowIso();
   return {
@@ -38,7 +39,7 @@ export function agentRowFromSnapshot(agent: {
     provider: agent.provider,
     title: agent.title ?? null,
     createdAt: agent.createdAt,
-    archivedAt: null,
+    archivedAt: agent.archivedAt ?? null,
     updatedAt,
   };
 }

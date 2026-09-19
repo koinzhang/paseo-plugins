@@ -45,7 +45,7 @@ export default function contribute(client: PluginClientContext) {
 
   client.addCommandCenterItem({
     id: "open-usage",
-    title: "Current Activity",
+    title: "Agent Activity",
     icon: "Activity",
     keywords: ["activity", "current", "agent", "tool", "usage", "shell", "skill", "mcp", "stats"],
     context: "agent",

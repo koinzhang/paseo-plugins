@@ -47,6 +47,8 @@
 | [023-command-center-titles](./023-command-center-titles/) | 已实现 | Command Center 项改名 All Activity / Current Activity |
 | [024-explorer-workspace-activity](./024-explorer-workspace-activity/) | 已实现 | Explorer workspace Activity 面板（per-agent 聚合） |
 | [025-explorer-panel-polish](./025-explorer-panel-polish/) | 已实现 | Explorer 面板：表头一行 / dense KPI / Active·Archived agent 筛选 |
+| [026-agent-archive-actions](./026-agent-archive-actions/) | 已实现 | Explorer Agents 行归档 / 反归档按钮 |
+| [027-agent-activity-title](./027-agent-activity-title/) | 已实现 | Command Center 项改名 Current Activity → Agent Activity |
 
 ## 约定
 

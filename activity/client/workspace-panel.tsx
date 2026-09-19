@@ -4,8 +4,8 @@ import {
   useRpc,
   useWorkspace,
 } from "@getpaseo/plugin/client";
-import { Icon } from "@getpaseo/plugin/client/react-native";
-import { useQuery } from "@tanstack/react-query";
+import { Icon, useToast } from "@getpaseo/plugin/client/react-native";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
@@ -22,6 +22,7 @@ import { ACTIVITY_LIST_LIMIT } from "../shared/insights.ts";
 import {
   providerLabel,
   type AgentUsageItem,
+  usageAgentUnarchiveRpc,
   usageAgentsRpc,
   usageMcpByToolRpc,
   usageSkillsByNameRpc,
@@ -308,6 +309,104 @@ function CountText({
   return <Text style={styles.countText}>{value}</Text>;
 }
 
+type AgentRowStyles = {
+  agentListRow: ViewStyle;
+  listMain: ViewStyle;
+  listLink: TextStyle;
+  listTitle: TextStyle;
+  listMeta: TextStyle;
+  titleAction: ViewStyle;
+};
+
+function AgentRow({
+  label,
+  archived,
+  canOpen,
+  meta,
+  busy,
+  actionDisabled,
+  theme,
+  styles,
+  onOpen,
+  onArchiveToggle,
+}: {
+  label: string;
+  archived: boolean;
+  canOpen: boolean;
+  meta: string | null;
+  busy: boolean;
+  actionDisabled: boolean;
+  theme: PluginWorkspacePanelProps["theme"];
+  styles: AgentRowStyles;
+  onOpen: () => void;
+  onArchiveToggle: () => void;
+}): ReactNode {
+  const [hovered, setHovered] = useState(false);
+  // Web: hover-reveal. Native has no hover — keep the action visible.
+  // Use mouseenter/leave on a View (not nested Pressable hover) so moving onto
+  // the title link or action button does not flicker hovered off.
+  const showAction = Platform.OS !== "web" || hovered || busy;
+  return (
+    <View
+      style={styles.agentListRow}
+      {...(Platform.OS === "web"
+        ? ({
+            onMouseEnter: () => setHovered(true),
+            onMouseLeave: () => setHovered(false),
+          } as object)
+        : null)}
+    >
+      <Icon
+        name={archived ? "BotOff" : "Bot"}
+        size={18}
+        color={theme.colors.foregroundMuted}
+      />
+      <View style={styles.listMain}>
+        {canOpen ? (
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel={`Open conversation ${label}`}
+            onPress={onOpen}
+          >
+            <Text style={styles.listLink} numberOfLines={1}>
+              {label}
+            </Text>
+          </Pressable>
+        ) : (
+          <Text style={styles.listTitle} numberOfLines={1}>
+            {label}
+          </Text>
+        )}
+        {meta ? (
+          <Text style={styles.listMeta} numberOfLines={1}>
+            {meta}
+          </Text>
+        ) : null}
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={archived ? `Unarchive ${label}` : `Archive ${label}`}
+        accessibilityState={{ disabled: actionDisabled }}
+        disabled={actionDisabled || !showAction}
+        hitSlop={8}
+        onPress={onArchiveToggle}
+        pointerEvents={showAction ? "auto" : "none"}
+        style={[styles.titleAction, { opacity: showAction ? 1 : 0 }]}
+      >
+        {busy ? (
+          <ActivityIndicator size="small" color={theme.colors.foregroundMuted} />
+        ) : (
+          <Icon
+            name={archived ? "ArchiveRestore" : "Archive"}
+            size={14}
+            color={theme.colors.foregroundMuted}
+          />
+        )}
+      </Pressable>
+    </View>
+  );
+}
+
 /** Workspace-scoped Activity for the Explorer (024). */
 export function WorkspaceActivityPanel({
   theme,
@@ -333,8 +432,11 @@ export function WorkspaceActivityPanel({
   const rootRef = useRef<View>(null);
   const triggerRef = useRef<View>(null);
   const [rankKind, setRankKind] = useState<RankKind>("skills");
+  const [busyAgentId, setBusyAgentId] = useState<string | null>(null);
   const padding = layout.compact ? 16 : 24;
   const locale = useAppLanguage();
+  const toast = useToast();
+  const queryClient = useQueryClient();
   const workspaceName = useWorkspace(workspaceId, (workspace) => workspace.title ?? workspace.name);
   const openAgent = navigation?.openAgent;
   const from = rangeFrom(range);
@@ -342,8 +444,11 @@ export function WorkspaceActivityPanel({
 
   const summaryRpc = useRpc(usageSummaryRpc);
   const agentsRpc = useRpc(usageAgentsRpc);
+  const unarchiveAgentRpc = useRpc(usageAgentUnarchiveRpc);
   const skillsRpc = useRpc(usageSkillsByNameRpc);
   const mcpRpc = useRpc(usageMcpByToolRpc);
+
+  const agentsQueryKey = ["activity", "workspace-agents", workspaceId, from ?? "all"] as const;
 
   const summary = useQuery({
     refetchInterval: 15_000,
@@ -355,7 +460,7 @@ export function WorkspaceActivityPanel({
   const agents = useQuery({
     refetchInterval: 15_000,
     retry: false,
-    queryKey: ["activity", "workspace-agents", workspaceId, from ?? "all"],
+    queryKey: agentsQueryKey,
     queryFn: () => agentsRpc({ workspaceId, ...window }),
   });
 
@@ -565,6 +670,12 @@ export function WorkspaceActivityPanel({
         alignItems: "center" as const,
         gap: 12,
         paddingVertical: 12,
+      },
+      agentListRow: {
+        flexDirection: "row" as const,
+        alignItems: "center" as const,
+        gap: 10,
+        paddingVertical: 6,
       },
       listMain: {
         flex: 1,
@@ -833,36 +944,77 @@ export function WorkspaceActivityPanel({
     }
   }
 
+  function patchAgentArchivedAt(agentId: string, archivedAt: string | null) {
+    queryClient.setQueryData<{ items: AgentUsageItem[] }>(agentsQueryKey, (prev) => {
+      if (!prev) return prev;
+      return {
+        items: prev.items.map((row) =>
+          row.agentId === agentId ? { ...row, archivedAt } : row,
+        ),
+      };
+    });
+  }
+
+  async function archiveAgent(item: AgentUsageItem) {
+    if (busyAgentId != null) return;
+    setBusyAgentId(item.agentId);
+    const previous = item.archivedAt;
+    patchAgentArchivedAt(item.agentId, new Date().toISOString());
+    try {
+      await paseo.agents.ref(item.agentId).archive();
+      await queryClient.invalidateQueries({ queryKey: agentsQueryKey });
+      await queryClient.invalidateQueries({
+        queryKey: ["activity", "workspace-agent-status", workspaceId],
+      });
+    } catch (error) {
+      patchAgentArchivedAt(item.agentId, previous);
+      toast.error(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusyAgentId(null);
+    }
+  }
+
+  async function unarchiveAgent(item: AgentUsageItem) {
+    if (busyAgentId != null) return;
+    setBusyAgentId(item.agentId);
+    const previous = item.archivedAt;
+    patchAgentArchivedAt(item.agentId, null);
+    try {
+      await unarchiveAgentRpc({ agentId: item.agentId });
+      await queryClient.invalidateQueries({ queryKey: agentsQueryKey });
+      await queryClient.invalidateQueries({
+        queryKey: ["activity", "workspace-agent-status", workspaceId],
+      });
+    } catch (error) {
+      patchAgentArchivedAt(item.agentId, previous);
+      toast.error(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusyAgentId(null);
+    }
+  }
+
   function renderAgentRow(item: AgentUsageItem): ReactNode {
     const label = item.title ?? item.agentId;
-    const canOpen = openAgent != null && item.archivedAt == null;
+    const archived = item.archivedAt != null;
+    const canOpen = openAgent != null && !archived;
     const meta = formatAgentMeta(item, agentShowFields, statuses.data, locale);
+    const busy = busyAgentId === item.agentId;
     return (
-      <View key={item.agentId} style={styles.listRow}>
-        <Icon name="Bot" size={18} color={theme.colors.foregroundMuted} />
-        <View style={styles.listMain}>
-          {canOpen ? (
-            <Pressable
-              accessibilityRole="link"
-              accessibilityLabel={`Open conversation ${label}`}
-              onPress={() => openAgent?.({ agentId: item.agentId })}
-            >
-              <Text style={styles.listLink} numberOfLines={1}>
-                {label}
-              </Text>
-            </Pressable>
-          ) : (
-            <Text style={styles.listTitle} numberOfLines={1}>
-              {label}
-            </Text>
-          )}
-          {meta ? (
-            <Text style={styles.listMeta} numberOfLines={1}>
-              {meta}
-            </Text>
-          ) : null}
-        </View>
-      </View>
+      <AgentRow
+        key={item.agentId}
+        label={label}
+        archived={archived}
+        canOpen={canOpen}
+        meta={meta}
+        busy={busy}
+        actionDisabled={busy || busyAgentId != null}
+        theme={theme}
+        styles={styles}
+        onOpen={() => openAgent?.({ agentId: item.agentId })}
+        onArchiveToggle={() => {
+          void (archived ? unarchiveAgent(item) : archiveAgent(item));
+        }}
+      />
     );
   }
 

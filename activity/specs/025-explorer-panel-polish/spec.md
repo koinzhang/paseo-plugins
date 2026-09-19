@@ -18,7 +18,7 @@
 | G8 | Sort=Status 时的排序数据来自客户端 `paseo.agents.list`（`includeArchived`，15s 轮询）：rank = attention（`requiresAttention` / `permission` / `error`）0 → running 1 → idle 2 → initializing 3 → closed/unknown 4；同级按 Updated 降序 |
 | G9 | workspace 级 Command Center「Workspace Activity」→ `openPanel("workspace-activity", { location: "explorer" })`；Explorer 面板本身由宿主管理（无法默认展示，需手动添加一次），此项提供 ⌘K 快捷打开 |
 | G10 | **Status**（多选）：Active（默认开）/ Archived（默认关）。控制是否列出未归档 / 归档 agent |
-| G11 | **Lifecycle**（多选，默认全选）：Idle / Running / Error / Closed。只作用于 Active（未归档）agent；`closed` ≠ 归档。归档行不提供打开会话链接 |
+| G11 | **Lifecycle**（多选，默认全选）：Idle / Running / Error / Closed。只作用于 Active（未归档）agent；`closed` ≠ 归档。归档行不提供打开会话链接；行首图标用 `BotOff`（机器+斜线），未归档仍用 `Bot` |
 | G12 | 点 Agents 筛选图标或 Skills/MCP 切换时 Explorer 不晃动：面板 ScrollView **始终隐藏滚动条**（`showsVerticalScrollIndicator={false}` + web `scrollbarWidth: none`），避免槽宽显隐；内容区 flex/`overflow` 约束 + 菜单 fixed；排行区 `minHeight` |
 
 ## 2. 非目标

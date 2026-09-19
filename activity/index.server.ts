@@ -11,6 +11,7 @@ import {
   createReadSkillHandler,
   createSkillsByNameHandler,
   createSummaryHandler,
+  createUnarchiveAgentHandler,
 } from "./server/handlers.ts";
 import { agentRowFromHook } from "./server/agents.ts";
 import { ingestTimeline, ingestUserMessages } from "./server/ingest.ts";
@@ -19,6 +20,7 @@ import { createUsageStore } from "./server/store.ts";
 import {
   usageActivityByDayRpc,
   usageAgentsRpc,
+  usageAgentUnarchiveRpc,
   usageByProviderRpc,
   usageExportRpc,
   usageListRpc,
@@ -57,6 +59,7 @@ export default function contribute(server: PluginServerContext) {
     void background.request(context.paseo);
     return createAgentsHandler(store)(input);
   });
+  server.handle(usageAgentUnarchiveRpc, createUnarchiveAgentHandler(store));
   server.handle(usageActivityByDayRpc, (input, context) => {
     void background.request(context.paseo);
     return createActivityByDayHandler(store)(input);
