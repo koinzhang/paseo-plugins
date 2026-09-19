@@ -11,27 +11,21 @@ Paseo 插件 monorepo。所有插件独立目录、独立 `paseo-plugin.json`，
 
 | 插件 | ID | 说明 |
 |---|---|---|
-| [Activity](./activity/) | `activity` | 本地统计工具调用（skill / MCP / shell / 文件读写）、agent 创建、用户发送消息与 model 使用 |
+| [Activity](./activity/) | `activity` | 本地用量分析 **兼** workspace agents 运营（Explorer 列表 / 归档） |
 
 ## Activity
 
-自动采集所有 agent 的 Paseo timeline 并落本地 SQLite，回答「我 / 各 provider 到底怎么在用」：
+三层 Scope —— 不只是统计面板：
 
-| 维度 | 计量 |
+| Scope | 角色 |
 |---|---|
-| Tools | skill / MCP / shell / file 调用次数；skill 分 exact / inferred / low 三档置信度 |
-| Agents | 凡创建即计入的 agent 注册表（含归档元数据） |
-| Messages | 用户发送的对话次数 |
-| Models | 发送时 model（按消息加权） |
+| **Global**（侧边栏） | 跨 workspace 习惯：热力图、provider、Insights、Most used skills / MCP / models |
+| **Workspace**（Explorer Activity） | 当前 workspace 的 **竖向 Agents 运营页**：列表 / 搜索 / 排序 / 筛选 / 归档 + KPI |
+| **Agent**（面板 + pill） | 当前会话的工具明细与 skill / MCP 概况 |
 
-UI 入口：
+计量维度（本地 SQLite）：tools（skill / MCP / shell / file）、agent 创建、用户消息、model（按消息加权）。详见 [activity/README.md](./activity/README.md) · [架构](./activity/docs/architecture.md)。
 
-- **Composer pill** — 当前 agent 的 skill / MCP 概况，无数据时隐藏
-- **Agent workspace panel** — 本 agent 详情（KPI / Skills / MCP / SKILL.md 阅读器）
-- **侧边栏 Activity** — 全局视图，按 provider 分区；热力图、KPI、Insights、Most used
-- **Command Center** — 打开面板、导出 markdown 使用报告
-
-数据目录 `~/.paseo/plugin-data/activity/`（SQLite `usage.db`）。Paseo timeline / `agents.list` 仅作采集与回填源，查询路径只读本地库。
+数据目录 `~/.paseo/plugin-data/activity/`（`usage.db`）。timeline / `agents.list` 作采集与实时状态源；查询只读本地库。
 
 ## 安装
 
@@ -70,12 +64,13 @@ npm test
 
 ```
 activity/
-  index.client.tsx        # 客户端入口：surface / sidebar / panel / pill / Command Center
-  index.server.ts         # 服务端入口：RPC handlers、事件订阅、后台补扫
-  client/                 # pill、panel、全局 surface、查询与展示
-  server/                 # 采集、SQLite 存储、分类、后台同步
-  shared/                 # RPC 契约（zod）、分类与格式化
-  specs/                  # 001–015 编号 spec / plan / tasks / contracts
+  index.client.tsx        # 客户端：surface / sidebar / Explorer + agent panel / pill / Command Center
+  index.server.ts         # 服务端：RPC、生命周期 hook、后台补扫
+  client/                 # 全局 surface、agent panel、pill、workspace/（Explorer）
+  server/                 # 采集、SQLite、分类、后台同步
+  shared/                 # RPC 契约（zod）、聚合辅助
+  docs/architecture.md    # Global / Workspace / Agent 分层
+  specs/                  # 编号 spec / plan / tasks / contracts
 ```
 
 ## 许可证

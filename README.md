@@ -11,27 +11,21 @@ A monorepo for Paseo plugins. Each plugin lives in its own directory with its ow
 
 | Plugin | ID | Description |
 |---|---|---|
-| [Activity](./activity/) | `activity` | Local analytics for tool calls (skills / MCP / shell / file reads & writes), agent creation, user messages, and model usage |
+| [Activity](./activity/) | `activity` | Local usage analytics **and** workspace agent management (Explorer fleet list + archive) |
 
 ## Activity
 
-Activity ingests every agent's Paseo timeline into a local SQLite database and answers "how am I / each provider actually using Paseo":
+Three scopes — not stats-only:
 
-| Dimension | What is counted |
+| Scope | Role |
 |---|---|
-| Tools | Skill / MCP / shell / file calls; skills classified into exact / inferred / low confidence tiers |
-| Agents | Every created agent (registry with archive metadata) |
-| Messages | User-sent messages |
-| Models | Model at send time (weighted by messages) |
+| **Global** (sidebar) | Habits across workspaces: heatmap, providers, insights, most-used skills / MCP / models |
+| **Workspace** (Explorer Activity) | Vertical agent ops for the current workspace: list / search / sort / filter / archive + KPIs |
+| **Agent** (panel + pill) | Current session tool detail and skill / MCP summary |
 
-Where it shows up:
+Counted dimensions (local SQLite): tools (skill / MCP / shell / file), agent creations, user messages, models (messages-weighted). Details: [activity/README.md](./activity/README.md) · [architecture](./activity/docs/architecture.md).
 
-- **Composer pill** — current agent's skill / MCP summary, hidden when there is no data
-- **Agent workspace panel** — per-agent detail (KPI / Skills / MCP / SKILL.md reader)
-- **Activity sidebar** — global view grouped by provider; heatmap, KPIs, insights, most used
-- **Command Center** — open panels, export a markdown usage report
-
-Data lives in `~/.paseo/plugin-data/activity/` (SQLite `usage.db`). The Paseo timeline / `agents.list` are ingestion and backfill sources only; queries read the local database.
+Data lives in `~/.paseo/plugin-data/activity/` (`usage.db`). Timeline / `agents.list` are ingestion and live-status sources; queries read the local database.
 
 ## Install
 
@@ -70,12 +64,13 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full contribution workflow (inc
 
 ```
 activity/
-  index.client.tsx        # client entry: surfaces / sidebar / panels / pills / Command Center
-  index.server.ts         # server entry: RPC handlers, event subscriptions, background backfill
-  client/                 # pill, panel, global surface, queries and presentation
-  server/                 # ingestion, SQLite store, classification, background sync
-  shared/                 # RPC contracts (zod), classification and formatting
-  specs/                  # numbered specs 001–015 (spec / plan / tasks / contracts)
+  index.client.tsx        # client: surfaces / sidebar / Explorer + agent panels / pills / Command Center
+  index.server.ts         # server: RPC, lifecycle hooks, background backfill
+  client/                 # global surface, agent panel, pill, workspace/ (Explorer)
+  server/                 # ingest, SQLite store, classification, background sync
+  shared/                 # RPC contracts (zod), aggregation helpers
+  docs/architecture.md    # Global / Workspace / Agent scope map
+  specs/                  # numbered specs (spec / plan / tasks / contracts)
 ```
 
 ## License

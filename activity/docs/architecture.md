@@ -20,8 +20,10 @@ Agent Activity      → 单 agent · 工具明细（Skills / MCP）· Pill 快�
 分工原则：
 
 - Global = 习惯与 provider 对比（热力图、Insights、Models）
-- Workspace = 本仓 agents 运营（列表、归档、显示偏好）；**不做**热力图 / provider·model 拆分 / 时间窗（024 / 027）
+- Workspace = **竖向 Agents 运营页**（列表、搜索、筛选、归档、显示偏好）+ 本仓 KPI；**不做**热力图 / provider·model 拆分 / 时间窗（024 / 027）
 - Agent = 当前会话工具明细 + pill；Messages 计入 KPI（031），Models 仍仅全局（015）
+
+产品定位已超出「纯统计」：Workspace 面把 activity 数据接到 agent 管理上。对外说明见 [`README.md`](../README.md)。
 
 ## 2. 技术分层
 

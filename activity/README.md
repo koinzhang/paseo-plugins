@@ -1,22 +1,35 @@
 # Activity
 
-Local usage analytics for Paseo: tool calls, agents, messages, and model usage.
+Activity for Paseo: local usage analytics **and** workspace agent management.
 
-Activity ingests every agent's Paseo timeline into a local SQLite database and answers "how am I / each provider actually using Paseo". Queries read the local database; the Paseo timeline and `agents.list` are ingestion and backfill sources only.
+It still answers “how am I using Paseo” (tools, messages, models, habits). With the Explorer **Workspace Activity** panel it also becomes a **vertical ops surface** for the agents in the current workspace — sort, filter, search, open, archive — with KPIs and top skills / MCP alongside the list.
+
+| Scope | Role |
+|---|---|
+| **Global** | Cross-workspace habits: heatmap, provider filter, insights, most-used skills / MCP / models |
+| **Workspace** | Per-workspace agent fleet: ranked list + display prefs + archive; shell / file / messages KPIs |
+| **Agent** | Current session: tool KPIs, Skills / MCP detail, SKILL.md reader, composer pill |
+
+Architecture notes: [docs/architecture.md](./docs/architecture.md).
+
+## What is counted
+
+Ingests every agent's Paseo timeline into a local SQLite database. Queries read that database; the timeline and `agents.list` are ingestion / backfill / live-status sources only.
 
 | Dimension | What is counted |
 |---|---|
 | Tools | Skill / MCP / shell / file calls; skills classified into exact / inferred / low confidence tiers |
 | Agents | Every created agent (registry with archive metadata) |
 | Messages | User-sent messages |
-| Models | Model at send time (weighted by messages) |
+| Models | Model at send time (weighted by messages; global view) |
 
 ## Where it shows up
 
-- **Composer pill** — current agent's skill / MCP summary, hidden when there is no data
-- **Agent workspace panel** — per-agent detail (KPI / Skills / MCP / SKILL.md reader)
-- **Activity sidebar** — global view grouped by provider; heatmap, KPIs, insights, most used
-- **Command Center** — open panels, export a markdown usage report
+- **Sidebar Activity** — global view by provider (heatmap, KPIs, insights, most used)
+- **Explorer → Activity** — workspace agents as a management list (search / sort / group / status / lifecycle / archive) plus workspace KPIs and top skills / MCP
+- **Agent workspace panel** — per-agent tool detail (KPI including messages / Skills / MCP / SKILL.md)
+- **Composer pill** — current agent's skill / MCP summary; hidden when empty
+- **Command Center** — Activity · Workspace Activity · Agent Activity
 
 ## Data
 
@@ -48,9 +61,10 @@ paseo plugin ls
 
 ## Limitations
 
-- Analytics are local to each daemon: every machine keeps its own database, and there is no cross-host aggregation.
+- Analytics and the agent registry are local to each daemon: every machine keeps its own database, and there is no cross-host aggregation.
 - Numbers are reconstructed from the Paseo timeline; items that do not report a model or skill cannot be attributed for that dimension.
 - Skill classification is heuristic (exact / inferred / low confidence); check the tier before trusting a count.
+- Workspace Activity focuses on agent operations for the current workspace; heatmap / provider / model breakdowns stay on the global sidebar.
 
 ## Development
 

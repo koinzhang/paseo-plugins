@@ -1,8 +1,9 @@
 # paseo-plugins
 
-Paseo 插件仓库。当前包含插件 **Activity**（`activity/`）：统计 **工具使用**、**agent 创建**、**用户发送次数**，以及发送时的 **model**（按消息加权）。
+Paseo 插件仓库。当前包含插件 **Activity**（`activity/`）：本地用量分析 **兼** workspace agents 运营——Global（习惯 / provider）、Workspace（Explorer 竖向 Agents 管理）、Agent（会话工具明细）。
 
 > 插件 ID / 目录名 / 数据目录：**`activity`**（原 `tool-usage`，见 `activity/specs/007-rename-activity/` Phase 2）。
+> 架构总览：[`activity/docs/architecture.md`](./activity/docs/architecture.md) · 产品 README：[`activity/README.md`](./activity/README.md)
 
 ## Spec 驱动开发
 
