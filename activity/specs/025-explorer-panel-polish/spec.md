@@ -10,7 +10,7 @@
 |---|---|
 | G1 | 面板内不再显示 Activity 页标题；左侧只显示分支/workspace 名（字体与时间 chips 一致：14 / 500 / muted），与右侧时间 chips 同一行、底部（基线）对齐；窄宽度允许换行；chips 与全局 Activity 页 TextTabs 同款：无下划线，仅颜色/字重区分选中 |
 | G2 | KPI 栏用 dense 尺寸（`UsageStats` 新增可选 `dense`）：更小的数值 / 标签 / 内边距；指标只保留 **Shell calls / File reads / File writes / Messages**（不含 skill / MCP / agents） |
-| G3 | Agents 区默认按 **创建时间倒序**；标题右侧设置图标展开**悬浮菜单卡片**（absolute 定位于图标下方，不把列表顶下去；点卡片外关闭；再点图标收起并回到 root），视觉对齐宿主侧边栏 `SidebarDisplayPreferencesMenu`（`MenuSurface` / `MenuItem`）：232 宽、8 圆角、`border` 描边、md 阴影、行 inset hover chip（4/8/6）、14/18 字号、muted 值 + 14 chevron；子页用 sheet 式返回头（面板内无法做 flyout）；行样式为 label 左 + 当前值 + `ChevronRight` 右，可进子页选择并返回 |
+| G3 | Agents 区默认按 **创建时间倒序**；标题右侧设置图标展开**悬浮菜单**（absolute；点卡片外关闭）；视觉与交互对齐宿主侧边栏 `SidebarDisplayPreferencesMenu`：一级 `MenuSurface` 常驻，点/悬停行打开**左侧二级 flyout**（overlap 5）；232 宽、8 圆角、`border`、md 阴影、行 inset hover chip；选中后关闭整菜单 |
 | G4 | Skills / MCP 合并为一个排行区：默认 **Skills**，点标题右侧图标切到 **MCP**（同全局 Activity 的 rank 图标切换；标题保持 Skills / MCP，不用 "Most used" 前缀），不再上下堆叠 |
 | G5 | **Sort**：Created（默认，创建时间倒序）/ Updated（更新时间倒序）/ Name（字典序）/ Messages（消息数倒序）/ Status（值得关注的状态置顶） |
 | G6 | **Group**：None（默认）/ Provider（按 provider 分组，组标题为 providerLabel） |
@@ -33,7 +33,7 @@
 - [ ] 无 Activity 页标题；分支名与 chips 同字体、同一行对齐；KPI 更紧凑且仅 Shell / File reads / File writes / Messages（实现完成，待真机视觉验收）
 - [ ] 默认只列 Active；切到 Archived 列归档 agent；归档行不可点开（实现完成，待真机验收）
 - [ ] 默认显示 Skills；点标题右侧图标切到 MCP（实现完成，待真机验收）
-- [ ] 设置菜单：点图标在标题下方展开**悬浮**卡片（不挤压 Agents 列表；点卡片外 / 再点图标收起），Sort / Group / Show 可切换（子页选中后返回 root）（实现完成，待真机验收）
+- [ ] 设置菜单：点图标展开一级悬浮卡片；点/悬停 Sort / Group / Show 打开**二级 flyout**；选中选项后关闭整菜单；点卡片外 / 再点图标收起（实现完成，待真机验收）
 - [ ] Sort 支持 Created / Updated / Name / Messages / Status；Status 下 attention（permission / error / running）置顶（实现完成，待真机验收）
 - [ ] Command Center「Workspace Activity」可在 Explorer 打开该面板（实现完成，待真机验收）
 - [x] `npm test` / typecheck / reload

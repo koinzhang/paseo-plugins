@@ -32,9 +32,13 @@ import { UsageStats } from "./usage-stats.tsx";
 type AgentSort = "created" | "updated" | "name" | "messages" | "status";
 type AgentGroup = "none" | "provider";
 type AgentShow = "active" | "archived";
-type MenuPage = "root" | "sort" | "group" | "show";
+type MenuFlyout = "sort" | "group" | "show";
 
 type AgentStatusInfo = { rank: number; updatedAt: string | null };
+
+/** Host MenuFlyout overlap between root surface and submenu (`SUBMENU_OVERLAP`). */
+const MENU_SUBMENU_OVERLAP = 5;
+const MENU_WIDTH = 232;
 
 const SORT_OPTIONS: ReadonlyArray<{ id: AgentSort; label: string }> = [
   { id: "created", label: "Created" },
@@ -81,46 +85,102 @@ function optionLabel<T extends string>(
   return options.find((option) => option.id === id)?.label ?? id;
 }
 
-function MenuRow({
+type MenuStyles = {
+  menuPage: ViewStyle;
+  menuRow: ViewStyle;
+  menuRowHighlighted: ViewStyle;
+  menuLabel: TextStyle;
+  menuValue: TextStyle;
+  menuTrailing: ViewStyle;
+  menuOption: ViewStyle;
+  menuOptionLabel: TextStyle;
+  menuSurface: ViewStyle;
+  menuRootWrap: ViewStyle;
+  menuFlyout: ViewStyle;
+};
+
+function MenuSubTrigger({
   label,
   value,
-  onPress,
+  active,
+  onOpen,
   styles,
   chevronColor,
 }: {
   label: string;
   value?: string;
-  onPress: () => void;
-  styles: {
-    menuRow: ViewStyle;
-    menuRowHighlighted: ViewStyle;
-    menuLabel: TextStyle;
-    menuValue: TextStyle;
-    menuTrailing: ViewStyle;
-  };
+  active: boolean;
+  onOpen: () => void;
+  styles: MenuStyles;
   chevronColor: string;
 }): ReactNode {
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
-        styles.menuRow,
-        pressed || hovered ? styles.menuRowHighlighted : null,
-      ]}
+    <View
+      // Web: open flyout on hover like host MenuSubTrigger.
+      {...({ onPointerEnter: onOpen } as object)}
     >
-      <Text style={styles.menuLabel} numberOfLines={1}>
-        {label}
-      </Text>
-      <View style={styles.menuTrailing}>
-        {value ? (
-          <Text style={styles.menuValue} numberOfLines={1}>
-            {value}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: active }}
+        onPress={onOpen}
+        style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+          styles.menuRow,
+          active || pressed || hovered ? styles.menuRowHighlighted : null,
+        ]}
+      >
+        <Text style={styles.menuLabel} numberOfLines={1}>
+          {label}
+        </Text>
+        <View style={styles.menuTrailing}>
+          {value ? (
+            <Text style={styles.menuValue} numberOfLines={1}>
+              {value}
+            </Text>
+          ) : null}
+          <Icon name="ChevronRight" size={14} color={chevronColor} />
+        </View>
+      </Pressable>
+    </View>
+  );
+}
+
+function MenuOptionList({
+  options,
+  selectedId,
+  onSelect,
+  styles,
+  checkColor,
+}: {
+  options: ReadonlyArray<{ id: string; label: string }>;
+  selectedId: string;
+  onSelect: (id: string) => void;
+  styles: MenuStyles;
+  checkColor: string;
+}): ReactNode {
+  return (
+    <View style={styles.menuPage}>
+      {options.map((option) => (
+        <Pressable
+          key={option.id}
+          accessibilityRole="button"
+          accessibilityState={{ selected: selectedId === option.id }}
+          onPress={() => onSelect(option.id)}
+          style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+            styles.menuOption,
+            pressed || hovered ? styles.menuRowHighlighted : null,
+          ]}
+        >
+          <Text style={styles.menuOptionLabel} numberOfLines={1}>
+            {option.label}
           </Text>
-        ) : null}
-        <Icon name="ChevronRight" size={14} color={chevronColor} />
-      </View>
-    </Pressable>
+          {selectedId === option.id ? (
+            <View style={styles.menuTrailing}>
+              <Icon name="Check" size={16} color={checkColor} />
+            </View>
+          ) : null}
+        </Pressable>
+      ))}
+    </View>
   );
 }
 
@@ -158,7 +218,7 @@ export function WorkspaceActivityPanel({
   const [agentGroup, setAgentGroup] = useState<AgentGroup>("none");
   const [agentShow, setAgentShow] = useState<AgentShow>("active");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [menuPage, setMenuPage] = useState<MenuPage>("root");
+  const [menuFlyout, setMenuFlyout] = useState<MenuFlyout | null>(null);
   const [rankKind, setRankKind] = useState<RankKind>("skills");
   const padding = layout.compact ? 16 : 24;
   const workspaceName = useWorkspace(workspaceId, (workspace) => workspace.title ?? workspace.name);
@@ -447,27 +507,6 @@ export function WorkspaceActivityPanel({
         marginLeft: "auto" as const,
         flexShrink: 0,
       },
-      // Compact in-panel stand-in for MenuSheetHeader (desktop uses flyouts).
-      menuBackHeader: {
-        flexDirection: "row" as const,
-        alignItems: "center" as const,
-        gap: 8,
-        paddingHorizontal: 12,
-        paddingTop: 4,
-        paddingBottom: 12,
-      },
-      menuBackButton: {
-        width: 24,
-        height: 24,
-        alignItems: "center" as const,
-        justifyContent: "center" as const,
-      },
-      menuBackTitle: {
-        color: theme.colors.foreground,
-        fontSize: 14,
-        fontWeight: "500" as const,
-        flexShrink: 1,
-      },
       menuOption: {
         flexDirection: "row" as const,
         alignItems: "center" as const,
@@ -491,10 +530,12 @@ export function WorkspaceActivityPanel({
       agentsSection: {
         gap: 12,
         position: "relative" as const,
+        overflow: "visible" as const,
       },
       agentsHeaderWrap: {
         position: "relative" as const,
         zIndex: 20,
+        overflow: "visible" as const,
       },
       menuBackdrop: {
         position: "absolute" as const,
@@ -505,39 +546,67 @@ export function WorkspaceActivityPanel({
         zIndex: 10,
       },
       // Matches host MenuSurface / FloatingSurface chrome (sidebar display menu).
-      menuCard: {
-        position: "absolute" as const,
-        top: "100%" as const,
-        right: 0,
-        marginTop: 4,
-        width: 232,
-        maxWidth: "100%" as const,
-        zIndex: 20,
+      menuSurface: {
+        width: MENU_WIDTH,
         borderRadius: 8,
         borderWidth: 1,
         borderColor: theme.colors.border,
         backgroundColor: theme.colors.surface1,
-        overflow: "hidden" as const,
         shadowColor: "rgba(0, 0, 0, 0.04)",
         shadowOffset: { width: 0, height: 4 },
         shadowRadius: 16,
         elevation: 4,
       },
+      menuRootWrap: {
+        position: "absolute" as const,
+        top: "100%" as const,
+        right: 0,
+        marginTop: 4,
+        zIndex: 20,
+        overflow: "visible" as const,
+      },
+      // Sibling flyout to the left of the root (menu is end-aligned; host opens right into content).
+      menuFlyout: {
+        position: "absolute" as const,
+        right: MENU_WIDTH - MENU_SUBMENU_OVERLAP,
+        width: MENU_WIDTH,
+        zIndex: 21,
+      },
     }),
     [theme, layout.compact, padding],
   );
 
-  const menuTitle = menuPage === "sort" ? "Sort" : menuPage === "group" ? "Group" : "Show";
-  const menuOptions: ReadonlyArray<{ id: string; label: string }> =
-    menuPage === "sort" ? SORT_OPTIONS : menuPage === "group" ? GROUP_OPTIONS : SHOW_OPTIONS;
-  const menuValue: string =
-    menuPage === "sort" ? agentSort : menuPage === "group" ? agentGroup : agentShow;
+  const rowHeight = layout.compact ? 40 : 28;
+  const flyoutTop = menuFlyout
+    ? 4 + ({ sort: 0, group: 1, show: 2 }[menuFlyout] * rowHeight)
+    : 0;
+  const flyoutOptions: ReadonlyArray<{ id: string; label: string }> =
+    menuFlyout === "sort"
+      ? SORT_OPTIONS
+      : menuFlyout === "group"
+        ? GROUP_OPTIONS
+        : menuFlyout === "show"
+          ? SHOW_OPTIONS
+          : [];
+  const flyoutValue: string =
+    menuFlyout === "sort"
+      ? agentSort
+      : menuFlyout === "group"
+        ? agentGroup
+        : menuFlyout === "show"
+          ? agentShow
+          : "";
+
+  function closeMenu() {
+    setMenuOpen(false);
+    setMenuFlyout(null);
+  }
 
   function selectMenuOption(id: string) {
-    if (menuPage === "sort") setAgentSort(id as AgentSort);
-    else if (menuPage === "group") setAgentGroup(id as AgentGroup);
-    else if (menuPage === "show") setAgentShow(id as AgentShow);
-    setMenuPage("root");
+    if (menuFlyout === "sort") setAgentSort(id as AgentSort);
+    else if (menuFlyout === "group") setAgentGroup(id as AgentGroup);
+    else if (menuFlyout === "show") setAgentShow(id as AgentShow);
+    closeMenu();
   }
 
   function renderAgentRow(item: AgentUsageItem): ReactNode {
@@ -627,8 +696,11 @@ export function WorkspaceActivityPanel({
                 accessibilityState={{ expanded: menuOpen }}
                 hitSlop={8}
                 onPress={() => {
-                  if (menuOpen) setMenuPage("root");
-                  setMenuOpen(!menuOpen);
+                  if (menuOpen) closeMenu();
+                  else {
+                    setMenuFlyout(null);
+                    setMenuOpen(true);
+                  }
                 }}
                 style={styles.titleAction}
               >
@@ -636,72 +708,49 @@ export function WorkspaceActivityPanel({
               </Pressable>
             </View>
             {menuOpen ? (
-              <View style={styles.menuCard}>
-                {menuPage === "root" ? (
+              <View style={styles.menuRootWrap}>
+                <View style={styles.menuSurface}>
                   <View style={styles.menuPage}>
-                    <MenuRow
+                    <MenuSubTrigger
                       label="Sort"
                       value={optionLabel(SORT_OPTIONS, agentSort)}
-                      onPress={() => setMenuPage("sort")}
+                      active={menuFlyout === "sort"}
+                      onOpen={() => setMenuFlyout("sort")}
                       styles={styles}
                       chevronColor={theme.colors.foregroundMuted}
                     />
-                    <MenuRow
+                    <MenuSubTrigger
                       label="Group"
                       value={optionLabel(GROUP_OPTIONS, agentGroup)}
-                      onPress={() => setMenuPage("group")}
+                      active={menuFlyout === "group"}
+                      onOpen={() => setMenuFlyout("group")}
                       styles={styles}
                       chevronColor={theme.colors.foregroundMuted}
                     />
-                    <MenuRow
+                    <MenuSubTrigger
                       label="Show"
                       value={optionLabel(SHOW_OPTIONS, agentShow)}
-                      onPress={() => setMenuPage("show")}
+                      active={menuFlyout === "show"}
+                      onOpen={() => setMenuFlyout("show")}
                       styles={styles}
                       chevronColor={theme.colors.foregroundMuted}
                     />
                   </View>
-                ) : (
-                  <View>
-                    <View style={styles.menuBackHeader}>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="Back"
-                        hitSlop={8}
-                        onPress={() => setMenuPage("root")}
-                        style={styles.menuBackButton}
-                      >
-                        <Icon name="ChevronLeft" size={18} color={theme.colors.foregroundMuted} />
-                      </Pressable>
-                      <Text style={styles.menuBackTitle} numberOfLines={1}>
-                        {menuTitle}
-                      </Text>
-                    </View>
-                    <View style={styles.menuPage}>
-                      {menuOptions.map((option) => (
-                        <Pressable
-                          key={option.id}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected: menuValue === option.id }}
-                          onPress={() => selectMenuOption(option.id)}
-                          style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
-                            styles.menuOption,
-                            pressed || hovered ? styles.menuRowHighlighted : null,
-                          ]}
-                        >
-                          <Text style={styles.menuOptionLabel} numberOfLines={1}>
-                            {option.label}
-                          </Text>
-                          {menuValue === option.id ? (
-                            <View style={styles.menuTrailing}>
-                              <Icon name="Check" size={16} color={theme.colors.foregroundMuted} />
-                            </View>
-                          ) : null}
-                        </Pressable>
-                      ))}
-                    </View>
+                </View>
+                {menuFlyout ? (
+                  <View
+                    style={[styles.menuSurface, styles.menuFlyout, { top: flyoutTop }]}
+                    {...({ onPointerEnter: () => setMenuFlyout(menuFlyout) } as object)}
+                  >
+                    <MenuOptionList
+                      options={flyoutOptions}
+                      selectedId={flyoutValue}
+                      onSelect={selectMenuOption}
+                      styles={styles}
+                      checkColor={theme.colors.foregroundMuted}
+                    />
                   </View>
-                )}
+                ) : null}
               </View>
             ) : null}
           </View>
@@ -709,10 +758,7 @@ export function WorkspaceActivityPanel({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Close agent display options"
-              onPress={() => {
-                setMenuOpen(false);
-                setMenuPage("root");
-              }}
+              onPress={closeMenu}
               style={styles.menuBackdrop}
             />
           ) : null}
