@@ -9,7 +9,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Dimensions,
+  Easing,
   Platform,
   Pressable,
   ScrollView,
@@ -54,6 +56,10 @@ type AgentStatusInfo = {
 
 type MenuOption = { id: string; label: string; icon: string };
 
+/** Agents header row / search pill height — keep fixed to avoid layout jump. */
+const AGENT_HEADER_HEIGHT = 28;
+const SEARCH_ANIM_MS = 220;
+const SEARCH_TITLE_GAP = 8;
 /** Host MenuFlyout overlap between root surface and submenu (`SUBMENU_OVERLAP`). */
 const MENU_SUBMENU_OVERLAP = 5;
 const MENU_WIDTH = 232;
@@ -440,6 +446,8 @@ export function WorkspaceActivityPanel({
   const [menuAnchor, setMenuAnchor] = useState<{ top: number; right: number } | null>(null);
   const [agentSearchOpen, setAgentSearchOpen] = useState(false);
   const [agentSearchQuery, setAgentSearchQuery] = useState("");
+  const [searchSlotWidth, setSearchSlotWidth] = useState(0);
+  const searchProgress = useRef(new Animated.Value(0)).current;
   const rootRef = useRef<View>(null);
   const triggerRef = useRef<View>(null);
   const searchInputRef = useRef<{ focus?: () => void } | null>(null);
@@ -452,19 +460,41 @@ export function WorkspaceActivityPanel({
   const openAgent = navigation?.openAgent;
 
   useEffect(() => {
+    searchProgress.stopAnimation();
+    searchProgress.setValue(0);
     setAgentSearchOpen(false);
     setAgentSearchQuery("");
-  }, [workspaceId]);
+  }, [workspaceId, searchProgress]);
 
   useEffect(() => {
     if (!agentSearchOpen) return;
-    const id = setTimeout(() => searchInputRef.current?.focus?.(), 0);
+    const id = setTimeout(() => searchInputRef.current?.focus?.(), SEARCH_ANIM_MS);
     return () => clearTimeout(id);
   }, [agentSearchOpen]);
 
+  function openAgentSearch() {
+    if (agentSearchOpen) return;
+    setAgentSearchOpen(true);
+    Animated.timing(searchProgress, {
+      toValue: 1,
+      duration: SEARCH_ANIM_MS,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }
+
   function closeAgentSearch() {
-    setAgentSearchOpen(false);
-    setAgentSearchQuery("");
+    if (!agentSearchOpen) return;
+    Animated.timing(searchProgress, {
+      toValue: 0,
+      duration: SEARCH_ANIM_MS,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: false,
+    }).start(({ finished }) => {
+      if (!finished) return;
+      setAgentSearchOpen(false);
+      setAgentSearchQuery("");
+    });
   }
 
   function persistDisplay(next: ExplorerAgentDisplayValues) {
@@ -658,6 +688,18 @@ export function WorkspaceActivityPanel({
         justifyContent: "space-between" as const,
         gap: 8,
       },
+      agentsHeaderRow: {
+        flexDirection: "row" as const,
+        alignItems: "center" as const,
+        height: AGENT_HEADER_HEIGHT,
+      },
+      agentsHeaderSearchSlot: {
+        flex: 1,
+        minWidth: 0,
+        flexDirection: "row" as const,
+        justifyContent: "flex-end" as const,
+        overflow: "hidden" as const,
+      },
       titleAction: {
         width: 24,
         height: 24,
@@ -671,19 +713,19 @@ export function WorkspaceActivityPanel({
         alignItems: "center" as const,
         gap: 2,
         flexShrink: 0,
+        marginLeft: 2,
       },
       searchField: {
-        flex: 1,
-        minWidth: 0,
         flexDirection: "row" as const,
         alignItems: "center" as const,
         gap: 6,
-        height: 28,
-        paddingHorizontal: 8,
-        borderRadius: 6,
+        height: AGENT_HEADER_HEIGHT,
+        paddingHorizontal: 10,
+        borderRadius: AGENT_HEADER_HEIGHT / 2,
         borderWidth: 1,
         borderColor: theme.colors.border,
         backgroundColor: theme.colors.surface1,
+        overflow: "hidden" as const,
       },
       searchInput: {
         flex: 1,
@@ -701,6 +743,7 @@ export function WorkspaceActivityPanel({
         fontWeight: "600" as const,
         flexShrink: 0,
         letterSpacing: -0.3,
+        lineHeight: AGENT_HEADER_HEIGHT,
       },
       panel: {
         gap: 4,
@@ -1081,10 +1124,36 @@ export function WorkspaceActivityPanel({
         {showAgents ? (
           <View style={styles.agentsSection}>
             <View style={styles.agentsHeaderWrap}>
-              <View style={styles.sectionHeaderRow}>
+              <View style={styles.agentsHeaderRow}>
                 <Text style={styles.sectionTitle}>Agents</Text>
-                {agentSearchOpen ? (
-                  <View style={styles.searchField}>
+                <View
+                  style={styles.agentsHeaderSearchSlot}
+                  onLayout={(event) => {
+                    const next = event.nativeEvent.layout.width;
+                    setSearchSlotWidth((prev) => (prev === next ? prev : next));
+                  }}
+                >
+                  <Animated.View
+                    pointerEvents={agentSearchOpen ? "auto" : "none"}
+                    style={[
+                      styles.searchField,
+                      {
+                        // Anchor to the right of the slot so the pill grows/shrinks L←R.
+                        width: searchProgress.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [
+                            0,
+                            Math.max(0, searchSlotWidth - SEARCH_TITLE_GAP),
+                          ],
+                        }),
+                        opacity: searchProgress,
+                        marginLeft: searchProgress.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, SEARCH_TITLE_GAP],
+                        }),
+                      },
+                    ]}
+                  >
                     <Icon name="Search" size={14} color={theme.colors.foregroundMuted} />
                     <TextInput
                       ref={searchInputRef as never}
@@ -1095,33 +1164,30 @@ export function WorkspaceActivityPanel({
                       autoCapitalize="none"
                       autoCorrect={false}
                       returnKeyType="search"
+                      editable={agentSearchOpen}
                       style={styles.searchInput}
                       accessibilityLabel="Search agents by title"
                     />
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="Close agent search"
-                      hitSlop={8}
-                      onPress={closeAgentSearch}
-                      style={styles.titleAction}
-                    >
-                      <Icon name="X" size={14} color={theme.colors.foregroundMuted} />
-                    </Pressable>
-                  </View>
-                ) : null}
+                  </Animated.View>
+                </View>
                 <View style={styles.headerActions}>
-                  {agentSearchOpen ? null : (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="Search agents"
-                      accessibilityState={{ expanded: false }}
-                      hitSlop={8}
-                      onPress={() => setAgentSearchOpen(true)}
-                      style={styles.titleAction}
-                    >
-                      <Icon name="Search" size={14} color={theme.colors.foregroundMuted} />
-                    </Pressable>
-                  )}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={agentSearchOpen ? "Close agent search" : "Search agents"}
+                    accessibilityState={{ expanded: agentSearchOpen }}
+                    hitSlop={8}
+                    onPress={() => {
+                      if (agentSearchOpen) closeAgentSearch();
+                      else openAgentSearch();
+                    }}
+                    style={styles.titleAction}
+                  >
+                    <Icon
+                      name={agentSearchOpen ? "X" : "Search"}
+                      size={14}
+                      color={theme.colors.foregroundMuted}
+                    />
+                  </Pressable>
                   <View ref={triggerRef} collapsable={false}>
                     <Pressable
                       accessibilityRole="button"
