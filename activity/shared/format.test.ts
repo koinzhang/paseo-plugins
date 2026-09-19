@@ -1,52 +1,52 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { formatDayTime, formatDisplayName, formatUpdatedAt } from "./format.ts";
+import {
+  formatActivityTime,
+  formatDisplayName,
+  formatLocalDateTime,
+  formatUpdatedAt,
+} from "./format.ts";
 
 const NOW = new Date(2026, 8, 18, 15, 30);
 
-describe("formatDayTime", () => {
-  it("shows only HH:mm for the same local day", () => {
-    assert.equal(formatDayTime(new Date(2026, 8, 18, 9, 5).toISOString(), NOW), "09:05");
-    assert.equal(formatDayTime(new Date(2026, 8, 18, 23, 59).toISOString(), NOW), "23:59");
+describe("formatActivityTime", () => {
+  it("shows only the time for the same local day", () => {
+    const text = formatActivityTime(new Date(2026, 8, 18, 9, 5).toISOString(), "en", NOW);
+    assert.match(text, /9:05/);
+    assert.doesNotMatch(text, /Sep/);
+    assert.doesNotMatch(text, /18/);
   });
 
-  it("adds MM-DD for another day in the same year", () => {
-    assert.equal(formatDayTime(new Date(2026, 8, 17, 14, 2).toISOString(), NOW), "09-17 14:02");
-    assert.equal(formatDayTime(new Date(2026, 0, 3, 0, 7).toISOString(), NOW), "01-03 00:07");
-  });
-
-  it("adds the year for a different year", () => {
-    assert.equal(
-      formatDayTime(new Date(2025, 11, 31, 23, 59).toISOString(), NOW),
-      "2025-12-31 23:59",
-    );
-  });
-
-  it("returns the placeholder for empty and keeps invalid input", () => {
-    assert.equal(formatDayTime(null, NOW), "—");
-    assert.equal(formatDayTime(undefined, NOW), "—");
-    assert.equal(formatDayTime("not-a-date", NOW), "not-a-date");
-  });
-});
-
-describe("formatUpdatedAt", () => {
-  it("uses locale month/day + time for the same year", () => {
-    const text = formatUpdatedAt(new Date(2026, 8, 17, 14, 2).toISOString(), "en", NOW);
+  it("adds month/day for another day in the same year", () => {
+    const text = formatActivityTime(new Date(2026, 8, 17, 14, 2).toISOString(), "en", NOW);
     assert.match(text, /Sep/);
     assert.match(text, /17/);
     assert.doesNotMatch(text, /2026/);
   });
 
   it("includes the year when the date is not this year", () => {
-    const text = formatUpdatedAt(new Date(2025, 11, 31, 23, 59).toISOString(), "en", NOW);
+    const text = formatActivityTime(new Date(2025, 11, 31, 23, 59).toISOString(), "en", NOW);
     assert.match(text, /2025/);
     assert.match(text, /Dec/);
   });
 
   it("returns the placeholder for empty and keeps invalid input", () => {
-    assert.equal(formatUpdatedAt(null, "en", NOW), "—");
-    assert.equal(formatUpdatedAt(undefined, "en", NOW), "—");
-    assert.equal(formatUpdatedAt("not-a-date", "en", NOW), "not-a-date");
+    assert.equal(formatActivityTime(null, "en", NOW), "—");
+    assert.equal(formatActivityTime(undefined, "en", NOW), "—");
+    assert.equal(formatActivityTime("not-a-date", "en", NOW), "not-a-date");
+  });
+
+  it("keeps formatUpdatedAt as an alias", () => {
+    assert.equal(formatUpdatedAt, formatActivityTime);
+  });
+});
+
+describe("formatLocalDateTime", () => {
+  it("defaults to English locale style", () => {
+    const text = formatLocalDateTime(new Date(2026, 8, 17, 14, 2).toISOString());
+    assert.match(text, /Sep/);
+    assert.match(text, /17/);
+    assert.match(text, /2026/);
   });
 });
 

@@ -1,5 +1,5 @@
 import { matchesAgentTitleSearch } from "../../shared/agent-title-search.ts";
-import { formatUpdatedAt } from "../../shared/format.ts";
+import { formatActivityTime } from "../../shared/format.ts";
 import { providerLabel, type AgentUsageItem } from "../../shared/usage.ts";
 import {
   type AgentShowField,
@@ -23,7 +23,7 @@ export function formatAgentMeta(
   if (showFields.has("messages")) parts.push(`${item.messageCount} messages`);
   if (showFields.has("updated")) {
     const at = agentUpdatedAt(item, byId);
-    if (at) parts.push(formatUpdatedAt(at, locale));
+    if (at) parts.push(formatActivityTime(at, locale));
   }
   if (parts.length === 0) return null;
   return parts.join(" · ");

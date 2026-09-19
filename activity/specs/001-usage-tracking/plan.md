@@ -175,7 +175,7 @@ async function resyncAgent(agentId: string, paseo: PaseoApi) {
 
 - `behavior.kind = "popover"`，Content = `UsagePopover`；宿主负责锚定 / 滚动 / padding
 - 行：类型图标（skill `Sparkles` / MCP `Plug`）；**不展示调用次数 / failures**；列表按 **最近使用降序**（最新在上，最早在下）
-  - skill 行：名称（14px）在左，最近使用同一行靠右对齐；时间 24 小时制，当天仅 `HH:mm`，非当天 `MM-DD HH:mm`（跨年带年份）；名称可点进 SKILL.md
+  - skill 行：名称（14px）在左，最近使用同一行靠右对齐；时间用 `FormattedTime`（app lang + locale；见 039）；名称可点进 SKILL.md
   - SKILL.md 详情顶栏：左 `← Skills`，右 `PanelRight` 按钮 → `client.openPanel("usage")` 在 agent workspace panel 打开同一文件（对齐 Skills 扩展的 panel 入口）
   - MCP 行：仅 `server.tool` 美化名（按 `lastUsedAt` 降序）
 - 展示名统一 `formatDisplayName` 美化（`-` / `_` → 空格，每个单词首字母大写）；skill / MCP / pill 一致，库内原始名与排序不变

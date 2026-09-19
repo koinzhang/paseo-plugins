@@ -1,8 +1,9 @@
 import { Icon } from "@getpaseo/plugin/client/react-native";
 import type { ReactNode } from "react";
 import { Pressable, Text, View, type TextStyle, type ViewStyle } from "react-native";
-import { formatDisplayName, formatLocalDateTime } from "../../shared/format.ts";
+import { formatDisplayName } from "../../shared/format.ts";
 import type { McpByToolItem, SkillByNameItem } from "../../shared/usage.ts";
+import { FormattedTime } from "../formatted-time.tsx";
 import { RANK_ROW_ESTIMATE } from "./constants.ts";
 
 type RankKind = "skills" | "mcp";
@@ -93,9 +94,11 @@ export function RankSection({
                   <Text style={styles.listTitle} numberOfLines={1}>
                     {formatDisplayName(item.skillName)}
                   </Text>
-                  <Text style={styles.listMeta}>
-                    Last {formatLocalDateTime(item.lastUsedAt)}
-                  </Text>
+                  <FormattedTime
+                    iso={item.lastUsedAt}
+                    prefix="Last "
+                    style={styles.listMeta}
+                  />
                 </View>
                 <CountText value={item.total} styles={styles} />
               </View>
@@ -107,13 +110,17 @@ export function RankSection({
                   <Text style={styles.listTitle} numberOfLines={1}>
                     {formatDisplayName(`${item.server}.${item.tool}`)}
                   </Text>
-                  <Text style={styles.listMeta}>
-                    {item.failures > 0
-                      ? `${item.failures} failed`
-                      : item.lastUsedAt
-                        ? `Last ${formatLocalDateTime(item.lastUsedAt)}`
-                        : "—"}
-                  </Text>
+                  {item.failures > 0 ? (
+                    <Text style={styles.listMeta}>{item.failures} failed</Text>
+                  ) : item.lastUsedAt ? (
+                    <FormattedTime
+                      iso={item.lastUsedAt}
+                      prefix="Last "
+                      style={styles.listMeta}
+                    />
+                  ) : (
+                    <Text style={styles.listMeta}>—</Text>
+                  )}
                 </View>
                 <CountText value={item.count} styles={styles} />
               </View>

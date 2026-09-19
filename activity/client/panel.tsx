@@ -17,7 +17,8 @@ import {
   usageSkillsByNameRpc,
   usageSummaryRpc,
 } from "../shared/usage.ts";
-import { formatDisplayName, formatLocalDateTime } from "../shared/format.ts";
+import { formatDisplayName } from "../shared/format.ts";
+import { FormattedTime } from "./formatted-time.tsx";
 import {
   clearPendingSkillOpen,
   consumePendingSkillOpen,
@@ -384,9 +385,11 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
                     <Icon name="Sparkles" size={18} color={theme.colors.foregroundMuted} />
                     <View style={styles.listMain}>
                       {title}
-                      <Text style={styles.listMeta}>
-                        Last {formatLocalDateTime(item.lastUsedAt)}
-                      </Text>
+                      <FormattedTime
+                        iso={item.lastUsedAt}
+                        prefix="Last "
+                        style={styles.listMeta}
+                      />
                     </View>
                     <CountText value={item.total} styles={styles} />
                   </View>
@@ -405,13 +408,17 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
                     <Text style={styles.listTitle} numberOfLines={1}>
                       {formatDisplayName(`${item.server}.${item.tool}`)}
                     </Text>
-                    <Text style={styles.listMeta}>
-                      {item.failures > 0
-                        ? `${item.failures} failed`
-                        : item.lastUsedAt
-                          ? `Last ${formatLocalDateTime(item.lastUsedAt)}`
-                          : "—"}
-                    </Text>
+                    {item.failures > 0 ? (
+                      <Text style={styles.listMeta}>{item.failures} failed</Text>
+                    ) : item.lastUsedAt ? (
+                      <FormattedTime
+                        iso={item.lastUsedAt}
+                        prefix="Last "
+                        style={styles.listMeta}
+                      />
+                    ) : (
+                      <Text style={styles.listMeta}>—</Text>
+                    )}
                   </View>
                   <CountText value={item.count} styles={styles} />
                 </View>

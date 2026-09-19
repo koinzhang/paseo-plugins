@@ -30,7 +30,7 @@
 
 - `usage.agents` 输出新增 `archivedAt`（registry `agents.archived_at`；非 registry agent 为 null → 视为 Active）与 `updatedAt`（registry `agents.updated_at`，用于 Updated 排序）
 - KPI（含 Agents / Messages）仍按 workspace 全量（含归档）统计；筛选只影响 Agents 列表
-- 行尾不再显示活动量数字；Show → Updated 使用 `formatUpdatedAt(iso, appLocale)`（app 语言默认 en；同年月日+时间，跨年带年份）
+- 行尾不再显示活动量数字；Show → Updated 使用 `formatActivityTime(iso, appLocale)`（app 语言默认 en；当天仅时间，同年非当天加月日，跨年带年份；见 039）
 - `closed` 与归档无关：见 G10
 
 ## 4. 验收

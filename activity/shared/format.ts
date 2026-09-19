@@ -1,16 +1,15 @@
 /** Format stored ISO timestamps for UI / export in the local timezone + locale. */
-export function formatLocalDateTime(iso: string | null | undefined): string {
+export function formatLocalDateTime(
+  iso: string | null | undefined,
+  locale = "en",
+): string {
   if (!iso) return "—";
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleString(undefined, {
+  return date.toLocaleString(locale, {
     dateStyle: "medium",
     timeStyle: "short",
   });
-}
-
-function pad2(value: number): string {
-  return String(value).padStart(2, "0");
 }
 
 /** Display-name prettifier: `-` / `_` → spaces, then Title Case each word. */
@@ -21,34 +20,10 @@ export function formatDisplayName(value: string): string {
 }
 
 /**
- * Compact 24-hour timestamp for list rows:
- * today → `HH:mm`; same year → `MM-DD HH:mm`; otherwise → `YYYY-MM-DD HH:mm`.
+ * Activity UI timestamp: app locale + local timezone.
+ * Today → time only; same year → month/day + time; otherwise year + month/day + time.
  */
-export function formatDayTime(
-  iso: string | null | undefined,
-  now: Date = new Date(),
-): string {
-  if (!iso) return "—";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  const time = `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
-  if (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate()
-  ) {
-    return time;
-  }
-  const monthDay = `${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
-  if (date.getFullYear() === now.getFullYear()) return `${monthDay} ${time}`;
-  return `${date.getFullYear()}-${monthDay} ${time}`;
-}
-
-/**
- * Agent list "Updated" stamp: app locale + local timezone.
- * Same calendar year → month/day + time; otherwise also includes the year.
- */
-export function formatUpdatedAt(
+export function formatActivityTime(
   iso: string | null | undefined,
   locale = "en",
   now: Date = new Date(),
@@ -56,14 +31,23 @@ export function formatUpdatedAt(
   if (!iso) return "—";
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
+  const sameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
   const options: Intl.DateTimeFormatOptions = {
-    month: "short",
-    day: "numeric",
     hour: "numeric",
     minute: "2-digit",
   };
-  if (date.getFullYear() !== now.getFullYear()) {
-    options.year = "numeric";
+  if (!sameDay) {
+    options.month = "short";
+    options.day = "numeric";
+    if (date.getFullYear() !== now.getFullYear()) {
+      options.year = "numeric";
+    }
   }
   return date.toLocaleString(locale, options);
 }
+
+/** @deprecated Prefer `formatActivityTime`. */
+export const formatUpdatedAt = formatActivityTime;

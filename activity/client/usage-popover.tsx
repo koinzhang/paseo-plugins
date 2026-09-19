@@ -17,7 +17,8 @@ import {
 import {
   usageReadSkillRpc,
 } from "../shared/usage.ts";
-import { formatDayTime, formatDisplayName } from "../shared/format.ts";
+import { formatDisplayName } from "../shared/format.ts";
+import { FormattedTime } from "./formatted-time.tsx";
 import { useUsagePillData } from "./usage-query.tsx";
 
 const MONO = Platform.select({ ios: "Menlo", default: "monospace" });
@@ -315,7 +316,7 @@ function UsagePopoverAgent(
                     {name}
                   </Text>
                   {item.lastUsedAt ? (
-                    <Text style={styles.rowMeta}>{formatDayTime(item.lastUsedAt)}</Text>
+                    <FormattedTime iso={item.lastUsedAt} style={styles.rowMeta} />
                   ) : null}
                 </View>
                 <CountBadge value={item.total} styles={styles} />
@@ -360,7 +361,7 @@ function UsagePopoverAgent(
                 {item.failures > 0 ? (
                   <Text style={styles.rowMeta}>{item.failures} failed</Text>
                 ) : item.lastUsedAt ? (
-                  <Text style={styles.rowMeta}>{formatDayTime(item.lastUsedAt)}</Text>
+                  <FormattedTime iso={item.lastUsedAt} style={styles.rowMeta} />
                 ) : null}
               </View>
               <CountBadge value={item.count} styles={styles} />
