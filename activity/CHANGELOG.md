@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Heatmap month focus: hovering a month label highlights that month's cells and dims the rest.
 - Workspace Activity panel in the Explorer sidebar: workspace-scoped KPIs (shell calls / file reads / file writes / messages), per-agent ranking (new `usage.agents` RPC), and top skills / MCP; the Workspace Activity Command Center item opens it.
+- Explorer Agents title search: a header search icon expands an animated inline pill; case-insensitive substring match on title (falls back to agent id) that stacks with Status / Lifecycle filters, sort, and grouping; the query is session-only.
+- Explorer Agents archive / unarchive row actions: Active rows show Archive (host `agents.ref(id).archive()`), Archived rows show Unarchive (new `usage.agent.unarchive` RPC → `paseo agent reload`), with optimistic list updates, error toast, and the local registry `archived_at` cleared on unarchive.
 
 ### Changed
 
@@ -19,7 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Command Center items renamed: Open Activity (all providers) → All Activity, Activity → Agent Activity.
 - Heatmap title renamed from Tool activity to Activity.
 - Smaller headings and tighter section spacing across the global surface and heatmap.
-- Explorer Activity panel: page title removed; workspace name (same type as the range chips) and range chips share one row; denser KPIs (shell / file reads / file writes / messages only); agent display menu (floating card below the header icon with hover flyout submenus matching the host sidebar menu; sort by created / updated / name / messages / status with attention-worthy agents first; group by provider; multi-select Status Active / Archived and Lifecycle Idle / Running / Error / Closed; Show toggles for provider / calls / messages / updated; `usage.agents` returns `updatedAt` and `archivedAt`); Command Center item Workspace Activity opens the panel in the Explorer; skills / MCP share one ranked list toggled by the header icon; hidden scrollbars avoid layout shift when filters change.
+- Explorer Activity panel: header removed (branch / workspace name and Today / 7D / 30D / All chips) so KPIs cover the workspace's full history; denser KPIs (shell / file reads / file writes / messages only); Active agent rows open the conversation from anywhere in the row; agent display menu (floating card below the header icon with hover flyout submenus matching the host sidebar menu; sort by updated / created / name / messages / status with attention-worthy agents first; group by None / Provider / Status; multi-select Status Active / Archived and Lifecycle Idle / Running / Error / Closed; Show toggles for provider / calls / messages / updated; `usage.agents` returns `updatedAt` and `archivedAt`); Command Center item Workspace Activity opens the panel in the Explorer; skills / MCP share one ranked list toggled by the header icon; hidden scrollbars avoid layout shift when filters change.
+- Explorer Agents display preferences (Sort / Group / Show / Status / Lifecycle) persist across workspaces, plugin reloads, and daemon restarts in host-scoped `explorer-agent-display` settings; defaults are sort Updated, group None, Status Active, all lifecycles, no extra Show fields.
 
 ### Removed
 

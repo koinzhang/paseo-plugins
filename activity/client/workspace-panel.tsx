@@ -21,6 +21,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { ACTIVITY_LIST_LIMIT } from "../shared/insights.ts";
+import { matchesAgentTitleSearch } from "../shared/agent-title-search.ts";
 import {
   EXPLORER_AGENT_DISPLAY_DEFAULTS,
   explorerAgentDisplaySettings,
@@ -145,10 +146,7 @@ function matchesAgentFilters(
 }
 
 function matchesAgentTitle(item: AgentUsageItem, query: string): boolean {
-  const needle = query.trim().toLowerCase();
-  if (!needle) return true;
-  const title = (item.title ?? item.agentId).toLowerCase();
-  return title.includes(needle);
+  return matchesAgentTitleSearch(item.title ?? item.agentId, query);
 }
 
 function agentUpdatedAt(
