@@ -1,32 +1,15 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { collapseHomePath } from "../shared/home-path.ts";
 import { createKeyedTtlCache } from "./ttl-cache.ts";
+
+export { collapseHomePath };
 
 /** Expand a leading `~` / `~/…` to an absolute path under `homeDir`. */
 export function expandHomePath(path: string, homeDir: string): string {
   const trimmed = path.trim();
   if (trimmed === "~") return homeDir;
   if (trimmed.startsWith("~/")) return join(homeDir, trimmed.slice(2));
-  return trimmed;
-}
-
-/** Collapse `homeDir` prefix to `~` so RPC/UI never expose `/Users/…`. */
-export function collapseHomePath(path: string, homeDir: string): string {
-  const trimmed = path.trim();
-  if (!trimmed || !homeDir) return trimmed;
-  if (trimmed === homeDir) return "~";
-  const prefix = homeDir.endsWith("/") ? homeDir : `${homeDir}/`;
-  if (trimmed.startsWith(prefix)) {
-    return `~/${trimmed.slice(prefix.length)}`;
-  }
-  // Case-insensitive match (macOS default FS); preserve the remainder as-is.
-  const lower = trimmed.toLowerCase();
-  const homeLower = homeDir.toLowerCase();
-  if (lower === homeLower) return "~";
-  const prefixLower = homeLower.endsWith("/") ? homeLower : `${homeLower}/`;
-  if (lower.startsWith(prefixLower)) {
-    return `~/${trimmed.slice(prefixLower.length)}`;
-  }
   return trimmed;
 }
 

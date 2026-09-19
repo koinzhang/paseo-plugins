@@ -13,6 +13,7 @@ import { providerLabel, type AgentUsageItem } from "../../shared/usage.ts";
 import { AgentRow, type AgentRowStyles } from "./agent-row.tsx";
 import {
   AGENT_PAGE_SIZE,
+  attentionKind,
   SEARCH_ANIM_MS,
   SEARCH_TITLE_GAP,
   type AgentGroup,
@@ -168,6 +169,8 @@ export function AgentsSection({
     const archived = item.archivedAt != null;
     const canOpen = openAgent != null && !archived;
     const meta = formatAgentMeta(item, agentShowFields, statuses, locale);
+    const statusInfo = statuses?.[item.agentId];
+    const permissionCount = statusInfo?.permissionCount ?? 0;
     const busy = busyAgentId === item.agentId;
     return (
       <AgentRow
@@ -176,6 +179,8 @@ export function AgentsSection({
         archived={archived}
         canOpen={canOpen}
         meta={meta}
+        permissionCount={permissionCount}
+        attentionKind={attentionKind(statusInfo)}
         busy={busy}
         actionDisabled={busy || busyAgentId != null}
         theme={theme}

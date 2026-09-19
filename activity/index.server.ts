@@ -23,6 +23,7 @@ import {
   usageAgentUnarchiveRpc,
   usageByProviderRpc,
   usageExportRpc,
+  usageHostInfoRpc,
   usageListRpc,
   usageMcpByToolRpc,
   usageReadSkillRpc,
@@ -67,6 +68,7 @@ export default function contribute(server: PluginServerContext) {
     return createActivityByDayHandler(store)(input);
   });
   server.handle(usageExportRpc, createExportHandler(store));
+  server.handle(usageHostInfoRpc, () => ({ homeDir: homedir() }));
   server.handle(usageReadSkillRpc, createReadSkillHandler());
 
   const removeCreated = server.on("agent.created", (event, context) => {

@@ -9,7 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Workspace Activity panel Terminals section: lists the workspace's open terminals through the host SDK (`paseo.terminals.list`), with a tap-to-expand live output preview (`capture`, latest 8 lines, ANSI stripped, 5s polling) and a per-row close button (`kill`, optimistic removal with rollback toast); hidden when no terminals are open.
+- Explorer Agents rows show a warning badge (ShieldAlert icon plus count when multiple) when the host reports pending permission requests; these agents also rank first with other attention-worthy agents.
+- Explorer Agents row bot icon reflects attention: accent for finished-but-unread turns and pending permissions (which keep the warning badge), danger for failed agents; the icon returns to muted once the host clears attention after viewing.
+- Workspace Activity panel Terminals section: lists the workspace's open terminals through the host SDK (`paseo.terminals.list`), with a tap-to-expand live output preview (`capture`, latest 8 lines, ANSI stripped, 5s polling) and a per-row close button (`kill`, optimistic removal with rollback toast); terminal cwd collapses the home directory to `~` (new `usage.host-info` RPC); hidden when no terminals are open.
 
 ## [0.2.0] - 2026-09-19
 

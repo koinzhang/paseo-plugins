@@ -256,6 +256,15 @@ export const usageAgentUnarchiveRpc = defineRpc({
   }),
 });
 
+/** Host paths for display-only formatting (e.g. collapsing `homeDir` to `~`). */
+export const usageHostInfoRpc = defineRpc({
+  name: "usage.host-info",
+  input: z.object({}),
+  output: z.object({
+    homeDir: z.string(),
+  }),
+});
+
 const PROVIDER_LABELS: Record<string, string> = {
   claude: "Claude",
   opencode: "OpenCode",

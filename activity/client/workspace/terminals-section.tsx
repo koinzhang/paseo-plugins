@@ -11,6 +11,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import { collapseHomePath } from "../../shared/home-path.ts";
 import { TERMINAL_PREVIEW_LINES, TERMINAL_REFETCH_MS } from "./constants.ts";
 import { terminalPreviewLines } from "./terminal-preview.ts";
 
@@ -38,6 +39,7 @@ export function TerminalsSection({
   workspaceId,
   terminalItems,
   busyTerminalId,
+  homeDir,
   mutedColor,
   styles,
   onClose,
@@ -45,6 +47,7 @@ export function TerminalsSection({
   workspaceId: string;
   terminalItems: ReadonlyArray<TerminalListItem>;
   busyTerminalId: string | null;
+  homeDir?: string;
   mutedColor: string;
   styles: TerminalsSectionStyles;
   onClose: (item: TerminalListItem) => void;
@@ -108,7 +111,7 @@ export function TerminalsSection({
                     {item.name}
                   </Text>
                   <Text style={styles.listMeta} numberOfLines={1}>
-                    {item.cwd}
+                    {collapseHomePath(item.cwd, homeDir ?? "")}
                   </Text>
                 </View>
                 <Pressable

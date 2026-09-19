@@ -26,6 +26,7 @@ import {
   type AgentUsageItem,
   usageAgentUnarchiveRpc,
   usageAgentsRpc,
+  usageHostInfoRpc,
   usageMcpByToolRpc,
   usageSkillsByNameRpc,
   usageSummaryRpc,
@@ -115,6 +116,7 @@ export function WorkspaceActivityPanel({
   const unarchiveAgentRpc = useRpc(usageAgentUnarchiveRpc);
   const skillsRpc = useRpc(usageSkillsByNameRpc);
   const mcpRpc = useRpc(usageMcpByToolRpc);
+  const hostInfoRpc = useRpc(usageHostInfoRpc);
 
   const agentsQueryKey = ["activity", "workspace-agents", workspaceId] as const;
   const terminalsQueryKey = ["activity", "workspace-terminals", workspaceId] as const;
@@ -153,6 +155,13 @@ export function WorkspaceActivityPanel({
     retry: false,
     queryKey: terminalsQueryKey,
     queryFn: () => paseo.terminals.list({ workspaceId }),
+  });
+
+  const hostInfo = useQuery({
+    staleTime: Infinity,
+    retry: false,
+    queryKey: ["activity", "host-info"],
+    queryFn: () => hostInfoRpc({}),
   });
 
   const statuses = useQuery({
@@ -359,6 +368,24 @@ export function WorkspaceActivityPanel({
       listMeta: {
         color: theme.colors.foregroundMuted,
         fontSize: 12,
+      },
+      permissionBadge: {
+        flexDirection: "row" as const,
+        alignItems: "center" as const,
+        gap: 3,
+        height: 18,
+        paddingHorizontal: 5,
+        borderRadius: 9,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        backgroundColor: theme.colors.surface1,
+        flexShrink: 0,
+      },
+      permissionBadgeText: {
+        color: theme.colors.statusWarning,
+        fontSize: 11,
+        fontWeight: "600" as const,
+        fontVariant: ["tabular-nums" as const],
       },
       terminalRow: {
         flexDirection: "row" as const,
@@ -779,6 +806,7 @@ export function WorkspaceActivityPanel({
               workspaceId={workspaceId}
               terminalItems={terminalItems}
               busyTerminalId={busyTerminalId}
+              homeDir={hostInfo.data?.homeDir}
               mutedColor={theme.colors.foregroundMuted}
               styles={styles}
               onClose={(item) => void closeTerminal(item)}

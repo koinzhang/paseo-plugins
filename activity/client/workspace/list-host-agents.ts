@@ -13,6 +13,7 @@ type HostAgentEntry = {
     updatedAt?: string;
     requiresAttention?: boolean;
     attentionReason?: string | null;
+    pendingPermissions?: ReadonlyArray<unknown>;
   };
 };
 
@@ -51,6 +52,9 @@ export async function loadWorkspaceAgentStatuses(
       rank: attentionRank(agent),
       updatedAt: agent.updatedAt ?? null,
       status: agent.status ?? null,
+      permissionCount: agent.pendingPermissions?.length ?? 0,
+      requiresAttention: agent.requiresAttention === true,
+      attentionReason: agent.attentionReason ?? null,
     };
   }
   return map;

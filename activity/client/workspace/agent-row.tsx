@@ -9,7 +9,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from "react-native";
-import type { WorkspaceTheme } from "./constants.ts";
+import type { AgentAttentionKind, WorkspaceTheme } from "./constants.ts";
 
 export type AgentRowStyles = {
   agentListRow: ViewStyle;
@@ -18,6 +18,8 @@ export type AgentRowStyles = {
   listTitle: TextStyle;
   listMeta: TextStyle;
   titleAction: ViewStyle;
+  permissionBadge: ViewStyle;
+  permissionBadgeText: TextStyle;
 };
 
 export function AgentRow({
@@ -25,6 +27,8 @@ export function AgentRow({
   archived,
   canOpen,
   meta,
+  permissionCount,
+  attentionKind,
   busy,
   actionDisabled,
   theme,
@@ -36,6 +40,8 @@ export function AgentRow({
   archived: boolean;
   canOpen: boolean;
   meta: string | null;
+  permissionCount: number;
+  attentionKind: AgentAttentionKind;
   busy: boolean;
   actionDisabled: boolean;
   theme: WorkspaceTheme;
@@ -55,12 +61,28 @@ export function AgentRow({
         } as object)
       : null;
 
+  const botColor =
+    !archived && attentionKind === "error"
+      ? theme.colors.statusDanger
+      : !archived && attentionKind != null
+        ? theme.colors.accent
+        : theme.colors.foregroundMuted;
+  const stateLabels: string[] = [];
+  if (permissionCount > 0) {
+    stateLabels.push(
+      permissionCount === 1 ? "1 pending permission" : `${permissionCount} pending permissions`,
+    );
+  }
+  if (!archived && attentionKind === "error") stateLabels.push("failed");
+  if (!archived && attentionKind === "finished") stateLabels.push("turn finished, unread");
+  const stateSuffix = stateLabels.length > 0 ? `, ${stateLabels.join(", ")}` : "";
+
   const body = (
     <>
       <Icon
         name={archived ? "BotOff" : "Bot"}
         size={18}
-        color={theme.colors.foregroundMuted}
+        color={botColor}
       />
       <View style={styles.listMain}>
         <Text style={canOpen ? styles.listLink : styles.listTitle} numberOfLines={1}>
@@ -72,6 +94,19 @@ export function AgentRow({
           </Text>
         ) : null}
       </View>
+      {permissionCount > 0 ? (
+        <View
+          accessibilityLabel={
+            permissionCount === 1 ? "1 pending permission" : `${permissionCount} pending permissions`
+          }
+          style={styles.permissionBadge}
+        >
+          <Icon name="ShieldAlert" size={12} color={theme.colors.statusWarning} />
+          {permissionCount > 1 ? (
+            <Text style={styles.permissionBadgeText}>{permissionCount}</Text>
+          ) : null}
+        </View>
+      ) : null}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={archived ? `Unarchive ${label}` : `Archive ${label}`}
@@ -99,7 +134,7 @@ export function AgentRow({
     return (
       <Pressable
         accessibilityRole="link"
-        accessibilityLabel={`Open conversation ${label}`}
+        accessibilityLabel={`Open conversation ${label}${stateSuffix}`}
         onPress={onOpen}
         style={styles.agentListRow}
         {...hoverProps}

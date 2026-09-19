@@ -16,7 +16,23 @@ export type AgentStatusInfo = {
   rank: number;
   updatedAt: string | null;
   status: string | null;
+  permissionCount: number;
+  requiresAttention: boolean;
+  attentionReason: string | null;
 };
+
+/** Icon highlight for attention states; permission keeps the 033 warning badge. */
+export type AgentAttentionKind = "finished" | "permission" | "error" | null;
+
+export function attentionKind(info: AgentStatusInfo | undefined): AgentAttentionKind {
+  if (!info) return null;
+  if (info.status === "error") return "error";
+  if (info.permissionCount > 0) return "permission";
+  if (!info.requiresAttention) return null;
+  if (info.attentionReason === "error") return "error";
+  if (info.attentionReason === "finished") return "finished";
+  return null;
+}
 
 export type MenuOption = { id: string; label: string; icon: string };
 
@@ -84,12 +100,14 @@ export function attentionRank(agent: {
   status?: string;
   requiresAttention?: boolean;
   attentionReason?: string | null;
+  pendingPermissions?: ReadonlyArray<unknown>;
 }): number {
   if (
     agent.requiresAttention === true ||
     agent.attentionReason === "permission" ||
     agent.attentionReason === "error" ||
-    agent.status === "error"
+    agent.status === "error" ||
+    (agent.pendingPermissions?.length ?? 0) > 0
   ) {
     return 0;
   }

@@ -12,6 +12,7 @@
   - `useEffect` 在展开的终端从列表消失时收起
 - panel 的 `closeTerminal`：乐观移除列表行 → `paseo.terminals.ref(id).kill()` → 清 capture 缓存 + invalidate；失败回滚并 toast
 - 纯函数 `client/workspace/terminal-preview.ts`：去尾部空行 + 截末 N 行（单测覆盖）
+- cwd 折叠：`collapseHomePath` 从 `server/skill-path.ts` 移到 `shared/home-path.ts`（纯函数，双端复用；server 侧 re-export 保持原导入）；homeDir 走新 RPC `usage.host-info`
 - `showContent = showAgents || showRank || showTerminals`；`terminals.error` 不进面板 error
 - 样式由 panel 注入（复用 `sectionHeaderRow` / `sectionTitle` / `panel` / `listMain` / `listTitle` / `listMeta` / `titleAction`，新增 `terminalRow` / `terminalPreview` / `terminalLine`）
 
@@ -21,7 +22,9 @@
 |---|---|
 | `client/workspace/terminals-section.tsx` | 新增区块（列表行 + 展开预览 + 关闭按钮） |
 | `client/workspace/terminal-preview.ts` + `.test.ts` | 预览行纯函数 + 单测 |
-| `client/workspace/panel.tsx` | terminals 查询、关闭（kill + 乐观更新）、区块接线、样式 |
+| `client/workspace/panel.tsx` | terminals / host-info 查询、关闭（kill + 乐观更新）、区块接线、样式 |
+| `shared/home-path.ts` | `collapseHomePath` 移入 shared（server re-export） |
+| `shared/usage.ts` + `index.server.ts` | 新增 `usage.host-info` RPC（`os.homedir()`） |
 | `client/workspace/constants.ts` | `TERMINAL_REFETCH_MS` / `TERMINAL_PREVIEW_LINES` |
 | `package.json` | test script 增加新单测 |
 | `specs/README.md` / `docs/architecture.md` / `CHANGELOG.md` | 登记 |
