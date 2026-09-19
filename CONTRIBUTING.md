@@ -58,6 +58,68 @@ paseo plugin logs activity
 - Make sure CI is green (`typecheck` + tests).
 - Describe user-visible behavior changes in the PR description; screenshots help for UI changes.
 
+## Commit messages
+
+Use [Conventional Commits](https://www.conventionalcommits.org/):
+
+```text
+<type>(<scope>): <description>
+```
+
+- **type** (required): `feat` · `fix` · `docs` · `style` · `refactor` · `perf` · `test` · `build` · `ci` · `chore` · `revert`
+- **scope** (preferred): plugin id (`activity`) or repo area (`ci`, `docs`, `repo`)
+- **description**: imperative, lowercase start, no trailing period; focus on why / user impact
+
+Examples:
+
+```text
+feat(activity): limit provider filter to top 5
+fix(activity): correct heatmap empty-state layout
+docs(repo): document npm publish via GitHub Release
+ci(repo): add publish workflow for activity
+chore(activity): release 0.1.1
+```
+
+Breaking changes: add `!` after type/scope (`feat(activity)!: ...`) and/or a `BREAKING CHANGE:` footer.
+
+Do not rewrite old history to match this style; apply from new commits onward.
+
+## Publishing to npm
+
+npm packages are published by **GitHub Release**, not by pushing `main` alone.
+
+Workflow: [`.github/workflows/publish.yml`](./.github/workflows/publish.yml). Auth: npm **Trusted Publisher** for that workflow (no `NPM_TOKEN`). Tag must be `{plugin-id}-v{semver}` and match that plugin's `package.json` `version`.
+
+### Activity (`@koinzhang/paseo-plugin-activity`)
+
+1. Bump version and land it on `main`:
+
+   ```bash
+   cd activity
+   npm version patch --no-git-tag-version   # or minor / major
+   git add package.json package-lock.json
+   git commit -m "chore(activity): release X.Y.Z"
+   git push origin main
+   ```
+
+2. Create a tag and publish a GitHub Release (tag form: `activity-vX.Y.Z`):
+
+   ```bash
+   git tag activity-vX.Y.Z
+   git push origin activity-vX.Y.Z
+   gh release create activity-vX.Y.Z --title "activity X.Y.Z" --generate-notes
+   ```
+
+3. Confirm the **Publish** workflow succeeded and the version appears on npm:
+
+   ```bash
+   npm view @koinzhang/paseo-plugin-activity version
+   ```
+
+Do not republish an existing version; bump again if the publish failed after the version was taken.
+
+For additional plugins later: add a job (or matrix entry) in `publish.yml`, use tag `{id}-v*`, and register the same workflow as a Trusted Publisher on that npm package.
+
 ## Reporting issues and vulnerabilities
 
 Open a regular GitHub issue for bugs and feature requests. Report security issues privately as described in [SECURITY.md](./SECURITY.md).

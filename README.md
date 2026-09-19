@@ -62,7 +62,7 @@ npm test
 
 This repo is spec-driven: read [activity/specs/README.md](./activity/specs/README.md) before coding, then the matching numbered directory. New features get a new numbered directory (`specs/00N-...`); update the spec first when implementation diverges.
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full contribution workflow, and [SECURITY.md](./SECURITY.md) for private vulnerability reporting.
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full contribution workflow (including [npm publishing](./CONTRIBUTING.md#publishing-to-npm)), and [SECURITY.md](./SECURITY.md) for private vulnerability reporting.
 
 ## Layout
 

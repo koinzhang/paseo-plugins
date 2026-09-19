@@ -36,6 +36,22 @@ paseo plugin ls                   # 确认 running
 
 改完 `client/` / `server/` / `shared/` / 入口 / `paseo-plugin.json` 后**主动** `paseo plugin reload activity`，不必等用户再说「重载」。
 
+## Commit 格式
+
+创建 git commit 时使用 Conventional Commits：`<type>(<scope>): <description>`。
+
+- type：`feat` / `fix` / `docs` / `style` / `refactor` / `perf` / `test` / `build` / `ci` / `chore` / `revert`
+- scope：插件 id（如 `activity`）或 `ci` / `docs` / `repo`
+- 发版：`chore(activity): release X.Y.Z`
+
+完整约定见 [`CONTRIBUTING.md` § Commit messages](./CONTRIBUTING.md#commit-messages)。
+
+## 发 npm 包
+
+**不要**只靠 push `main` 发版。流程：bump `activity/package.json` version → 合进 `main` → 打 tag `activity-vX.Y.Z` → `gh release create` → `.github/workflows/publish.yml` 用 npm Trusted Publisher 自动 `npm publish`。
+
+完整步骤见 [`CONTRIBUTING.md` § Publishing to npm](./CONTRIBUTING.md#publishing-to-npm)；用户说「发版 / publish / release npm」时读 [`.agents/skills/publish-npm/SKILL.md`](./.agents/skills/publish-npm/SKILL.md) 并按其执行。
+
 ## 约束
 
 - **产品名（用户可见）**：Activity

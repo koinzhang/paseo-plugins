@@ -62,7 +62,7 @@ npm test
 
 本仓库采用 spec 驱动开发：编码前先读 [activity/specs/README.md](./activity/specs/README.md) 总览，再读对应编号目录；新功能建新编号目录（`specs/00N-...`），实现与 spec 出现偏差时先更新 spec。
 
-完整贡献流程见 [CONTRIBUTING.md](./CONTRIBUTING.md)；漏洞私下上报见 [SECURITY.md](./SECURITY.md)。
+完整贡献流程见 [CONTRIBUTING.md](./CONTRIBUTING.md)（含 [npm 发版](./CONTRIBUTING.md#publishing-to-npm)）；漏洞私下上报见 [SECURITY.md](./SECURITY.md)。
 
 ## 目录结构
 
