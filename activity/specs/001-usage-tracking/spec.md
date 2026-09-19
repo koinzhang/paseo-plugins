@@ -66,7 +66,7 @@ Paseo 把所有 provider 的工具调用统一规范化为 timeline 的 `tool_ca
 - Then 在 composer 上方打开 **popover**（宽屏锚定浮层；compact 为底部 sheet），展示本 agent 的 Skills / MCP
   - 已知宿主缺陷：重挂时可能留下左上角幽灵层；不在插件侧绕行，见 [013](../013-pill-modal/)
 - And 每行行首带类型图标（skill = `Sparkles`，MCP = `Plug`）；无分区标题行，无 resync / export 按钮（完整操作仍在 panel / Command Center）
-- And Command Center「Activity」仍可打开 agent workspace panel（完整详情 / SKILL.md）
+- And Command Center「Current Activity」仍可打开 agent workspace panel（完整详情 / SKILL.md；命名见 [023](../023-command-center-titles/)）
 
 ### US-3 查看 skill 使用情况（按 skill 名）
 作为用户，我想知道每个 skill 被调用的次数与置信档位。
@@ -87,7 +87,7 @@ Paseo 把所有 provider 的工具调用统一规范化为 timeline 的 `tool_ca
 作为用户，我想知道执行了多少条命令、top 命令是什么。
 
 - Given 采集到多条 `detail.type === "shell"` 的 tool_call
-- When 通过 Command Center「Export activity report」导出
+- When 通过 `usage.export` RPC 导出（Command Center 入口已于 022 移除）
 - Then 报告（剪贴板 markdown）含 shell 总次数、失败数、按首词归并的 top 命令
 - And v1 面板 / 全局 UI 不展示 shell 分区（数据仍入库，见 NG10）
 
@@ -98,11 +98,11 @@ Paseo 把所有 provider 的工具调用统一规范化为 timeline 的 `tool_ca
 - When 插件后台静默回填运行（见 **008-silent-backfill**；不再提供 Command Center 手动「重扫」入口）
 - Then 历史 tool_call 入库，重复执行不产生重复记录
 
-### US-8 导出报告
+### US-8 导出报告（Command Center 入口已于 022 移除）
 作为用户，我想导出 markdown 报告用于周回顾。
 
-- Given Command Center 可触发「Export activity report」（panel 不再提供导出按钮）
-- When 执行该命令
+- Given 导出由 `usage.export` RPC 提供（Command Center「Export activity report」入口见 [022](../022-remove-export-command/) 已移除；panel 无导出按钮）
+- When 调用该 RPC
 - Then markdown 写入系统剪贴板，数字与详情 / pill 一致
 
 ### US-9 侧边栏查看全部 usage（按 provider）

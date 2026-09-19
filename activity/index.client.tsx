@@ -1,9 +1,7 @@
 import type { PluginClientContext } from "@getpaseo/plugin/client";
-import { copyText } from "@getpaseo/plugin/client/react-native";
 import { GlobalUsageSurface } from "./client/global-surface.tsx";
 import { UsagePanel } from "./client/panel.tsx";
 import { contributePills } from "./client/pill.tsx";
-import { usageExportRpc } from "./shared/usage.ts";
 
 const GLOBAL_SURFACE_ID = "activity";
 
@@ -26,7 +24,7 @@ export default function contribute(client: PluginClientContext) {
 
   client.addCommandCenterItem({
     id: "open-usage-global",
-    title: "Open Activity (all providers)",
+    title: "All Activity",
     icon: "Activity",
     keywords: ["activity", "tool", "usage", "provider", "all", "global", "sidebar"],
     context: "global",
@@ -37,24 +35,12 @@ export default function contribute(client: PluginClientContext) {
 
   client.addCommandCenterItem({
     id: "open-usage",
-    title: "Activity",
+    title: "Current Activity",
     icon: "Activity",
-    keywords: ["activity", "tool", "usage", "shell", "skill", "mcp", "stats"],
+    keywords: ["activity", "current", "agent", "tool", "usage", "shell", "skill", "mcp", "stats"],
     context: "agent",
     onSelect: ({ openPanel }) => {
       openPanel("usage");
-    },
-  });
-
-  client.addCommandCenterItem({
-    id: "export-usage",
-    title: "Export activity report",
-    icon: "FileDown",
-    keywords: ["export", "report", "markdown", "activity", "tool usage"],
-    context: "agent",
-    async onSelect({ agent, rpc }) {
-      const result = await rpc(usageExportRpc, { agentId: agent?.id });
-      await copyText(result.markdown);
     },
   });
 

@@ -43,6 +43,8 @@
 | [019-coding-mutating-ops](./019-coding-mutating-ops/) | 已实现 | Coding = 写/改文件或写盘 shell（白名单启发式） |
 | [020-heatmap-title](./020-heatmap-title/) | 已实现 | 热力图标题 Tool activity → Activity |
 | [021-heatmap-range-layout](./021-heatmap-range-layout/) | 已实现 | Today/7D/30D 热力图与 All 同用 52 周年窗布局 |
+| [022-remove-export-command](./022-remove-export-command/) | 已实现 | 移除 Command Center「Export activity report」入口 |
+| [023-command-center-titles](./023-command-center-titles/) | 已实现 | Command Center 项改名 All Activity / Current Activity |
 
 ## 约定
 
