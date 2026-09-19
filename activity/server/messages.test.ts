@@ -96,7 +96,10 @@ test("resync paginates messages idempotently; query handlers use stored messages
   const store = createUsageStore({ dir, driver: "sqlite" });
   let calls = 0;
   const paseo = { agents: {
-    list: async () => ({ entries: [{ agent: { ...agent, createdAt: earlier } }] }),
+    list: async () => ({
+      entries: [{ agent: { ...agent, createdAt: earlier } }],
+      pageInfo: { hasMore: false, nextCursor: null, prevCursor: null },
+    }),
     ref: () => ({ timeline: { refetch: async (input: { direction: string }) => {
       calls++;
       const tail = input.direction === "tail";
@@ -132,7 +135,10 @@ test("canceling an in-flight canonical scan prevents writes after the store clos
   const started = new Promise<void>(resolve => { entered = resolve; });
   const gate = new Promise<void>(resolve => { release = resolve; });
   const paseo = { agents: {
-    list: async () => ({ entries: [{ agent: { ...agent, createdAt: earlier } }] }),
+    list: async () => ({
+      entries: [{ agent: { ...agent, createdAt: earlier } }],
+      pageInfo: { hasMore: false, nextCursor: null, prevCursor: null },
+    }),
     ref: () => ({ timeline: { refetch: async () => {
       entered(); await gate;
       return { entries: [{ item: message, timestamp: earlier, seqStart: 1 }], hasOlder: false,

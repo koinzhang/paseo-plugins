@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { PluginHandlerContext } from "@getpaseo/plugin/server";
 import { LOG_PREFIX } from "../shared/plugin-id.ts";
+import { listAllAgentPages } from "../shared/list-agent-pages.ts";
 import type { UsageStore } from "./store.ts";
 import { defaultDataDir } from "./store.ts";
 import { agentRowFromSnapshot, agentsFromToolCalls } from "./agents.ts";
@@ -12,6 +13,16 @@ type PaseoApi = PluginHandlerContext["paseo"];
 // Bump when historical ingestion semantics change, not on UI-only releases.
 const BACKFILL_VERSION = 1;
 const CHECK_INTERVAL_MS = 5 * 60_000;
+const AGENT_LIST_PAGE_LIMIT = 200;
+
+async function listAllAgents(paseo: PaseoApi) {
+  return listAllAgentPages(async (cursor) => {
+    const result = await paseo.agents.list({
+      page: { limit: AGENT_LIST_PAGE_LIMIT, ...(cursor ? { cursor } : {}) },
+    });
+    return { entries: result.entries, pageInfo: result.pageInfo };
+  });
+}
 
 export function createBackgroundSync(store: UsageStore, options: {
   path?: string;
@@ -45,14 +56,14 @@ export function createBackgroundSync(store: UsageStore, options: {
   }
 
   async function check(paseo: PaseoApi) {
-    const listed = await paseo.agents.list();
+    const listedEntries = await listAllAgents(paseo);
     if (controller.signal.aborted) return;
     // Directory synchronization belongs to the background task, never a UI read.
-    store.upsertAgents(listed.entries.map(({ agent }) => agentRowFromSnapshot(agent)));
+    store.upsertAgents(listedEntries.map(({ agent }) => agentRowFromSnapshot(agent)));
     const known = new Set(store.selectAgents().map(agent => agent.agentId));
     store.upsertAgents(agentsFromToolCalls(store.select()).filter(agent => !known.has(agent.agentId)));
 
-    const liveIds = new Set(listed.entries.map(({ agent }) => agent.id));
+    const liveIds = new Set(listedEntries.map(({ agent }) => agent.id));
     const pruned: Record<string, string> = Object.create(null);
     for (const [id, stamp] of Object.entries(checkpoints)) {
       if (liveIds.has(id)) pruned[id] = stamp;
@@ -61,11 +72,11 @@ export function createBackgroundSync(store: UsageStore, options: {
       persistCheckpoints(pruned);
     }
 
-    for (const { agent } of listed.entries) {
+    for (const { agent } of listedEntries) {
       if (controller.signal.aborted) return;
       const stamp = `${agent.updatedAt}:${agent.lastUserMessageAt ?? ""}`;
       if (checkpoints[agent.id] === stamp) continue;
-      const result = await scan(store, paseo, [agent.id], controller.signal, listed.entries);
+      const result = await scan(store, paseo, [agent.id], controller.signal, listedEntries);
       if (controller.signal.aborted) return;
       if (result.errors.length || result.syncedAgents !== 1) {
         console.error("[activity] background history scan incomplete", agent.id, result.errors);

@@ -14,7 +14,14 @@ function fixture() {
   const store = createUsageStore({ dir, driver: "sqlite" });
   const path = join(dir, "checkpoints.json");
   const agent = { id: "a1", provider: "codex", createdAt: "2026-09-19", updatedAt: "2026-09-19", lastUserMessageAt: null };
-  const paseo = { agents: { list: async () => ({ entries: [{ agent }] }) } } as unknown as PaseoApi;
+  const paseo = {
+    agents: {
+      list: async () => ({
+        entries: [{ agent }],
+        pageInfo: { hasMore: false, nextCursor: null, prevCursor: null },
+      }),
+    },
+  } as unknown as PaseoApi;
   return { store, path, agent, paseo, cleanup() { store.close(); rmSync(dir, { recursive: true, force: true }); } };
 }
 
@@ -62,7 +69,8 @@ test("concurrent triggers share one scan; stopping prevents completion checkpoin
   try {
     const first = sync.request(f.paseo);
     assert.equal(sync.request(f.paseo), first);
-    await Promise.resolve();
+    // listAllAgentPages awaits agents.list before scan starts — drain microtasks.
+    for (let i = 0; i < 20 && scans === 0; i++) await Promise.resolve();
     assert.equal(scans, 1);
     sync.stop(); release(); await first;
     assert.equal(existsSync(f.path), false);
@@ -121,7 +129,10 @@ test("stopping after agents.list prevents directory writes", async () => {
     agents: {
       list: async () => {
         await listGate;
-        return { entries: [{ agent: f.agent }] };
+        return {
+          entries: [{ agent: f.agent }],
+          pageInfo: { hasMore: false, nextCursor: null, prevCursor: null },
+        };
       },
     },
   } as unknown as PaseoApi;

@@ -56,6 +56,7 @@ paseo plugin ls                   # 确认 running
 
 - **产品名（用户可见）**：Activity
 - **插件 ID**：`activity`（与 checkout 目录名一致）
+- **架构**：三层 Global / Workspace / Agent — 见 [`activity/docs/architecture.md`](./activity/docs/architecture.md)
 - 数据目录：`~/.paseo/plugin-data/activity/`（不要写进插件 checkout）；默认 SQLite `usage.db`
   - 升级：首次启动若仅有旧目录 `…/plugin-data/tool-usage/`，自动 rename 迁入 `activity/`
 - 客户端 UI 只用 React Native 原语 + `theme.colors` / `layout.compact`

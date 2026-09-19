@@ -24,6 +24,8 @@ export const usageSummaryRpc = defineRpc({
     mcpCalls: z.number().int().nonnegative(),
     mcpFailures: z.number().int().nonnegative(),
     toolCallsByKind: z.record(z.string(), z.number().int().nonnegative()),
+    /** User sends in the same filter window (006 / 031). */
+    messageCount: z.number().int().nonnegative(),
   }),
 });
 

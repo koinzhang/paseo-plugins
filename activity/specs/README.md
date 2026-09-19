@@ -3,6 +3,8 @@
 产品名 / 插件 ID / 数据目录：**Activity** / **`activity`** / `~/.paseo/plugin-data/activity/`  
 （原 id `tool-usage`；升级时自动迁移，见 [007-rename-activity](./007-rename-activity/) Phase 2。）
 
+**架构总览（Global / Workspace / Agent）**：[docs/architecture.md](../docs/architecture.md)
+
 按编号增量演进；**不要往已关闭的目录里堆新需求**。实现前先改对应 `spec.md` / `plan.md`。
 
 ## 数据维度（正交）
@@ -53,6 +55,7 @@
 | [027-agent-activity-title](./027-agent-activity-title/) | 已实现 | Command Center 项改名 Current Activity → Agent Activity |
 | [029-explorer-agent-search](./029-explorer-agent-search/) | 已实现 | Explorer Agents 按标题搜索（图标展开输入框） |
 | [030-command-center-activity-title](./030-command-center-activity-title/) | 已实现 | Command Center 项改名 All Activity → Activity |
+| [031-scope-architecture-remediation](./031-scope-architecture-remediation/) | 已实现 | 架构文档；拆分 workspace panel；agents 翻页；Agent Messages KPI |
 
 ## 约定
 

@@ -312,6 +312,7 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
         { label: "Shell calls", value: (usageSummary.data?.shellCalls ?? 0).toLocaleString() },
         { label: "File reads", value: (usageSummary.data?.fileReads ?? 0).toLocaleString() },
         { label: "File writes", value: (usageSummary.data?.fileWrites ?? 0).toLocaleString() },
+        { label: "Messages", value: (usageSummary.data?.messageCount ?? 0).toLocaleString() },
         { label: "Tools explored", value: String(skillItems.length + mcpItems.length) },
       ]} /> : null}
       {tabs.length > 1 ? (

@@ -25,6 +25,7 @@ import {
   usageSkillsByNameRpc,
   usageSummaryRpc,
 } from "../shared/usage.ts";
+import { listAllAgentPages } from "../shared/list-agent-pages.ts";
 import { DEFAULT_SKILL_ROOTS, matchSkillFile } from "../shared/classify.ts";
 import { buildHomeSkillRoots, buildSkillRoots, toolCallToRow, ingestUserMessages } from "./ingest.ts";
 import { normalizeModelId } from "./resolve-model.ts";
@@ -38,6 +39,8 @@ import type { QueryFilter, ToolCallRow, UserMessageRow, UsageStore } from "./sto
 import { formatLocalDateTime } from "../shared/format.ts";
 import { agentRowFromSnapshot } from "./agents.ts";
 import { readFile } from "node:fs/promises";
+
+const AGENT_LIST_PAGE_LIMIT = 200;
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -89,6 +92,7 @@ export function summarizeRows(rows: readonly ToolCallRow[]): UsageSummary {
     mcpCalls,
     mcpFailures,
     toolCallsByKind,
+    messageCount: 0,
   };
 }
 
@@ -100,7 +104,10 @@ export function createSummaryHandler(store: UsageStore) {
       from: input.from,
       to: input.to,
     };
-    return summarizeRows(store.select(filter));
+    return {
+      ...summarizeRows(store.select(filter)),
+      messageCount: store.selectUserMessages(filter).length,
+    };
   };
 }
 
@@ -513,7 +520,14 @@ export async function resyncAgents(
   const homeDir = homedir();
   const listed = listedEntries
     ? { entries: listedEntries }
-    : await paseo.agents.list();
+    : {
+        entries: await listAllAgentPages(async (cursor) => {
+          const result = await paseo.agents.list({
+            page: { limit: AGENT_LIST_PAGE_LIMIT, ...(cursor ? { cursor } : {}) },
+          });
+          return { entries: result.entries, pageInfo: result.pageInfo };
+        }),
+      };
   const targets = listed.entries
     .map((entry) => entry.agent)
     .filter((agent) => !agentIds || agentIds.includes(agent.id));
