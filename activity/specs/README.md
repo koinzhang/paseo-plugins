@@ -37,6 +37,7 @@
 | [013-pill-modal](./013-pill-modal/) | 已回滚 | 双层 popover 判定为宿主缺陷；记录排查与结论，插件侧不绕行 |
 | [014-shell-file-ops](./014-shell-file-ops/) | 已实现 | Shell / File reads·writes KPI；互斥口径（low-skill 不计 Shell） |
 | [015-model-usage](./015-model-usage/) | 已实现 | user_message 打 model 戳；Most used models / Top model |
+| [016-provider-filter-limit](./016-provider-filter-limit/) | 已实现 | Provider 筛选栏最多 5 个，按 agent / message 数排名 |
 
 ## 约定
 

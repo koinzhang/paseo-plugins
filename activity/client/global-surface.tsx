@@ -26,6 +26,7 @@ import {
 
 import { UsageStats } from "./usage-stats.tsx";
 import { mcpServerColor } from "./rank-color.ts";
+import { selectProviderOptions } from "./provider-filter.ts";
 import { useAppLanguage } from "./use-app-language.ts";
 import { buildActivityInsights, ACTIVITY_LIST_LIMIT } from "../shared/insights.ts";
 
@@ -272,9 +273,9 @@ export function GlobalUsageSurface({ theme, layout }: PluginSurfaceProps) {
   const providerOptions = useMemo(
     () => [
       { id: "all", label: "All" },
-      ...catalogProviders.map((item) => ({ id: item.provider, label: item.label })),
+      ...selectProviderOptions(catalogProviders, providerFilter),
     ],
-    [catalogProviders],
+    [catalogProviders, providerFilter],
   );
 
   useEffect(() => {
