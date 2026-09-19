@@ -221,6 +221,8 @@ export const AgentUsageItemSchema = z.object({
   coding: z.boolean(),
   /** Registry creation time; null when the agent is not in the registry. */
   createdAt: z.string().nullable(),
+  /** Registry last update time (hook time); null when not in the registry. */
+  updatedAt: z.string().nullable(),
   /** Registry archive time; null for active agents (025). */
   archivedAt: z.string().nullable(),
   /** Latest tool call / message time in the window. */
@@ -639,6 +641,7 @@ export function aggregateAgents(
     provider: string;
     title?: string | null;
     createdAt?: string | null;
+    updatedAt?: string | null;
     archivedAt?: string | null;
   }> = [],
   messages: ReadonlyArray<{
@@ -666,6 +669,7 @@ export function aggregateAgents(
         messageCount: 0,
         coding: false,
         createdAt: null,
+        updatedAt: null,
         archivedAt: null,
         lastActivityAt: null,
       };
@@ -697,6 +701,7 @@ export function aggregateAgents(
     const acc = ensure(agent.agentId, agent.provider);
     acc.title = agent.title?.trim() || acc.title;
     acc.createdAt = agent.createdAt ?? acc.createdAt;
+    acc.updatedAt = agent.updatedAt ?? acc.updatedAt;
     acc.archivedAt = agent.archivedAt ?? acc.archivedAt;
   }
 

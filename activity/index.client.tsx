@@ -54,5 +54,16 @@ export default function contribute(client: PluginClientContext) {
     },
   });
 
+  client.addCommandCenterItem({
+    id: "open-workspace-activity",
+    title: "Workspace Activity",
+    icon: "Activity",
+    keywords: ["activity", "workspace", "explorer", "tool", "usage", "shell", "skill", "mcp", "stats"],
+    context: "workspace",
+    onSelect({ openPanel }) {
+      openPanel("workspace-activity", { location: "explorer" });
+    },
+  });
+
   return contributePills(client);
 }

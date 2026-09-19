@@ -869,7 +869,7 @@ describe("aggregateAgents (024)", () => {
           title: "Review bot",
           createdAt: "2026-09-18T00:00:00.000Z",
         },
-        { agentId: "a3", provider: "codex", title: "Idle", createdAt: "2026-09-19T00:00:00.000Z", archivedAt: "2026-09-19T01:00:00.000Z" },
+        { agentId: "a3", provider: "codex", title: "Idle", createdAt: "2026-09-19T00:00:00.000Z", updatedAt: "2026-09-19T02:00:00.000Z", archivedAt: "2026-09-19T01:00:00.000Z" },
       ],
       [
         { agentId: "a1", provider: "claude/opus", ts: "2026-09-18T05:00:00.000Z" },
@@ -895,6 +895,7 @@ describe("aggregateAgents (024)", () => {
     assert.equal(a1.coding, true);
     assert.equal(a1.messageCount, 2);
     assert.equal(a1.archivedAt, null);
+    assert.equal(a1.updatedAt, null);
     assert.equal(a1.lastActivityAt, "2026-09-18T06:00:00.000Z");
 
     const a2 = items[1]!;
@@ -908,6 +909,7 @@ describe("aggregateAgents (024)", () => {
     assert.equal(a3.messageCount, 0);
     assert.equal(a3.title, "Idle");
     assert.equal(a3.createdAt, "2026-09-19T00:00:00.000Z");
+    assert.equal(a3.updatedAt, "2026-09-19T02:00:00.000Z");
     assert.equal(a3.archivedAt, "2026-09-19T01:00:00.000Z");
     assert.equal(a3.lastActivityAt, null);
   });

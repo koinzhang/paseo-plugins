@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Command Center items renamed: Open Activity (all providers) → All Activity, Activity → Current Activity.
 - Heatmap title renamed from Tool activity to Activity.
 - Smaller headings and tighter section spacing across the global surface and heatmap.
-- Explorer Activity panel: page title removed; workspace name (same type as the range chips) and range chips share one row; denser KPIs (shell / file reads / file writes / messages only); Active / Archived agent filter (`usage.agents` now returns `archivedAt`); skills / MCP share one ranked list toggled by the header icon.
+- Explorer Activity panel: page title removed; workspace name (same type as the range chips) and range chips share one row; denser KPIs (shell / file reads / file writes / messages only); agent display menu (floating card below the header icon; sort by created / updated / name / messages / status with attention-worthy agents first; group by provider; show active or archived; `usage.agents` returns `updatedAt` and `archivedAt`); Command Center item Workspace Activity opens the panel in the Explorer; skills / MCP share one ranked list toggled by the header icon.
 
 ### Removed
 

@@ -115,6 +115,7 @@ test("usage.agents filters by workspace and merges the registry", async () => {
     assert.equal(result.items[0]?.callCount, 1);
     assert.equal(result.items[0]?.skillCalls, 1);
     assert.equal(result.items[0]?.archivedAt, null);
+    assert.equal(result.items[0]?.updatedAt, "2026-09-19T10:00:00.000Z");
     assert.equal(result.items[1]?.archivedAt, "2026-09-19T11:00:00.000Z");
   } finally {
     store.close();
