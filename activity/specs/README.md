@@ -42,6 +42,7 @@
 | [018-coding-vs-chat-agents](./018-coding-vs-chat-agents/) | 已实现 | Coding vs chat 按 agent 会话二分；空会话排除 |
 | [019-coding-mutating-ops](./019-coding-mutating-ops/) | 已实现 | Coding = 写/改文件或写盘 shell（白名单启发式） |
 | [020-heatmap-title](./020-heatmap-title/) | 已实现 | 热力图标题 Tool activity → Activity |
+| [021-heatmap-range-layout](./021-heatmap-range-layout/) | 已实现 | Today/7D/30D 热力图与 All 同用 52 周年窗布局 |
 
 ## 约定
 

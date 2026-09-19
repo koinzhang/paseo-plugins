@@ -32,19 +32,12 @@ function addDays(date: Date, days: number): Date {
 
 export type HeatmapMode = "daily" | "weekly" | "cumulative";
 
-export function buildActivityCalendar(days: readonly ActivityDay[], mode: HeatmapMode, from?: string, today = new Date(), locale = "en") {
+export function buildActivityCalendar(days: readonly ActivityDay[], mode: HeatmapMode, _from?: string, today = new Date(), locale = "en") {
   const end = startOfLocalDay(today);
-  let first: Date;
-  let start: Date;
-  if (from) {
-    const parsed = startOfLocalDay(new Date(from));
-    first = Number.isNaN(parsed.getTime()) ? addDays(end, -363) : parsed;
-    start = startOfWeekSunday(first);
-  } else {
-    // Fixed 52-week year window (ChatGPT-style): current week + 51 prior weeks.
-    start = addDays(startOfWeekSunday(end), -7 * 51);
-    first = start;
-  }
+  // Always fixed 52-week year window (ChatGPT-style). Range chips filter RPC data only —
+  // short windows must not shrink the grid (021). `_from` kept for call-site compatibility.
+  const start = addDays(startOfWeekSunday(end), -7 * 51);
+  const first = start;
   const daily = new Map(days.map(day => [day.date, day]));
   const weekly = new Map<string, ActivityDay>();
   for (const day of days) {

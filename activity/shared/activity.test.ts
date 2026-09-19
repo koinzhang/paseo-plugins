@@ -13,9 +13,9 @@ describe("activity calendar", () => {
   it("formats months with the explicit app language", () => {
     const english = buildActivityCalendar([], "daily", from, today, "en");
     const chinese = buildActivityCalendar([], "daily", from, today, "zh-CN");
-    assert.equal(english.months.length, 1);
-    assert.equal(english.months[0]?.label, "Mar");
-    assert.equal(chinese.months[0]?.label, "3月");
+    assert.equal(english.months.length, 12);
+    assert.equal(english.months[11]?.label, "Mar");
+    assert.equal(chinese.months[11]?.label, "3月");
   });
   it("uses 12 evenly spaced month labels for a year window", () => {
     const result = buildActivityCalendar([], "daily", undefined, new Date(2026, 8, 19), "en");
@@ -37,6 +37,14 @@ describe("activity calendar", () => {
       }
     }
   });
+  it("keeps 52-week layout even when a short range from is passed (021)", () => {
+    const short = buildActivityCalendar([], "daily", from, today, "en");
+    const all = buildActivityCalendar([], "daily", undefined, today, "en");
+    assert.equal(short.weeks.length, 52);
+    assert.equal(short.months.length, 12);
+    assert.equal(short.weeks.length, all.weeks.length);
+    assert.equal(short.months.length, all.months.length);
+  });
   it("carries cumulative counts across missing days including today", () => {
     const cells = buildActivityCalendar(days, "cumulative", from, today).weeks.flat();
     assert.equal(cells.find(c => c.key === "2026-03-08")?.total, 9);
@@ -47,23 +55,25 @@ describe("activity calendar", () => {
   });
   it("keeps daily gaps empty and aggregates Sunday-start weeks", () => {
     assert.equal(buildActivityCalendar(days, "daily", from, today).weeks.flat().find(c => c.key === "2026-03-08")?.total, 0);
-    const weekly = buildActivityCalendar(days, "weekly", from, today).weeks[1]?.[0];
-    assert.equal(weekly?.total, 9);
-    assert.equal(weekly?.agents, 1);
-    assert.equal(weekly?.messages, 3);
+    const weekStart = "2026-03-08"; // Sunday containing 2026-03-09
+    const weeklyCell = buildActivityCalendar(days, "weekly", from, today)
+      .weeks.flat()
+      .find((c) => c.key === weekStart);
+    assert.equal(weeklyCell?.total, 9);
+    assert.equal(weeklyCell?.agents, 1);
+    assert.equal(weeklyCell?.messages, 3);
   });
-  it("includes the current week across DST and marks padding cells", () => {
+  it("includes the current week across DST and marks future padding cells", () => {
     const previous = process.env.TZ;
     process.env.TZ = "America/New_York";
     try {
       const result = buildActivityCalendar([], "daily", new Date(2026, 2, 1).toISOString(), new Date(2026, 2, 15));
-      assert.equal(result.weeks.length, 3);
-      assert.equal(result.weeks[2]?.[0]?.key, "2026-03-15");
-      assert.equal(result.weeks[2]?.[1]?.future, true);
+      assert.equal(result.weeks.length, 52);
+      assert.equal(result.weeks[51]?.[0]?.key, "2026-03-15");
+      assert.equal(result.weeks[51]?.[1]?.future, true);
     } finally {
       if (previous === undefined) delete process.env.TZ; else process.env.TZ = previous;
     }
-    assert.equal(buildActivityCalendar([], "daily", from, today).weeks[0]?.[0]?.excluded, true);
   });
   it("renders empty windows and bounded intensity", () => {
     const result = buildActivityCalendar([], "daily", undefined, today);
