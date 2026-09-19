@@ -38,6 +38,7 @@ export function formatActivityTime(
   const options: Intl.DateTimeFormatOptions = {
     hour: "numeric",
     minute: "2-digit",
+    hour12: false,
   };
   if (!sameDay) {
     options.month = "short";

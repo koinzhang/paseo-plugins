@@ -12,22 +12,26 @@ const NOW = new Date(2026, 8, 18, 15, 30);
 describe("formatActivityTime", () => {
   it("shows only the time for the same local day", () => {
     const text = formatActivityTime(new Date(2026, 8, 18, 9, 5).toISOString(), "en", NOW);
-    assert.match(text, /9:05/);
+    assert.match(text, /09:05|9:05/);
     assert.doesNotMatch(text, /Sep/);
-    assert.doesNotMatch(text, /18/);
+    assert.doesNotMatch(text, /\bAM\b|\bPM\b/i);
   });
 
   it("adds month/day for another day in the same year", () => {
     const text = formatActivityTime(new Date(2026, 8, 17, 14, 2).toISOString(), "en", NOW);
     assert.match(text, /Sep/);
     assert.match(text, /17/);
+    assert.match(text, /14:02/);
     assert.doesNotMatch(text, /2026/);
+    assert.doesNotMatch(text, /\bAM\b|\bPM\b/i);
   });
 
   it("includes the year when the date is not this year", () => {
     const text = formatActivityTime(new Date(2025, 11, 31, 23, 59).toISOString(), "en", NOW);
     assert.match(text, /2025/);
     assert.match(text, /Dec/);
+    assert.match(text, /23:59/);
+    assert.doesNotMatch(text, /\bAM\b|\bPM\b/i);
   });
 
   it("returns the placeholder for empty and keeps invalid input", () => {

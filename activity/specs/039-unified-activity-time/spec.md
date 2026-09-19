@@ -10,7 +10,7 @@
 |---|---|
 | G1 | Workspace Rank「Last」、Agent Activity「Last」、Composer popover 行时间、Agents Show→Updated **共用同一套时间格式** |
 | G2 | 优先使用 App 页面语言（`useAppLanguage` / `documentElement.lang`）；取不到时回退 `en` |
-| G3 | 用 `Intl` locale 样式：当天仅时间；同年非当天加月日；跨年再加年份 |
+| G3 | 用 `Intl` locale 样式、**24 小时制**：当天仅时间；同年非当天加月日；跨年再加年份 |
 | G4 | 客户端 UI 经统一组件 `FormattedTime` 渲染；字符串拼接场景（Agents meta）调用同一 `formatActivityTime` |
 
 ## 2. 非目标
@@ -21,7 +21,7 @@
 
 ## 3. 口径
 
-- `formatActivityTime(iso, locale, now?)`：当天仅时间；同年非当天 `month/day + time`；跨年加 `year`；`formatUpdatedAt` 为别名
+- `formatActivityTime(iso, locale, now?)`：当天仅时间；同年非当天 `month/day + time`；跨年加 `year`；**24 小时制**；`formatUpdatedAt` 为别名
 - 删除 UI 对 `formatDayTime` 的依赖（popover 不再用 24h 紧凑数字）
 - `FormattedTime`：内部 `useAppLanguage()` + `formatActivityTime`；可选 `prefix`（如 `"Last "`）
 
