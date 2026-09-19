@@ -304,7 +304,7 @@ export function WorkspaceActivityPanel({
       },
       sectionTitle: {
         color: theme.colors.foreground,
-        fontSize: layout.compact ? 18 : 20,
+        fontSize: 16,
         fontWeight: "600" as const,
         flexShrink: 0,
         letterSpacing: -0.3,
