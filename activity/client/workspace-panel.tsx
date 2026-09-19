@@ -116,14 +116,6 @@ export function WorkspaceActivityPanel({
   const error = summary.error ?? agents.error ?? skills.error ?? mcp.error;
 
   const kpi = [
-    {
-      label: "Skill calls",
-      value: allSkills.reduce((sum, item) => sum + item.total, 0).toLocaleString(),
-    },
-    {
-      label: "MCP calls",
-      value: allMcp.reduce((sum, item) => sum + item.count, 0).toLocaleString(),
-    },
     { label: "Shell calls", value: (summary.data?.shellCalls ?? 0).toLocaleString() },
     { label: "File reads", value: (summary.data?.fileReads ?? 0).toLocaleString() },
     { label: "File writes", value: (summary.data?.fileWrites ?? 0).toLocaleString() },
@@ -131,7 +123,6 @@ export function WorkspaceActivityPanel({
       label: "Messages",
       value: agentItems.reduce((sum, item) => sum + item.messageCount, 0).toLocaleString(),
     },
-    { label: "Agents", value: String(agentItems.length) },
   ];
 
   const showAgents = agentItems.length > 0;
@@ -165,7 +156,8 @@ export function WorkspaceActivityPanel({
       },
       headerMeta: {
         color: theme.colors.foregroundMuted,
-        fontSize: 12,
+        fontSize: 14,
+        fontWeight: "500" as const,
         flexShrink: 1,
       },
       sectionHeaderRow: {
@@ -253,7 +245,6 @@ export function WorkspaceActivityPanel({
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.headerRow}>
         <View style={styles.header}>
-          {!layout.compact ? <Text style={styles.sectionTitle}>Activity</Text> : null}
           <Text style={styles.headerMeta} numberOfLines={1}>
             {workspaceName ?? workspaceId}
           </Text>
