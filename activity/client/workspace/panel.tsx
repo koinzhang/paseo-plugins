@@ -371,6 +371,23 @@ export function WorkspaceActivityPanel({
         gap: 10,
         paddingVertical: 6,
       },
+      agentIconWrap: {
+        width: 18,
+        height: 18,
+        alignItems: "center" as const,
+        justifyContent: "center" as const,
+      },
+      runningBadge: {
+        position: "absolute" as const,
+        right: -4,
+        bottom: -4,
+        width: 13,
+        height: 13,
+        borderRadius: 6.5,
+        alignItems: "center" as const,
+        justifyContent: "center" as const,
+        backgroundColor: theme.colors.surface0,
+      },
       listMain: {
         flex: 1,
         minWidth: 0,

@@ -10,9 +10,12 @@ import {
   type ViewStyle,
 } from "react-native";
 import type { AgentAttentionKind, WorkspaceTheme } from "./constants.ts";
+import { RunningIndicator } from "./running-indicator.tsx";
 
 export type AgentRowStyles = {
   agentListRow: ViewStyle;
+  agentIconWrap: ViewStyle;
+  runningBadge: ViewStyle;
   listMain: ViewStyle;
   listLink: TextStyle;
   listTitle: TextStyle;
@@ -29,6 +32,7 @@ export function AgentRow({
   meta,
   permissionCount,
   attentionKind,
+  running,
   busy,
   actionDisabled,
   theme,
@@ -42,6 +46,7 @@ export function AgentRow({
   meta: string | null;
   permissionCount: number;
   attentionKind: AgentAttentionKind;
+  running: boolean;
   busy: boolean;
   actionDisabled: boolean;
   theme: WorkspaceTheme;
@@ -70,6 +75,7 @@ export function AgentRow({
           ? theme.colors.statusSuccess
           : theme.colors.foregroundMuted;
   const stateLabels: string[] = [];
+  if (!archived && running) stateLabels.push("running");
   if (permissionCount > 0) {
     stateLabels.push(
       permissionCount === 1 ? "1 pending permission" : `${permissionCount} pending permissions`,
@@ -81,11 +87,18 @@ export function AgentRow({
 
   const body = (
     <>
-      <Icon
-        name={archived ? "BotOff" : "Bot"}
-        size={18}
-        color={botColor}
-      />
+      <View style={styles.agentIconWrap}>
+        <Icon
+          name={archived ? "BotOff" : "Bot"}
+          size={18}
+          color={botColor}
+        />
+        {running && !archived ? (
+          <View style={styles.runningBadge}>
+            <RunningIndicator theme={theme} />
+          </View>
+        ) : null}
+      </View>
       <View style={styles.listMain}>
         <Text style={canOpen ? styles.listLink : styles.listTitle} numberOfLines={1}>
           {label}

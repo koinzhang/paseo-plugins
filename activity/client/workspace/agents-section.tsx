@@ -14,6 +14,7 @@ import { AgentRow, type AgentRowStyles } from "./agent-row.tsx";
 import {
   AGENT_PAGE_SIZE,
   attentionKind,
+  isAgentRunning,
   SEARCH_ANIM_MS,
   SEARCH_TITLE_GAP,
   type AgentGroup,
@@ -181,6 +182,7 @@ export function AgentsSection({
         meta={meta}
         permissionCount={permissionCount}
         attentionKind={attentionKind(statusInfo)}
+        running={isAgentRunning(statusInfo)}
         busy={busy}
         actionDisabled={busy || busyAgentId != null}
         theme={theme}

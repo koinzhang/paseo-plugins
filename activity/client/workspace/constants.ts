@@ -34,6 +34,11 @@ export function attentionKind(info: AgentStatusInfo | undefined): AgentAttention
   return null;
 }
 
+/** Host lifecycle says the agent is actively working a turn (spinner badge). */
+export function isAgentRunning(info: AgentStatusInfo | undefined): boolean {
+  return info?.status === "running";
+}
+
 export type MenuOption = { id: string; label: string; icon: string };
 
 /** Agents header row / search pill height — keep fixed to avoid layout jump. */

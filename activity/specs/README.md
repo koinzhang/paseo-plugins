@@ -60,6 +60,7 @@
 | [033-agent-permission-badge](./033-agent-permission-badge/) | 已实现 | Agents 行 pending permission warning 徽标；attention 排序含 pendingPermissions |
 | [034-agent-attention-colors](./034-agent-attention-colors/) | 已实现 | Agents 行机器人图标：finished→statusSuccess、permission→statusWarning、error→statusDanger |
 | [035-agent-status-subscription](./035-agent-status-subscription/) | 已实现 | 订阅 agent_update 近实时刷新状态查询（300ms 防抖，15s 轮询兜底） |
+| [036-agent-running-spinner](./036-agent-running-spinner/) | 已实现 | Agents 行 running 状态：图标右下角 host 风格环形 loading |
 
 ## 约定
 

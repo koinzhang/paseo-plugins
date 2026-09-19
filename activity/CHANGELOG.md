@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Explorer Agents rows show a warning badge (ShieldAlert icon plus count when multiple) when the host reports pending permission requests; these agents also rank first with other attention-worthy agents.
 - Explorer Agents row bot icon reflects attention with theme status colors: success (green) for finished-but-unread turns, warning for pending permissions (which keep the warning badge), and danger for failed agents; the icon returns to muted once the host clears attention after viewing.
 - Explorer agent status (permission badge, attention icon colors) now refreshes on the host's `agent_update` push (300ms debounce, workspace-filtered) instead of waiting for the 15s poll, which stays as a fallback.
+- Explorer Agents rows show a host-style spinning ring at the bottom-right of the bot icon while the agent is running (`status = "running"`); it disappears when the turn ends.
 - Workspace Activity panel Terminals section: lists the workspace's open terminals through the host SDK (`paseo.terminals.list`), with a tap-to-expand live output preview (`capture`, latest 8 lines, ANSI stripped, 5s polling) and a per-row close button (`kill`, optimistic removal with rollback toast); terminal cwd collapses the home directory to `~` (new `usage.host-info` RPC); hidden when no terminals are open.
 
 ## [0.2.0] - 2026-09-19
