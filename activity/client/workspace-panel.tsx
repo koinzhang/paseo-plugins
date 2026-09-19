@@ -27,6 +27,18 @@ const AGENT_FILTERS: ReadonlyArray<{ id: "active" | "archived"; label: string }>
   { id: "archived", label: "Archived" },
 ];
 
+type RankKind = "skills" | "mcp";
+
+function rankTitle(kind: RankKind): string {
+  return kind === "skills" ? "Skills" : "MCP";
+}
+
+function rankAction(kind: RankKind): { icon: "Sparkles" | "Plug"; accessibilityLabel: string } {
+  return kind === "skills"
+    ? { icon: "Plug", accessibilityLabel: "Show most used MCP" }
+    : { icon: "Sparkles", accessibilityLabel: "Show most used skills" };
+}
+
 function CountText({
   value,
   styles,
@@ -46,6 +58,7 @@ export function WorkspaceActivityPanel({
 }: PluginWorkspacePanelProps) {
   const [range, setRange] = useState<RangeId>("all");
   const [agentFilter, setAgentFilter] = useState<"active" | "archived">("active");
+  const [rankKind, setRankKind] = useState<RankKind>("skills");
   const padding = layout.compact ? 16 : 24;
   const workspaceName = useWorkspace(workspaceId, (workspace) => workspace.title ?? workspace.name);
   const openAgent = navigation?.openAgent;
@@ -122,9 +135,8 @@ export function WorkspaceActivityPanel({
   ];
 
   const showAgents = agentItems.length > 0;
-  const showSkills = skillItems.length > 0;
-  const showMcp = mcpItems.length > 0;
-  const showContent = showAgents || showSkills || showMcp;
+  const showRank = skillItems.length > 0 || mcpItems.length > 0;
+  const showContent = showAgents || showRank;
 
   const styles = useMemo(
     () => ({
@@ -162,6 +174,10 @@ export function WorkspaceActivityPanel({
         justifyContent: "space-between" as const,
         flexWrap: "wrap" as const,
         gap: 12,
+      },
+      titleAction: {
+        padding: 4,
+        borderRadius: 6,
       },
       sectionTitle: {
         color: theme.colors.foreground,
@@ -343,48 +359,63 @@ export function WorkspaceActivityPanel({
         </View>
       ) : null}
 
-      {showSkills ? (
+      {showRank ? (
         <View style={{ gap: 12 }}>
-          <Text style={styles.sectionTitle}>Skills</Text>
-          <View style={styles.panel}>
-            {skillItems.map((item) => (
-              <View key={item.skillName} style={styles.listRow}>
-                <Icon name="Sparkles" size={18} color={theme.colors.foregroundMuted} />
-                <View style={styles.listMain}>
-                  <Text style={styles.listTitle} numberOfLines={1}>
-                    {formatDisplayName(item.skillName)}
-                  </Text>
-                  <Text style={styles.listMeta}>Last {formatLocalDateTime(item.lastUsedAt)}</Text>
-                </View>
-                <CountText value={item.total} styles={styles} />
-              </View>
-            ))}
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>{rankTitle(rankKind)}</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={rankAction(rankKind).accessibilityLabel}
+              hitSlop={8}
+              onPress={() => setRankKind((prev) => (prev === "skills" ? "mcp" : "skills"))}
+              style={styles.titleAction}
+            >
+              <Icon
+                name={rankAction(rankKind).icon}
+                size={16}
+                color={theme.colors.foregroundMuted}
+              />
+            </Pressable>
           </View>
-        </View>
-      ) : null}
-
-      {showMcp ? (
-        <View style={{ gap: 12 }}>
-          <Text style={styles.sectionTitle}>MCP</Text>
           <View style={styles.panel}>
-            {mcpItems.map((item) => (
-              <View key={`${item.server}.${item.tool}`} style={styles.listRow}>
-                <Icon name="Plug" size={18} color={theme.colors.foregroundMuted} />
-                <View style={styles.listMain}>
-                  <Text style={styles.listTitle} numberOfLines={1}>
-                    {formatDisplayName(`${item.server}.${item.tool}`)}
-                  </Text>
-                  <Text style={styles.listMeta}>
-                    {item.failures > 0
-                      ? `${item.failures} failed`
-                      : item.lastUsedAt
-                        ? `Last ${formatLocalDateTime(item.lastUsedAt)}`
-                        : "—"}
-                  </Text>
-                </View>
-                <CountText value={item.count} styles={styles} />
-              </View>
-            ))}
+            {rankKind === "skills"
+              ? skillItems.map((item) => (
+                  <View key={item.skillName} style={styles.listRow}>
+                    <Icon name="Sparkles" size={18} color={theme.colors.foregroundMuted} />
+                    <View style={styles.listMain}>
+                      <Text style={styles.listTitle} numberOfLines={1}>
+                        {formatDisplayName(item.skillName)}
+                      </Text>
+                      <Text style={styles.listMeta}>
+                        Last {formatLocalDateTime(item.lastUsedAt)}
+                      </Text>
+                    </View>
+                    <CountText value={item.total} styles={styles} />
+                  </View>
+                ))
+              : mcpItems.map((item) => (
+                  <View key={`${item.server}.${item.tool}`} style={styles.listRow}>
+                    <Icon name="Plug" size={18} color={theme.colors.foregroundMuted} />
+                    <View style={styles.listMain}>
+                      <Text style={styles.listTitle} numberOfLines={1}>
+                        {formatDisplayName(`${item.server}.${item.tool}`)}
+                      </Text>
+                      <Text style={styles.listMeta}>
+                        {item.failures > 0
+                          ? `${item.failures} failed`
+                          : item.lastUsedAt
+                            ? `Last ${formatLocalDateTime(item.lastUsedAt)}`
+                            : "—"}
+                      </Text>
+                    </View>
+                    <CountText value={item.count} styles={styles} />
+                  </View>
+                ))}
+            {(rankKind === "skills" ? skillItems.length : mcpItems.length) === 0 ? (
+              <Text style={styles.empty}>
+                {rankKind === "skills" ? "No skills yet" : "No MCP yet"}
+              </Text>
+            ) : null}
           </View>
         </View>
       ) : null}
