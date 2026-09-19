@@ -64,9 +64,11 @@ export function AgentRow({
   const botColor =
     !archived && attentionKind === "error"
       ? theme.colors.statusDanger
-      : !archived && attentionKind != null
-        ? theme.colors.accent
-        : theme.colors.foregroundMuted;
+      : !archived && attentionKind === "permission"
+        ? theme.colors.statusWarning
+        : !archived && attentionKind === "finished"
+          ? theme.colors.statusSuccess
+          : theme.colors.foregroundMuted;
   const stateLabels: string[] = [];
   if (permissionCount > 0) {
     stateLabels.push(
