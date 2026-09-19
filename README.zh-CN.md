@@ -38,11 +38,17 @@ UI 入口：
 需要 Paseo >= 0.8.0。
 
 ```bash
+paseo plugin install https://github.com/koinzhang/paseo-plugins.git:activity
+paseo plugin ls                # 确认 running
+```
+
+本地 checkout（开发）改为安装目录：
+
+```bash
 cd activity
 paseo plugin install .
 paseo plugin reload activity   # 源码改动后重载
 paseo plugin logs activity     # 查看子进程日志
-paseo plugin ls                # 确认 running
 ```
 
 ## 开发
