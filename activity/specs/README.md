@@ -62,7 +62,7 @@
 | [035-agent-status-subscription](./035-agent-status-subscription/) | 已实现（038 修正） | 目录事件增量更新状态缓存，15s 轮询保证完整性 |
 | [036-agent-running-spinner](./036-agent-running-spinner/) | 已实现 | Agents 行 running 状态：图标右下角 host 风格环形 loading |
 | [037-turn-end-refresh](./037-turn-end-refresh/) | 已实现（038 修正） | Agent/pill 真实 timeline turn 刷新；Workspace 启发式提示 + 轮询 |
-| [038-sdk-api-remediation](./038-sdk-api-remediation/) | 已实现 | SDK 审查修复：分页轮询、projectKey 过滤、timeline 事件、skill cwd 恢复 |
+| [038-sdk-api-remediation](./038-sdk-api-remediation/) | 已实现 | SDK 审查修复：分页轮询、placement 项目过滤（已修正回归）、timeline 事件、skill cwd 恢复 |
 
 ## 约定
 

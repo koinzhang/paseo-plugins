@@ -168,23 +168,17 @@ export function WorkspaceActivityPanel({
   });
 
   const projectId = useWorkspace(workspaceId, (workspace) => workspace.projectId);
-  const projects = useQuery({
-    queryKey: ["activity", "host-projects"],
-    queryFn: () => paseo.projects.list(),
-    staleTime: 60_000,
-    retry: false,
-  });
-  const projectKey = projects.data?.projects.find((project) => project.projectId === projectId)?.projectKey;
+  // 0.8 agent directory filters match ProjectPlacement.projectKey, which the
+  // daemon builds from projectId, NOT WorkspaceProjectDescriptor.projectKey.
   const statusQueryKey = useMemo(
-    () => ["activity", "workspace-agent-status", workspaceId, projectKey ?? null],
-    [workspaceId, projectKey],
+    () => ["activity", "workspace-agent-status", workspaceId, projectId ?? null],
+    [workspaceId, projectId],
   );
   const statuses = useQuery({
-    enabled: projects.isFetched,
     refetchInterval: 15_000,
     retry: false,
     queryKey: statusQueryKey,
-    queryFn: () => loadWorkspaceAgentStatuses(paseo, workspaceId, projectKey),
+    queryFn: () => loadWorkspaceAgentStatuses(paseo, workspaceId, projectId),
   });
 
   useEffect(() => paseo.agents.subscribe((update) => {

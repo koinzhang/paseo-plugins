@@ -29,16 +29,20 @@ type HostAgentsApi = {
   };
 };
 
-/** Fetch project agents when its key is known, then enforce workspace scope. */
+/**
+ * Fetch project agents then enforce workspace scope. In daemon 0.8,
+ * ProjectPlacement.projectKey is projectId; the project catalog's repository
+ * key is a different identifier and produces an empty agent directory.
+ */
 export async function loadWorkspaceAgentStatuses(
   paseo: HostAgentsApi,
   workspaceId: string,
-  projectKey?: string | null,
+  projectId?: string | null,
 ): Promise<Record<string, AgentStatusInfo>> {
   const entries = await listAllAgentPages(
     async (cursor) => {
       const result = await paseo.agents.list({
-        filter: { includeArchived: true, ...(projectKey ? { projectKeys: [projectKey] } : {}) },
+        filter: { includeArchived: true, ...(projectId ? { projectKeys: [projectId] } : {}) },
         page: { limit: HOST_AGENT_PAGE_LIMIT, ...(cursor ? { cursor } : {}) },
       });
       return { entries: result.entries, pageInfo: result.pageInfo };

@@ -18,7 +18,7 @@
 | 编号 | 严重度 | 结论 | 状态 |
 |---|---|---|---|
 | A | 高 | 本地监听不拥有 observation，原实时性依赖宿主 | 已做 0.8 兼容修复：独立轮询保证完整性，目录实时推送仍为尽力加速 |
-| B | 中 | Workspace 状态全 host 拉取且每次推送重拉 | 已修复：真实 projectKey 收窄 + 增量缓存 |
+| B | 中 | Workspace 状态全 host 拉取且每次推送重拉 | 已修复：agent placement 项目 ID 过滤 + 增量缓存（已修正字段混淆） |
 | C | 中 | 从非 running 状态推断回合结束 | 已修复：单 agent 使用 timeline；workspace 明确为启发式刷新 |
 | D | 中 | 新句柄 current() 为 null 导致项目 skill 路径缺失 | 已修复并补回归测试 |
 | E | 低 | Pill 初始化未翻页 | 已修复并覆盖卸载/推送竞态 |
@@ -28,7 +28,7 @@
 ### 本次验证
 
 - `npm run typecheck`：通过。
-- `npm test`：151 项全部通过；新增项目 SKILL.md 解析、元信息缺失回退、pill 分页/并发 remove/卸载/无推送轮询、workspace 分页过滤测试。
+- `npm test`：152 项全部通过；新增项目 SKILL.md 解析、元信息缺失回退、pill 分页/并发 remove/卸载/无推送轮询、workspace 分页过滤及两个 projectKey 不同的等待输入回归测试。
 - `paseo plugin reload activity` / `paseo plugin ls`：`running`，加载日志出现 `store ready` / `Plugin ready`。
 - 未执行真机多端 UI 交互验收、远端/自定义 daemon 环境矩阵；不将这些项目视为已验证。
 
@@ -87,7 +87,11 @@
 
 ## B. Workspace Agents 状态查询全量拉取（中）
 
-**复核与处理**：问题成立。daemon ProjectRegistry 独立生成 `projectId`，`projectKey` 为另外的字段，两者不能互换。`client/workspace/panel.tsx` 通过 `useWorkspace` 取得 projectId，再通过 `projects.list()` 映射真实 projectKey，等待项目查询完成后加载状态。`loadWorkspaceAgentStatuses` 每页携带 projectKeys，最终严格过滤 workspaceId；项目 key 缺失或项目目录请求失败时安全回退全 host 分页。推送直接更新/删除单个缓存项，不再触发全目录重拉。
+**复核与处理（第二次修正）**：全量查询问题成立，但首次修复错误混用了两个 `projectKey`。0.8.0 `session.buildProjectPlacementForWorkspace` 明确构造 `projectKey: project.projectId`，agent filter 匹配的是这个 **placement key**；`projects.list().projects[].projectKey` 则是 `remote:github.com/...` 仓库标识。初次测试仅断言传参，没有模拟 daemon 匹配行为，遗漏了回归。
+
+现在 `client/workspace/panel.tsx` 直接把 `useWorkspace(...projectId)` 传给 `loadWorkspaceAgentStatuses`，每页用于 `filter.projectKeys`，并严格过滤 workspaceId；删除多余的 projects.list 查询与等待。projectId 暂不可用时仍回退全 host 分页。推送维持单条缓存更新。
+
+用户报告的 agent `44cc9fd8-c930-4a1a-9ee5-251b61fbec40` 实测：错误的仓库 key 过滤为 0 条；修复后调用实际 loader 返回该 workspace 的 33 条状态，其中目标 agent `permissionCount=1`、`rank=0`、attention kind 为 permission，与 daemon 直接快照一致。根因是空轮询结果反复覆盖推送缓存，导致等待输入提示消失。新增模拟真实 placement 过滤的回归测试覆盖这一问题。
 
 **现象**
 
