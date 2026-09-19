@@ -484,7 +484,7 @@ export function GlobalUsageSurface({ theme, layout }: PluginSurfaceProps) {
       content: {
         padding,
         paddingBottom: padding + 32,
-        gap: layout.compact ? 28 : 40,
+        gap: layout.compact ? 24 : 32,
         maxWidth: 780,
         width: "100%" as const,
         alignSelf: "center" as const,
@@ -534,7 +534,7 @@ export function GlobalUsageSurface({ theme, layout }: PluginSurfaceProps) {
       },
       blockTitle: {
         color: theme.colors.foreground,
-        fontSize: 19,
+        fontSize: layout.compact ? 13 : 15,
         fontWeight: "500" as const,
         flexShrink: 1,
         marginBottom: 0,

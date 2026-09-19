@@ -73,9 +73,9 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
   const axisWidth = needsScroll ? gridWidth : width;
   const modeLabel = mode === "weekly" ? "Week containing" : mode === "cumulative" ? "Through" : "";
   return (
-    <View style={{ gap: compact ? 16 : 22 }} onLayout={event => setWidth(event.nativeEvent.layout.width)}>
+    <View style={{ gap: compact ? 10 : 12 }} onLayout={event => setWidth(event.nativeEvent.layout.width)}>
       <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <Text style={{ color: colors.foreground, fontSize: compact ? 17 : 20, fontWeight: "500" }}>Activity</Text>
+        <Text style={{ color: colors.foreground, fontSize: compact ? 13 : 15, fontWeight: "500" }}>Activity</Text>
         <View style={{ flexDirection: "row", gap: compact ? 14 : 20 }}>
           {modeOptions.map(option => (
             <Pressable key={option.id} accessibilityRole="tab" accessibilityState={{ selected: mode === option.id }} onPress={() => onModeChange(option.id)} style={{ paddingVertical: 6 }}>
