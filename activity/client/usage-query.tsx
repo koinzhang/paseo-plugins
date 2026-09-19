@@ -1,5 +1,5 @@
 import { useRpc } from "@getpaseo/plugin/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   usageMcpByToolRpc,
   usageSkillsByNameRpc,
@@ -10,17 +10,22 @@ import {
   writePillDataCache,
   type UsagePillData,
 } from "./pill-data-cache.ts";
+import { useAgentTurnEnd } from "./use-agent-turn-end.ts";
 
 export type { UsagePillData } from "./pill-data-cache.ts";
 export { __setPillDataCacheForTests, clearPillDataCache } from "./pill-data-cache.ts";
 
-/** Poll while empty so mid-turn mount can see post-turn_ended rows before hide. */
-const EMPTY_REFETCH_MS = 1_500;
+/** Fallback poll while empty; host turn-end events drive the fast path. */
+const EMPTY_REFETCH_MS = 5_000;
 
 /** Current-agent skills/mcp breakdown for the composer pill (no summary — unused in UI). */
 export function useUsagePillData(agentId: string) {
   const skillsRpc = useRpc(usageSkillsByNameRpc);
   const mcpRpc = useRpc(usageMcpByToolRpc);
+  const queryClient = useQueryClient();
+  useAgentTurnEnd({ agentId }, () => {
+    void queryClient.invalidateQueries({ queryKey: ["activity", "pill", "agent", agentId] });
+  });
   return useQuery({
     queryKey: ["activity", "pill", "agent", agentId],
     queryFn: async () => {

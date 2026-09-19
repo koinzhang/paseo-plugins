@@ -1,6 +1,6 @@
 import { type PluginAgentPanelProps, useAgent, useRpc } from "@getpaseo/plugin/client";
 import { Icon } from "@getpaseo/plugin/client/react-native";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
@@ -23,6 +23,7 @@ import {
   consumePendingSkillOpen,
   subscribePendingSkillOpen,
 } from "./pending-skill.ts";
+import { useAgentTurnEnd } from "./use-agent-turn-end.ts";
 
 import { UsageStats } from "./usage-stats.tsx";
 
@@ -97,6 +98,13 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
     queryFn: () => readSkillRpc({ path: skillDetail!.path }),
     enabled: Boolean(skillDetail?.path),
     retry: false,
+  });
+
+  const queryClient = useQueryClient();
+  useAgentTurnEnd({ agentId }, () => {
+    void queryClient.invalidateQueries({ queryKey: ["activity", "skills-by-name", agentId] });
+    void queryClient.invalidateQueries({ queryKey: ["activity", "mcp-by-tool", agentId] });
+    void queryClient.invalidateQueries({ queryKey: ["activity", "summary", agentId] });
   });
 
   const skillItems = useMemo(() => {

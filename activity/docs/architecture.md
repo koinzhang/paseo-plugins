@@ -20,7 +20,7 @@ Agent Activity      → 单 agent · 工具明细（Skills / MCP）· Pill 快�
 分工原则：
 
 - Global = 习惯与 provider 对比（热力图、Insights、Models）
-- Workspace = **竖向 Agents 运营页**（列表、搜索、筛选、归档、显示偏好）+ 本仓 KPI + 打开中的 Terminals（032，host SDK 直连：列表 / 预览 / 关闭，不进本地库）；**不做**热力图 / provider·model 拆分 / 时间窗（024 / 027）
+- Workspace = **竖向 Agents 运营页**（列表、搜索、筛选、归档、显示偏好）+ 本仓 KPI + 打开中的 Terminals（032，host SDK 直连：列表 / 预览 / 关闭，不进本地库）+ Agents 行实时 attention（033–036：pending permission 徽标、status 色、running spinner；`agent_update` 近实时，15s 轮询兜底）；**不做**热力图 / provider·model 拆分 / 时间窗（024 / 027）
 - Agent = 当前会话工具明细 + pill；Messages 计入 KPI（031），Models 仍仅全局（015）
 
 产品定位已超出「纯统计」：Workspace 面把 activity 数据接到 agent 管理上。对外说明见 [`README.md`](../README.md)。
@@ -34,7 +34,7 @@ server/          handlers · store · ingest · background-sync · hooks
 ~/.paseo/.../    SQLite：tool_calls · user_messages · agents
 ```
 
-**查询面以本地库为准**；Paseo timeline / `agents.list` 只作采集与回填 / 状态 enrichment，不在 UI 路径全量现算。
+**查询面以本地库为准**；Paseo timeline / `agents.list` 只作采集与回填 / 状态 enrichment，不在 UI 路径全量现算。Workspace Agents 行的 attention / lifecycle 另订 `paseo.agents.subscribe`（`agent_update`）近实时 invalidate，15s 轮询兜底（035）。本地用量查询（Workspace / Agent / pill）在回合结束离开 `running`/`initializing` 时同样经 `agent_update` 失效（037，300ms + 2s settle）；Global 与 Terminals 仍靠轮询。Terminals 不经本地库，走 host `terminals.*`（032）。
 
 ### 正交事件维
 
@@ -55,6 +55,7 @@ server/          handlers · store · ingest · background-sync · hooks
 | `usage.mcp-by-tool` | ✓ | ✓ | ✓ | 三层 |
 | `usage.by-provider` | — | ✓ | ✓ | Global |
 | `usage.agents` | — | ✓ | ✓ | Workspace |
+| `usage.host-info` | — | — | — | Workspace（cwd `~` 折叠） |
 | `usage.activity-by-day` | — | ✓ | ✓ | Global |
 | `usage.list` / `usage.export` | ✓ | — | ✓ | 无 UI（契约保留） |
 

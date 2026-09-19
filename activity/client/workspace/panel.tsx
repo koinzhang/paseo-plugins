@@ -32,6 +32,7 @@ import {
   usageSummaryRpc,
 } from "../../shared/usage.ts";
 import { useAppLanguage } from "../use-app-language.ts";
+import { useAgentTurnEnd } from "../use-agent-turn-end.ts";
 import { UsageStats } from "../usage-stats.tsx";
 import { AgentsSection } from "./agents-section.tsx";
 import {
@@ -191,6 +192,19 @@ export function WorkspaceActivityPanel({
       if (timer != null) clearTimeout(timer);
     };
   }, [paseo, queryClient, workspaceId]);
+
+  useAgentTurnEnd({ workspaceId }, () => {
+    void queryClient.invalidateQueries({
+      queryKey: ["activity", "workspace-summary", workspaceId],
+    });
+    void queryClient.invalidateQueries({ queryKey: agentsQueryKey });
+    void queryClient.invalidateQueries({
+      queryKey: ["activity", "workspace-skills", workspaceId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["activity", "workspace-mcp", workspaceId],
+    });
+  });
 
   const agentItems = agents.data?.items ?? [];
   const visibleAgentItems = useMemo(() => {

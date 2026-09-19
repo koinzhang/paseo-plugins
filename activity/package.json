@@ -1,7 +1,7 @@
 {
   "name": "@koinzhang/paseo-plugin-activity",
-  "version": "0.2.0",
-  "description": "Local usage analytics for Paseo: tool calls, agents, messages, and model usage.",
+  "version": "0.3.0",
+  "description": "Local usage analytics and workspace agent ops for Paseo: tools, agents, messages, models, Explorer fleet list, and terminals.",
   "license": "MIT",
   "type": "module",
   "repository": {

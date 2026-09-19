@@ -2,12 +2,12 @@
 
 Activity for Paseo: local usage analytics **and** workspace agent management.
 
-It still answers “how am I using Paseo” (tools, messages, models, habits). With the Explorer **Workspace Activity** panel it also becomes a **vertical ops surface** for the agents in the current workspace — sort, filter, search, open, archive — with KPIs and top skills / MCP alongside the list.
+It still answers “how am I using Paseo” (tools, messages, models, habits). With the Explorer **Workspace Activity** panel it also becomes a **vertical ops surface** for the agents in the current workspace — sort, filter, search, open, archive — with live attention cues, open terminals, KPIs, and top skills / MCP.
 
 | Scope | Role |
 |---|---|
 | **Global** | Cross-workspace habits: heatmap, provider filter, insights, most-used skills / MCP / models |
-| **Workspace** | Per-workspace agent fleet: ranked list + display prefs + archive; shell / file / messages KPIs |
+| **Workspace** | Per-workspace agent fleet: ranked list + display prefs + archive; live status (permission / finished / error / running); open Terminals; shell / file / messages KPIs |
 | **Agent** | Current session: tool KPIs, Skills / MCP detail, SKILL.md reader, composer pill |
 
 Architecture notes: [docs/architecture.md](./docs/architecture.md).
@@ -26,9 +26,9 @@ Ingests every agent's Paseo timeline into a local SQLite database. Queries read 
 ## Where it shows up
 
 - **Sidebar Activity** — global view by provider (heatmap, KPIs, insights, most used)
-- **Explorer → Activity** — workspace agents as a management list (search / sort / group / status / lifecycle / archive) plus workspace KPIs and top skills / MCP
-- **Agent workspace panel** — per-agent tool detail (KPI including messages / Skills / MCP / SKILL.md)
-- **Composer pill** — current agent's skill / MCP summary; hidden when empty
+- **Explorer → Activity** — workspace agents as a management list (search / sort / group / status / lifecycle / archive), live attention (permission badge, status colors, running spinner via `agent_update`), open Terminals (list / preview / close), plus workspace KPIs and top skills / MCP; usage numbers refresh when a turn ends
+- **Agent workspace panel** — per-agent tool detail (KPI including messages / Skills / MCP / SKILL.md); refreshes when the agent's turn ends
+- **Composer pill** — current agent's skill / MCP summary; hidden when empty; refreshes on turn end (5s empty poll fallback)
 - **Command Center** — Activity · Workspace Activity · Agent Activity
 
 ## Data

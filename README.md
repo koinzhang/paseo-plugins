@@ -11,7 +11,7 @@ A monorepo for Paseo plugins. Each plugin lives in its own directory with its ow
 
 | Plugin | ID | Description |
 |---|---|---|
-| [Activity](./activity/) | `activity` | Local usage analytics **and** workspace agent management (Explorer fleet list + archive) |
+| [Activity](./activity/) | `activity` | Local usage analytics **and** workspace agent ops (Explorer fleet list, live attention, terminals) |
 
 ## Activity
 
@@ -20,7 +20,7 @@ Three scopes — not stats-only:
 | Scope | Role |
 |---|---|
 | **Global** (sidebar) | Habits across workspaces: heatmap, providers, insights, most-used skills / MCP / models |
-| **Workspace** (Explorer Activity) | Vertical agent ops for the current workspace: list / search / sort / filter / archive + KPIs |
+| **Workspace** (Explorer Activity) | Vertical agent ops for the current workspace: list / search / sort / filter / archive, live attention, open Terminals + KPIs |
 | **Agent** (panel + pill) | Current session tool detail and skill / MCP summary |
 
 Counted dimensions (local SQLite): tools (skill / MCP / shell / file), agent creations, user messages, models (messages-weighted). Details: [activity/README.md](./activity/README.md) · [architecture](./activity/docs/architecture.md).

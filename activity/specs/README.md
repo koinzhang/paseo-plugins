@@ -61,6 +61,7 @@
 | [034-agent-attention-colors](./034-agent-attention-colors/) | 已实现 | Agents 行机器人图标：finished→statusSuccess、permission→statusWarning、error→statusDanger |
 | [035-agent-status-subscription](./035-agent-status-subscription/) | 已实现 | 订阅 agent_update 近实时刷新状态查询（300ms 防抖，15s 轮询兜底） |
 | [036-agent-running-spinner](./036-agent-running-spinner/) | 已实现 | Agents 行 running 状态：图标右下角 host 风格环形 loading |
+| [037-turn-end-refresh](./037-turn-end-refresh/) | 已实现 | 回合结束事件驱动刷新 Workspace / Agent / pill 本地用量查询；pill 空态轮询 1.5s→5s |
 
 ## 约定
 
