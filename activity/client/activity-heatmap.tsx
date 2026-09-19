@@ -10,6 +10,8 @@ type ThemeColors = {
   surface0: string; surface1: string; surface2: string;
 };
 
+type HoveredMonth = { year: number; month: number };
+
 // Derive the activity palette from the active theme.
 function mix(base: string, accent: string, amount: number): string {
   const parse = (value: string) => {
@@ -29,6 +31,12 @@ function plural(count: number, singular: string, pluralForm = `${singular}s`): s
   return `${count.toLocaleString()} ${count === 1 ? singular : pluralForm}`;
 }
 
+function cellInMonth(dateKey: string, hovered: HoveredMonth | null): boolean {
+  if (!hovered) return false;
+  const [year, month] = dateKey.split("-").map(Number);
+  return year === hovered.year && month === hovered.month + 1;
+}
+
 export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChange, modeOptions }: {
   days: readonly ActivityDay[]; from?: string; colors: ThemeColors; compact?: boolean;
   mode: HeatmapMode; onModeChange: (mode: HeatmapMode) => void;
@@ -41,7 +49,12 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
   const [tooltipSize, setTooltipSize] = useState({ width: 220, height: 28 });
   const [selected, setSelected] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
-  useEffect(() => { setSelected(null); setHovered(null); }, [from, mode, days]);
+  const [hoveredMonth, setHoveredMonth] = useState<HoveredMonth | null>(null);
+  useEffect(() => {
+    setSelected(null);
+    setHovered(null);
+    setHoveredMonth(null);
+  }, [from, mode, days]);
   const { weeks, months, max } = useMemo(() => buildActivityCalendar(days, mode, from, new Date(), locale), [days, mode, from, locale]);
   const gap = compact ? 2 : 3;
   // Fit the full year into the measured width (no min floor — avoid horizontal overflow).
@@ -69,9 +82,9 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
   const tooltipText = active
     ? `${plural(active.skills, "skill")}, ${plural(active.mcp, "mcp")}, ${plural(active.agents, "agent")}, ${plural(active.messages, "message")} ${datePrefix} ${dateLabel}`
     : "";
-  const muted = { color: colors.foregroundMuted, fontSize: 12 };
   const axisWidth = needsScroll ? gridWidth : width;
   const modeLabel = mode === "weekly" ? "Week containing" : mode === "cumulative" ? "Through" : "";
+  const monthBorder = mix(colors.surface2, colors.accent, 0.35);
   return (
     <View style={{ gap: compact ? 10 : 12 }} onLayout={event => setWidth(event.nativeEvent.layout.width)}>
       <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -98,6 +111,7 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
               <View key={i} style={{ gap }}>
                 {week.map(cell => {
                   const hidden = cell.future || cell.excluded;
+                  const monthHighlight = !hidden && cellInMonth(cell.key, hoveredMonth);
                   return (
                     <Pressable key={cell.key} disabled={hidden} accessibilityRole="button"
                       accessibilityLabel={`${modeLabel} ${cell.key}: ${cell.total} activity, ${cell.skills} skills, ${cell.mcp} MCP, ${cell.agents} agents, ${cell.messages} messages`}
@@ -105,19 +119,47 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
                       onHoverIn={() => setHovered(cell.key)} onHoverOut={() => setHovered(null)}
                       onFocus={() => setHovered(cell.key)} onBlur={() => setHovered(null)}
                       onPress={() => setSelected(prev => prev === cell.key ? null : cell.key)}
-                      style={{ width: cellSize, height: cellSize, borderRadius: Math.max(2, cellSize / 4),
-                        backgroundColor: palette[activityLevel(cell.total, max)], opacity: hidden ? 0 : 1 }} />
+                      style={{
+                        width: cellSize,
+                        height: cellSize,
+                        borderRadius: Math.max(2, cellSize / 4),
+                        backgroundColor: palette[activityLevel(cell.total, max)],
+                        borderWidth: monthHighlight ? 0.1 : 0,
+                        borderColor: monthHighlight ? monthBorder : "transparent",
+                        opacity: hidden ? 0 : 1,
+                      }} />
                   );
                 })}
               </View>
             ))}
           </View>
           <View style={{ height: 24, marginTop: 10, flexDirection: "row", justifyContent: "space-between" }}>
-            {months.map((item, i) => (
-              <Text key={`${item.label}-${i}`} numberOfLines={1} style={muted}>
-                {item.label}
-              </Text>
-            ))}
+            {months.map((item, i) => {
+              const activeMonth =
+                hoveredMonth?.year === item.year && hoveredMonth.month === item.month;
+              return (
+                <Pressable
+                  key={`${item.year}-${item.month}-${i}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Highlight ${item.label}`}
+                  onHoverIn={() => setHoveredMonth({ year: item.year, month: item.month })}
+                  onHoverOut={() => setHoveredMonth(null)}
+                  onFocus={() => setHoveredMonth({ year: item.year, month: item.month })}
+                  onBlur={() => setHoveredMonth(null)}
+                  style={{ paddingVertical: 2 }}
+                >
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      color: activeMonth ? colors.foreground : colors.foregroundMuted,
+                      fontSize: 12,
+                    }}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         </View>
       </ScrollView>

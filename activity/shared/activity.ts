@@ -119,7 +119,7 @@ export function buildActivityCalendar(days: readonly ActivityDay[], mode: Heatma
     (endMonth.getMonth() - startMonth.getMonth()) +
     1;
   const monthCount = Math.min(12, Math.max(1, spanMonths));
-  const months: Array<{ index: number; label: string }> = [];
+  const months: Array<{ index: number; label: string; year: number; month: number }> = [];
   for (let i = 0; i < monthCount; i++) {
     const date =
       monthCount === 12
@@ -128,6 +128,8 @@ export function buildActivityCalendar(days: readonly ActivityDay[], mode: Heatma
     months.push({
       index: (i / monthCount) * weeks.length,
       label: date.toLocaleDateString(locale, { month: "short" }),
+      year: date.getFullYear(),
+      month: date.getMonth(),
     });
   }
   return { weeks, months, max };
