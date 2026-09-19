@@ -6,7 +6,7 @@ import {
 } from "@getpaseo/plugin/client";
 import { Icon } from "@getpaseo/plugin/client/react-native";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -31,10 +31,15 @@ import { UsageStats } from "./usage-stats.tsx";
 
 type AgentSort = "created" | "updated" | "name" | "messages" | "status";
 type AgentGroup = "none" | "provider";
-type AgentShow = "active" | "archived";
-type MenuFlyout = "sort" | "group" | "show";
+type AgentShowField = "provider" | "calls" | "messages";
+type AgentStatusFilter = "running" | "active" | "archived";
+type MenuFlyout = "sort" | "group" | "show" | "status";
 
-type AgentStatusInfo = { rank: number; updatedAt: string | null };
+type AgentStatusInfo = {
+  rank: number;
+  updatedAt: string | null;
+  status: string | null;
+};
 
 /** Host MenuFlyout overlap between root surface and submenu (`SUBMENU_OVERLAP`). */
 const MENU_SUBMENU_OVERLAP = 5;
@@ -73,16 +78,41 @@ const GROUP_OPTIONS: ReadonlyArray<{ id: AgentGroup; label: string }> = [
   { id: "provider", label: "Provider" },
 ];
 
-const SHOW_OPTIONS: ReadonlyArray<{ id: AgentShow; label: string }> = [
+const SHOW_FIELD_OPTIONS: ReadonlyArray<{ id: AgentShowField; label: string }> = [
+  { id: "provider", label: "Provider" },
+  { id: "calls", label: "Calls" },
+  { id: "messages", label: "Messages" },
+];
+
+const STATUS_FILTER_OPTIONS: ReadonlyArray<{ id: AgentStatusFilter; label: string }> = [
+  { id: "running", label: "Running" },
   { id: "active", label: "Active" },
   { id: "archived", label: "Archived" },
 ];
+
+const DEFAULT_SHOW_FIELDS: ReadonlySet<AgentShowField> = new Set([
+  "provider",
+  "calls",
+  "messages",
+]);
 
 function optionLabel<T extends string>(
   options: ReadonlyArray<{ id: T; label: string }>,
   id: T,
 ): string {
   return options.find((option) => option.id === id)?.label ?? id;
+}
+
+function formatAgentMeta(
+  item: AgentUsageItem,
+  showFields: ReadonlySet<AgentShowField>,
+): string | null {
+  const parts: string[] = [];
+  if (showFields.has("provider")) parts.push(providerLabel(item.provider));
+  if (showFields.has("calls")) parts.push(`${item.callCount} calls`);
+  if (showFields.has("messages")) parts.push(`${item.messageCount} messages`);
+  if (parts.length === 0) return null;
+  return parts.join(" · ");
 }
 
 type MenuStyles = {
@@ -97,6 +127,7 @@ type MenuStyles = {
   menuSurface: ViewStyle;
   menuRootWrap: ViewStyle;
   menuFlyout: ViewStyle;
+  menuSeparator: ViewStyle;
 };
 
 function MenuSubTrigger({
@@ -147,39 +178,45 @@ function MenuSubTrigger({
 function MenuOptionList({
   options,
   selectedId,
+  selectedIds,
   onSelect,
   styles,
   checkColor,
 }: {
   options: ReadonlyArray<{ id: string; label: string }>;
-  selectedId: string;
+  selectedId?: string;
+  selectedIds?: ReadonlySet<string>;
   onSelect: (id: string) => void;
   styles: MenuStyles;
   checkColor: string;
 }): ReactNode {
   return (
     <View style={styles.menuPage}>
-      {options.map((option) => (
-        <Pressable
-          key={option.id}
-          accessibilityRole="button"
-          accessibilityState={{ selected: selectedId === option.id }}
-          onPress={() => onSelect(option.id)}
-          style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
-            styles.menuOption,
-            pressed || hovered ? styles.menuRowHighlighted : null,
-          ]}
-        >
-          <Text style={styles.menuOptionLabel} numberOfLines={1}>
-            {option.label}
-          </Text>
-          {selectedId === option.id ? (
-            <View style={styles.menuTrailing}>
-              <Icon name="Check" size={16} color={checkColor} />
-            </View>
-          ) : null}
-        </Pressable>
-      ))}
+      {options.map((option) => {
+        const selected =
+          selectedIds != null ? selectedIds.has(option.id) : selectedId === option.id;
+        return (
+          <Pressable
+            key={option.id}
+            accessibilityRole="button"
+            accessibilityState={{ selected }}
+            onPress={() => onSelect(option.id)}
+            style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+              styles.menuOption,
+              pressed || hovered ? styles.menuRowHighlighted : null,
+            ]}
+          >
+            <Text style={styles.menuOptionLabel} numberOfLines={1}>
+              {option.label}
+            </Text>
+            {selected ? (
+              <View style={styles.menuTrailing}>
+                <Icon name="Check" size={16} color={checkColor} />
+              </View>
+            ) : null}
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -216,9 +253,15 @@ export function WorkspaceActivityPanel({
   const [range, setRange] = useState<RangeId>("all");
   const [agentSort, setAgentSort] = useState<AgentSort>("created");
   const [agentGroup, setAgentGroup] = useState<AgentGroup>("none");
-  const [agentShow, setAgentShow] = useState<AgentShow>("active");
+  const [agentShowFields, setAgentShowFields] = useState<ReadonlySet<AgentShowField>>(
+    () => new Set(DEFAULT_SHOW_FIELDS),
+  );
+  const [agentStatusFilter, setAgentStatusFilter] = useState<AgentStatusFilter>("active");
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuFlyout, setMenuFlyout] = useState<MenuFlyout | null>(null);
+  const [menuAnchor, setMenuAnchor] = useState<{ top: number; right: number } | null>(null);
+  const rootRef = useRef<View>(null);
+  const triggerRef = useRef<View>(null);
   const [rankKind, setRankKind] = useState<RankKind>("skills");
   const padding = layout.compact ? 16 : 24;
   const workspaceName = useWorkspace(workspaceId, (workspace) => workspace.title ?? workspace.name);
@@ -276,6 +319,7 @@ export function WorkspaceActivityPanel({
         map[agent.id] = {
           rank: attentionRank(agent),
           updatedAt: agent.updatedAt ?? null,
+          status: agent.status ?? null,
         };
       }
       return map;
@@ -284,10 +328,14 @@ export function WorkspaceActivityPanel({
 
   const agentItems = agents.data?.items ?? [];
   const visibleAgentItems = useMemo(() => {
-    const filtered = agentItems.filter((item) =>
-      agentShow === "archived" ? item.archivedAt != null : item.archivedAt == null,
-    );
     const byId = statuses.data;
+    const filtered = agentItems.filter((item) => {
+      if (agentStatusFilter === "archived") return item.archivedAt != null;
+      if (agentStatusFilter === "active") return item.archivedAt == null;
+      // running: live status from agents.list; exclude archived even if still listed
+      if (item.archivedAt != null) return false;
+      return byId?.[item.agentId]?.status === "running";
+    });
     const byName = (a: AgentUsageItem, b: AgentUsageItem) =>
       (a.title ?? a.agentId).localeCompare(b.title ?? b.agentId);
     const updatedAt = (item: AgentUsageItem) =>
@@ -309,7 +357,7 @@ export function WorkspaceActivityPanel({
       const rankB = byId?.[b.agentId]?.rank ?? 4;
       return rankA - rankB || updatedAt(b).localeCompare(updatedAt(a)) || byName(a, b);
     });
-  }, [agentItems, agentShow, agentSort, statuses.data]);
+  }, [agentItems, agentStatusFilter, agentSort, statuses.data]);
 
   const agentGroups = useMemo(() => {
     if (agentGroup === "none") return null;
@@ -530,12 +578,9 @@ export function WorkspaceActivityPanel({
       agentsSection: {
         gap: 12,
         position: "relative" as const,
-        overflow: "visible" as const,
       },
       agentsHeaderWrap: {
         position: "relative" as const,
-        zIndex: 20,
-        overflow: "visible" as const,
       },
       menuBackdrop: {
         position: "absolute" as const,
@@ -543,7 +588,7 @@ export function WorkspaceActivityPanel({
         left: 0,
         right: 0,
         bottom: 0,
-        zIndex: 10,
+        zIndex: 30,
       },
       // Matches host MenuSurface / FloatingSurface chrome (sidebar display menu).
       menuSurface: {
@@ -559,10 +604,7 @@ export function WorkspaceActivityPanel({
       },
       menuRootWrap: {
         position: "absolute" as const,
-        top: "100%" as const,
-        right: 0,
-        marginTop: 4,
-        zIndex: 20,
+        zIndex: 31,
         overflow: "visible" as const,
       },
       // Sibling flyout to the left of the root (menu is end-aligned; host opens right into content).
@@ -570,7 +612,12 @@ export function WorkspaceActivityPanel({
         position: "absolute" as const,
         right: MENU_WIDTH - MENU_SUBMENU_OVERLAP,
         width: MENU_WIDTH,
-        zIndex: 21,
+        zIndex: 32,
+      },
+      menuSeparator: {
+        height: 1,
+        marginVertical: 4,
+        backgroundColor: theme.colors.border,
       },
     }),
     [theme, layout.compact, padding],
@@ -578,7 +625,9 @@ export function WorkspaceActivityPanel({
 
   const rowHeight = layout.compact ? 40 : 28;
   const flyoutTop = menuFlyout
-    ? 4 + ({ sort: 0, group: 1, show: 2 }[menuFlyout] * rowHeight)
+    ? 4 +
+      ({ sort: 0, group: 1, show: 2, status: 3 }[menuFlyout] * rowHeight) +
+      (menuFlyout === "status" ? 9 : 0) // separator (~1 + 4*2) above Status
     : 0;
   const flyoutOptions: ReadonlyArray<{ id: string; label: string }> =
     menuFlyout === "sort"
@@ -586,33 +635,83 @@ export function WorkspaceActivityPanel({
       : menuFlyout === "group"
         ? GROUP_OPTIONS
         : menuFlyout === "show"
-          ? SHOW_OPTIONS
-          : [];
-  const flyoutValue: string =
+          ? SHOW_FIELD_OPTIONS
+          : menuFlyout === "status"
+            ? STATUS_FILTER_OPTIONS
+            : [];
+  const flyoutSelectedId: string | undefined =
     menuFlyout === "sort"
       ? agentSort
       : menuFlyout === "group"
         ? agentGroup
-        : menuFlyout === "show"
-          ? agentShow
-          : "";
+        : menuFlyout === "status"
+          ? agentStatusFilter
+          : undefined;
 
   function closeMenu() {
     setMenuOpen(false);
     setMenuFlyout(null);
+    setMenuAnchor(null);
+  }
+
+  function openMenu() {
+    const trigger = triggerRef.current;
+    const root = rootRef.current;
+    if (!trigger || !root) {
+      setMenuAnchor({ top: 48, right: 16 });
+      setMenuFlyout(null);
+      setMenuOpen(true);
+      return;
+    }
+    trigger.measureInWindow((tx, ty, tw, th) => {
+      root.measureInWindow((rx, ry, rw) => {
+        setMenuAnchor({
+          top: ty + th - ry + 4,
+          right: rx + rw - (tx + tw),
+        });
+        setMenuFlyout(null);
+        setMenuOpen(true);
+      });
+    });
   }
 
   function selectMenuOption(id: string) {
-    if (menuFlyout === "sort") setAgentSort(id as AgentSort);
-    else if (menuFlyout === "group") setAgentGroup(id as AgentGroup);
-    else if (menuFlyout === "show") setAgentShow(id as AgentShow);
-    closeMenu();
+    if (menuFlyout === "sort") {
+      setAgentSort(id as AgentSort);
+      closeMenu();
+      return;
+    }
+    if (menuFlyout === "group") {
+      setAgentGroup(id as AgentGroup);
+      closeMenu();
+      return;
+    }
+    if (menuFlyout === "status") {
+      setAgentStatusFilter(id as AgentStatusFilter);
+      closeMenu();
+      return;
+    }
+    if (menuFlyout === "show") {
+      const field = id as AgentShowField;
+      setAgentShowFields((prev) => {
+        const next = new Set(prev);
+        if (next.has(field)) next.delete(field);
+        else next.add(field);
+        return next;
+      });
+    }
   }
 
   function renderAgentRow(item: AgentUsageItem): ReactNode {
     const label = item.title ?? item.agentId;
     const activity = item.callCount + item.messageCount;
     const canOpen = openAgent != null && item.archivedAt == null;
+    const meta = formatAgentMeta(item, agentShowFields);
+    const archivedSuffix =
+      item.archivedAt && agentStatusFilter === "archived"
+        ? `Archived ${formatLocalDateTime(item.archivedAt)}`
+        : null;
+    const metaLine = [meta, archivedSuffix].filter(Boolean).join(" · ");
     return (
       <View key={item.agentId} style={styles.listRow}>
         <Icon name="Bot" size={18} color={theme.colors.foregroundMuted} />
@@ -632,10 +731,11 @@ export function WorkspaceActivityPanel({
               {label}
             </Text>
           )}
-          <Text style={styles.listMeta} numberOfLines={1}>
-            {providerLabel(item.provider)} · {item.callCount} calls · {item.messageCount} messages
-            {item.archivedAt ? ` · Archived ${formatLocalDateTime(item.archivedAt)}` : ""}
-          </Text>
+          {metaLine ? (
+            <Text style={styles.listMeta} numberOfLines={1}>
+              {metaLine}
+            </Text>
+          ) : null}
         </View>
         <CountText value={activity} styles={styles} />
       </View>
@@ -643,203 +743,226 @@ export function WorkspaceActivityPanel({
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <View style={styles.headerRow}>
-        <View style={styles.header}>
-          <Text style={styles.headerMeta} numberOfLines={1}>
-            {workspaceName ?? workspaceId}
+    <View ref={rootRef} collapsable={false} style={styles.screen}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.content}
+        scrollEnabled={!menuOpen}
+      >
+        <View style={styles.headerRow}>
+          <View style={styles.header}>
+            <Text style={styles.headerMeta} numberOfLines={1}>
+              {workspaceName ?? workspaceId}
+            </Text>
+          </View>
+          <View style={styles.rangeBar}>
+            {RANGE_OPTIONS.map((option) => {
+              const active = range === option.id;
+              return (
+                <Pressable
+                  key={option.id}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active }}
+                  onPress={() => setRange(option.id)}
+                  style={styles.rangeSegment}
+                >
+                  <Text style={active ? styles.chipTextActive : styles.chipText}>
+                    {option.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {loading ? <ActivityIndicator color={theme.colors.accent} /> : null}
+        {error ? (
+          <Text style={{ color: theme.colors.statusDanger }}>
+            {error instanceof Error ? error.message : String(error)}
           </Text>
-        </View>
-        <View style={styles.rangeBar}>
-          {RANGE_OPTIONS.map((option) => {
-            const active = range === option.id;
-            return (
-              <Pressable
-                key={option.id}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
-                onPress={() => setRange(option.id)}
-                style={styles.rangeSegment}
-              >
-                <Text style={active ? styles.chipTextActive : styles.chipText}>
-                  {option.label}
+        ) : null}
+
+        {!loading && !error && !showContent ? (
+          <Text style={styles.empty}>No activity in this workspace yet</Text>
+        ) : null}
+
+        {!loading && !error && showContent ? (
+          <UsageStats items={kpi} colors={theme.colors} compact={layout.compact} dense />
+        ) : null}
+
+        {showAgents ? (
+          <View style={styles.agentsSection}>
+            <View style={styles.agentsHeaderWrap}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>Agents</Text>
+                <View ref={triggerRef} collapsable={false}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Agent display options"
+                    accessibilityState={{ expanded: menuOpen }}
+                    hitSlop={8}
+                    onPress={() => {
+                      if (menuOpen) closeMenu();
+                      else openMenu();
+                    }}
+                    style={styles.titleAction}
+                  >
+                    <Icon name="Settings2" size={14} color={theme.colors.foregroundMuted} />
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+            <View style={styles.panel}>
+              {agentGroups
+                ? agentGroups.map(([provider, items]) => (
+                    <View key={provider} style={styles.agentGroup}>
+                      <Text style={styles.groupLabel}>{providerLabel(provider)}</Text>
+                      {items.map(renderAgentRow)}
+                    </View>
+                  ))
+                : visibleAgentItems.map(renderAgentRow)}
+              {visibleAgentItems.length === 0 ? (
+                <Text style={styles.empty}>
+                  {agentStatusFilter === "archived"
+                    ? "No archived agents"
+                    : agentStatusFilter === "running"
+                      ? "No running agents"
+                      : "No active agents"}
                 </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
+              ) : null}
+            </View>
+          </View>
+        ) : null}
 
-      {loading ? <ActivityIndicator color={theme.colors.accent} /> : null}
-      {error ? (
-        <Text style={{ color: theme.colors.statusDanger }}>
-          {error instanceof Error ? error.message : String(error)}
-        </Text>
-      ) : null}
-
-      {!loading && !error && !showContent ? (
-        <Text style={styles.empty}>No activity in this workspace yet</Text>
-      ) : null}
-
-      {!loading && !error && showContent ? (
-        <UsageStats items={kpi} colors={theme.colors} compact={layout.compact} dense />
-      ) : null}
-
-      {showAgents ? (
-        <View style={styles.agentsSection}>
-          <View style={styles.agentsHeaderWrap}>
+        {showRank ? (
+          <View style={{ gap: 12 }}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Agents</Text>
+              <Text style={styles.sectionTitle}>{rankTitle(rankKind)}</Text>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Agent display options"
-                accessibilityState={{ expanded: menuOpen }}
+                accessibilityLabel={rankAction(rankKind).accessibilityLabel}
                 hitSlop={8}
-                onPress={() => {
-                  if (menuOpen) closeMenu();
-                  else {
-                    setMenuFlyout(null);
-                    setMenuOpen(true);
-                  }
-                }}
+                onPress={() => setRankKind((prev) => (prev === "skills" ? "mcp" : "skills"))}
                 style={styles.titleAction}
               >
-                <Icon name="Settings2" size={14} color={theme.colors.foregroundMuted} />
+                <Icon
+                  name={rankAction(rankKind).icon}
+                  size={16}
+                  color={theme.colors.foregroundMuted}
+                />
               </Pressable>
             </View>
-            {menuOpen ? (
-              <View style={styles.menuRootWrap}>
-                <View style={styles.menuSurface}>
-                  <View style={styles.menuPage}>
-                    <MenuSubTrigger
-                      label="Sort"
-                      value={optionLabel(SORT_OPTIONS, agentSort)}
-                      active={menuFlyout === "sort"}
-                      onOpen={() => setMenuFlyout("sort")}
-                      styles={styles}
-                      chevronColor={theme.colors.foregroundMuted}
-                    />
-                    <MenuSubTrigger
-                      label="Group"
-                      value={optionLabel(GROUP_OPTIONS, agentGroup)}
-                      active={menuFlyout === "group"}
-                      onOpen={() => setMenuFlyout("group")}
-                      styles={styles}
-                      chevronColor={theme.colors.foregroundMuted}
-                    />
-                    <MenuSubTrigger
-                      label="Show"
-                      value={optionLabel(SHOW_OPTIONS, agentShow)}
-                      active={menuFlyout === "show"}
-                      onOpen={() => setMenuFlyout("show")}
-                      styles={styles}
-                      chevronColor={theme.colors.foregroundMuted}
-                    />
-                  </View>
-                </View>
-                {menuFlyout ? (
-                  <View
-                    style={[styles.menuSurface, styles.menuFlyout, { top: flyoutTop }]}
-                    {...({ onPointerEnter: () => setMenuFlyout(menuFlyout) } as object)}
-                  >
-                    <MenuOptionList
-                      options={flyoutOptions}
-                      selectedId={flyoutValue}
-                      onSelect={selectMenuOption}
-                      styles={styles}
-                      checkColor={theme.colors.foregroundMuted}
-                    />
-                  </View>
-                ) : null}
-              </View>
-            ) : null}
+            <View style={styles.panel}>
+              {rankKind === "skills"
+                ? skillItems.map((item) => (
+                    <View key={item.skillName} style={styles.listRow}>
+                      <Icon name="Sparkles" size={18} color={theme.colors.foregroundMuted} />
+                      <View style={styles.listMain}>
+                        <Text style={styles.listTitle} numberOfLines={1}>
+                          {formatDisplayName(item.skillName)}
+                        </Text>
+                        <Text style={styles.listMeta}>
+                          Last {formatLocalDateTime(item.lastUsedAt)}
+                        </Text>
+                      </View>
+                      <CountText value={item.total} styles={styles} />
+                    </View>
+                  ))
+                : mcpItems.map((item) => (
+                    <View key={`${item.server}.${item.tool}`} style={styles.listRow}>
+                      <Icon name="Plug" size={18} color={theme.colors.foregroundMuted} />
+                      <View style={styles.listMain}>
+                        <Text style={styles.listTitle} numberOfLines={1}>
+                          {formatDisplayName(`${item.server}.${item.tool}`)}
+                        </Text>
+                        <Text style={styles.listMeta}>
+                          {item.failures > 0
+                            ? `${item.failures} failed`
+                            : item.lastUsedAt
+                              ? `Last ${formatLocalDateTime(item.lastUsedAt)}`
+                              : "—"}
+                        </Text>
+                      </View>
+                      <CountText value={item.count} styles={styles} />
+                    </View>
+                  ))}
+              {(rankKind === "skills" ? skillItems.length : mcpItems.length) === 0 ? (
+                <Text style={styles.empty}>
+                  {rankKind === "skills" ? "No skills yet" : "No MCP yet"}
+                </Text>
+              ) : null}
+            </View>
           </View>
-          {menuOpen ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Close agent display options"
-              onPress={closeMenu}
-              style={styles.menuBackdrop}
-            />
-          ) : null}
-          <View style={styles.panel}>
-            {agentGroups
-              ? agentGroups.map(([provider, items]) => (
-                  <View key={provider} style={styles.agentGroup}>
-                    <Text style={styles.groupLabel}>{providerLabel(provider)}</Text>
-                    {items.map(renderAgentRow)}
-                  </View>
-                ))
-              : visibleAgentItems.map(renderAgentRow)}
-            {visibleAgentItems.length === 0 ? (
-              <Text style={styles.empty}>
-                {agentShow === "archived" ? "No archived agents" : "No active agents"}
-              </Text>
-            ) : null}
-          </View>
-        </View>
+        ) : null}
+      </ScrollView>
+
+      {menuOpen ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close agent display options"
+          onPress={closeMenu}
+          style={styles.menuBackdrop}
+        />
       ) : null}
 
-      {showRank ? (
-        <View style={{ gap: 12 }}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>{rankTitle(rankKind)}</Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={rankAction(rankKind).accessibilityLabel}
-              hitSlop={8}
-              onPress={() => setRankKind((prev) => (prev === "skills" ? "mcp" : "skills"))}
-              style={styles.titleAction}
-            >
-              <Icon
-                name={rankAction(rankKind).icon}
-                size={16}
-                color={theme.colors.foregroundMuted}
+      {menuOpen && menuAnchor ? (
+        <View
+          pointerEvents="box-none"
+          style={[styles.menuRootWrap, { top: menuAnchor.top, right: menuAnchor.right }]}
+        >
+          <View style={styles.menuSurface}>
+            <View style={styles.menuPage}>
+              <MenuSubTrigger
+                label="Sort"
+                value={optionLabel(SORT_OPTIONS, agentSort)}
+                active={menuFlyout === "sort"}
+                onOpen={() => setMenuFlyout("sort")}
+                styles={styles}
+                chevronColor={theme.colors.foregroundMuted}
               />
-            </Pressable>
+              <MenuSubTrigger
+                label="Group"
+                value={optionLabel(GROUP_OPTIONS, agentGroup)}
+                active={menuFlyout === "group"}
+                onOpen={() => setMenuFlyout("group")}
+                styles={styles}
+                chevronColor={theme.colors.foregroundMuted}
+              />
+              <MenuSubTrigger
+                label="Show"
+                active={menuFlyout === "show"}
+                onOpen={() => setMenuFlyout("show")}
+                styles={styles}
+                chevronColor={theme.colors.foregroundMuted}
+              />
+              <View style={styles.menuSeparator} />
+              <MenuSubTrigger
+                label="Status"
+                value={optionLabel(STATUS_FILTER_OPTIONS, agentStatusFilter)}
+                active={menuFlyout === "status"}
+                onOpen={() => setMenuFlyout("status")}
+                styles={styles}
+                chevronColor={theme.colors.foregroundMuted}
+              />
+            </View>
           </View>
-          <View style={styles.panel}>
-            {rankKind === "skills"
-              ? skillItems.map((item) => (
-                  <View key={item.skillName} style={styles.listRow}>
-                    <Icon name="Sparkles" size={18} color={theme.colors.foregroundMuted} />
-                    <View style={styles.listMain}>
-                      <Text style={styles.listTitle} numberOfLines={1}>
-                        {formatDisplayName(item.skillName)}
-                      </Text>
-                      <Text style={styles.listMeta}>
-                        Last {formatLocalDateTime(item.lastUsedAt)}
-                      </Text>
-                    </View>
-                    <CountText value={item.total} styles={styles} />
-                  </View>
-                ))
-              : mcpItems.map((item) => (
-                  <View key={`${item.server}.${item.tool}`} style={styles.listRow}>
-                    <Icon name="Plug" size={18} color={theme.colors.foregroundMuted} />
-                    <View style={styles.listMain}>
-                      <Text style={styles.listTitle} numberOfLines={1}>
-                        {formatDisplayName(`${item.server}.${item.tool}`)}
-                      </Text>
-                      <Text style={styles.listMeta}>
-                        {item.failures > 0
-                          ? `${item.failures} failed`
-                          : item.lastUsedAt
-                            ? `Last ${formatLocalDateTime(item.lastUsedAt)}`
-                            : "—"}
-                      </Text>
-                    </View>
-                    <CountText value={item.count} styles={styles} />
-                  </View>
-                ))}
-            {(rankKind === "skills" ? skillItems.length : mcpItems.length) === 0 ? (
-              <Text style={styles.empty}>
-                {rankKind === "skills" ? "No skills yet" : "No MCP yet"}
-              </Text>
-            ) : null}
-          </View>
+          {menuFlyout ? (
+            <View
+              style={[styles.menuSurface, styles.menuFlyout, { top: flyoutTop }]}
+              {...({ onPointerEnter: () => setMenuFlyout(menuFlyout) } as object)}
+            >
+              <MenuOptionList
+                options={flyoutOptions}
+                selectedId={flyoutSelectedId}
+                selectedIds={menuFlyout === "show" ? agentShowFields : undefined}
+                onSelect={selectMenuOption}
+                styles={styles}
+                checkColor={theme.colors.foregroundMuted}
+              />
+            </View>
+          ) : null}
         </View>
       ) : null}
-    </ScrollView>
+    </View>
   );
 }
