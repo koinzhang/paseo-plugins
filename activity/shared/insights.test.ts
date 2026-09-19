@@ -25,7 +25,7 @@ function provider(partial: Partial<ProviderUsageItem> & Pick<ProviderUsageItem, 
 }
 
 describe("buildActivityInsights", () => {
-  it("returns habit-first 8 rows with Top model on All", () => {
+  it("returns habit → preference → structure 8 rows", () => {
     // 2026-03-07 Sat, 2026-03-09 Mon — Mon has more messages → Peak weekday Mon
     const days = [
       { date: "2026-03-07", skills: 2, mcp: 0, agents: 1, messages: 4, total: 2 },
@@ -68,25 +68,25 @@ describe("buildActivityInsights", () => {
         "Active days",
         "Longest streak",
         "Busiest day",
+        "Peak weekday",
+        "Top provider",
         "Top model",
         "Messages per agent",
-        "Tools per message",
         "Coding vs chat",
-        "Peak weekday",
       ],
     );
     assert.equal(rows[0]?.value, "2");
     assert.equal(rows[1]?.value, "6 days");
     assert.equal(rows[2]?.value, "Mar 9 · 10 messages");
-    assert.equal(rows[3]?.value, "Gpt 5.4 · 71%");
-    assert.equal(rows[4]?.value, "7");
-    assert.equal(rows[5]?.value, "0.4");
+    assert.equal(rows[3]?.value, "Mon");
+    assert.equal(rows[4]?.value, "Codex · 71%");
+    assert.equal(rows[5]?.value, "Gpt 5.4 · 71%");
+    assert.equal(rows[6]?.value, "7");
     // coding=15, messages=14 → 15/29 ≈ 52%
-    assert.equal(rows[6]?.value, "52% coding");
-    assert.equal(rows[7]?.value, "Mon");
+    assert.equal(rows[7]?.value, "52% coding");
   });
 
-  it("shows Top model for a provider filter from that provider's models", () => {
+  it("hides Top provider when filtered; Top model stays scoped", () => {
     const rows = buildActivityInsights({
       days: [{ date: "2026-03-07", skills: 0, mcp: 0, agents: 0, messages: 10, total: 0 }],
       summary: { skills: 0, mcp: 0, agents: 0, messages: 10, longestStreak: 1 },
@@ -101,6 +101,7 @@ describe("buildActivityInsights", () => {
       providerFilter: "codex",
     });
     assert.equal(rows.length, ACTIVITY_LIST_LIMIT);
+    assert.equal(rows.find((r) => r.label === "Top provider")?.value, "—");
     assert.equal(rows.find((r) => r.label === "Top model")?.value, "Gpt 5.4 · 100%");
   });
 
@@ -114,9 +115,10 @@ describe("buildActivityInsights", () => {
     });
     assert.equal(rows.find((r) => r.label === "Busiest day")?.value, "Mar 8 · 4 calls");
     assert.equal(rows.find((r) => r.label === "Messages per agent")?.value, "—");
-    assert.equal(rows.find((r) => r.label === "Tools per message")?.value, "—");
     assert.equal(rows.find((r) => r.label === "Coding vs chat")?.value, "—");
+    assert.equal(rows.find((r) => r.label === "Top provider")?.value, "—");
     assert.equal(rows.find((r) => r.label === "Top model")?.value, "—");
     assert.equal(rows.find((r) => r.label === "Peak weekday")?.value, "Sun");
+    assert.equal(rows.find((r) => r.label === "Tools per message"), undefined);
   });
 });

@@ -73,6 +73,25 @@ function formatBusiest(day: ActivityDay, locale: string): string {
   return label;
 }
 
+/** All view only: messages-weighted top provider. Filtered or empty → `—`. */
+function topProviderValue(
+  providers: readonly ProviderUsageItem[],
+  providerFilter: string,
+): string {
+  if (providerFilter !== "all") return "—";
+  const ranked = [...providers]
+    .filter((p) => p.messageCount > 0)
+    .sort(
+      (a, b) =>
+        b.messageCount - a.messageCount || a.provider.localeCompare(b.provider),
+    );
+  const top = ranked[0];
+  if (!top) return "—";
+  const total = ranked.reduce((sum, p) => sum + p.messageCount, 0);
+  const pct = total > 0 ? Math.round((top.messageCount / total) * 100) : 0;
+  return `${top.label} · ${pct}%`;
+}
+
 function topModelValue(
   providers: readonly ProviderUsageItem[],
   providerFilter: string,
@@ -163,6 +182,14 @@ export function buildActivityInsights(input: {
       value: busiest ? formatBusiest(busiest, locale) : "—",
     },
     {
+      label: "Peak weekday",
+      value: peakWeekdayValue(input.days, locale),
+    },
+    {
+      label: "Top provider",
+      value: topProviderValue(input.providers, input.providerFilter),
+    },
+    {
       label: "Top model",
       value: topModelValue(input.providers, input.providerFilter),
     },
@@ -171,16 +198,8 @@ export function buildActivityInsights(input: {
       value: formatRatio(input.summary.messages, input.summary.agents),
     },
     {
-      label: "Tools per message",
-      value: formatRatio(input.summary.skills + input.summary.mcp, input.summary.messages),
-    },
-    {
       label: "Coding vs chat",
       value: codingVsChatValue(shell, fileOps, input.summary.messages),
-    },
-    {
-      label: "Peak weekday",
-      value: peakWeekdayValue(input.days, locale),
     },
   ];
 
