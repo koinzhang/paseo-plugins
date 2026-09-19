@@ -343,40 +343,27 @@ function AgentRow({
 }): ReactNode {
   const [hovered, setHovered] = useState(false);
   // Web: hover-reveal. Native has no hover — keep the action visible.
-  // Use mouseenter/leave on a View (not nested Pressable hover) so moving onto
-  // the title link or action button does not flicker hovered off.
+  // mouseenter/leave (not nested Pressable hover) so title/action don't flicker.
   const showAction = Platform.OS !== "web" || hovered || busy;
-  return (
-    <View
-      style={styles.agentListRow}
-      {...(Platform.OS === "web"
-        ? ({
-            onMouseEnter: () => setHovered(true),
-            onMouseLeave: () => setHovered(false),
-          } as object)
-        : null)}
-    >
+  const hoverProps =
+    Platform.OS === "web"
+      ? ({
+          onMouseEnter: () => setHovered(true),
+          onMouseLeave: () => setHovered(false),
+        } as object)
+      : null;
+
+  const body = (
+    <>
       <Icon
         name={archived ? "BotOff" : "Bot"}
         size={18}
         color={theme.colors.foregroundMuted}
       />
       <View style={styles.listMain}>
-        {canOpen ? (
-          <Pressable
-            accessibilityRole="link"
-            accessibilityLabel={`Open conversation ${label}`}
-            onPress={onOpen}
-          >
-            <Text style={styles.listLink} numberOfLines={1}>
-              {label}
-            </Text>
-          </Pressable>
-        ) : (
-          <Text style={styles.listTitle} numberOfLines={1}>
-            {label}
-          </Text>
-        )}
+        <Text style={canOpen ? styles.listLink : styles.listTitle} numberOfLines={1}>
+          {label}
+        </Text>
         {meta ? (
           <Text style={styles.listMeta} numberOfLines={1}>
             {meta}
@@ -403,6 +390,26 @@ function AgentRow({
           />
         )}
       </Pressable>
+    </>
+  );
+
+  if (canOpen) {
+    return (
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel={`Open conversation ${label}`}
+        onPress={onOpen}
+        style={styles.agentListRow}
+        {...hoverProps}
+      >
+        {body}
+      </Pressable>
+    );
+  }
+
+  return (
+    <View style={styles.agentListRow} {...hoverProps}>
+      {body}
     </View>
   );
 }

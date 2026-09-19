@@ -26,6 +26,7 @@
 - `upsertAgents` / `mergeAgentRow`：`archived_at` 以本次写入为准（允许 null 清除）；`agentRowFromSnapshot` 透传 `agent.archivedAt`
 - 行尾图标：Active → `Archive`；Archived → `ArchiveRestore`；**仅行悬停（或 busy）时显示**；busy 时禁用
 - Agents 行垂直间距更紧（`paddingVertical: 6`，独立于 Skills/MCP 排行行）
+- Active 行**整行**可点开会话（归档按钮为嵌套 Pressable，不触发跳转）；归档行仍不可点开
 
 ## 4. 验收
 
