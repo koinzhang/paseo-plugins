@@ -1,0 +1,21 @@
+# 006 tasks
+
+- [x] T0 草案文档齐套：spec / plan / research / tasks / contracts
+  - 验证：目录文件齐全，索引已更新。
+- [x] T1 实现前核对维度边界、SQLite 决策、不存正文
+  - 验证：按用户要求实施 006；plan 记录无 ID live 延迟到 canonical 的去重策略与全局重扫入口。
+- [x] T2 Schema + store：UserMessageRow / upsert / select；SQLite + JSONL
+  - 验证：两驱动的重复写入、时间纠正、筛选、重开持久化、正文不落盘测试通过；运行库已创建 user_messages 表。
+- [x] T3 ingestUserMessages + turn_ended / resync 接线
+  - 验证：message/client ID 优先级、匿名 canonical fallback、重复 live、分页重扫幂等测试通过。
+- [x] T4 ActivityDay.messages + aggregateActivityByDay / handler
+  - 验证：message-only 日期、provider 过滤、查询不 refetch timeline 测试通过。
+- [x] T5 by-provider / 全局 KPI messageCount / Messages
+  - 验证：message-only provider、时间与 workspace 筛选、类型检查通过。
+- [x] T6 global-surface：KPI、tooltip、insights；着色不变
+  - 验证：日／周／累计 messages、tools total 与 streak 不受影响的测试通过；React Native/theme/compact 静态检查通过。
+- [x] T7a npm run typecheck、npm test、reload
+  - 验证：76/76 测试通过；paseo plugin reload tool-usage 后 running；最新日志 Plugin ready。
+- [ ] T7b 真机发一条消息验收 US-3；宽屏/紧凑布局与主题检查
+  - 待验：Activity → Rescan history，检查历史 Messages；发送一条消息并等 turn 结束，重新打开 Activity 检查 +1。无 ID 消息需重扫历史。
+  - 当前阻碍：本地 6767 Web 页面返回 ERR_HTTP_RESPONSE_CODE_FAILURE；原生应用自动化请求超时，未能完成视觉及真实发送验证。

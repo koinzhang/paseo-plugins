@@ -1,0 +1,29 @@
+{
+  "name": "@koinzhang/paseo-plugin-activity",
+  "version": "0.1.0",
+  "type": "module",
+  "files": [
+    "paseo-plugin.json",
+    "index.client.ts",
+    "index.client.tsx",
+    "index.server.ts",
+    "index.server.tsx",
+    "client/",
+    "server/",
+    "shared/"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test server/background-sync.test.ts server/handlers-query.test.ts client/pill-data-cache.test.ts client/rank-color.test.ts shared/activity.test.ts shared/insights.test.ts shared/classify.test.ts shared/usage.test.ts shared/format.test.ts server/store.test.ts server/ingest.test.ts server/skill-path.test.ts server/mcp-servers.test.ts server/agents.test.ts server/migrate-data.test.ts server/messages.test.ts server/resolve-model.test.ts"
+  },
+  "devDependencies": {
+    "@getpaseo/plugin": "0.8.0",
+    "@tanstack/react-query": "^5.90.11",
+    "@types/node": "^24.13.5",
+    "@types/react": "~19.2.0",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "typescript": "^5.9.3",
+    "zod": "^4.4.3"
+  }
+}
