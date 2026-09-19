@@ -77,7 +77,7 @@ feat(activity): limit provider filter to top 5
 fix(activity): correct heatmap empty-state layout
 docs(repo): document npm publish via GitHub Release
 ci(repo): add publish workflow for activity
-chore(activity): release 0.1.1
+chore(activity): release 0.3.0
 ```
 
 Breaking changes: add `!` after type/scope (`feat(activity)!: ...`) and/or a `BREAKING CHANGE:` footer.

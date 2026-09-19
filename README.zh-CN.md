@@ -20,8 +20,8 @@ Paseo 插件 monorepo。所有插件独立目录、独立 `paseo-plugin.json`，
 | Scope | 角色 |
 |---|---|
 | **Global**（侧边栏） | 跨 workspace 习惯：热力图、provider、Insights、Most used skills / MCP / models |
-| **Workspace**（Explorer Activity） | 当前 workspace 的 **竖向 Agents 运营页**：列表 / 搜索 / 排序 / 筛选 / 归档、实时 attention、打开中的 Terminals + KPI |
-| **Agent**（面板 + pill） | 当前会话的工具明细与 skill / MCP 概况 |
+| **Workspace**（Explorer Activity） | 当前 workspace 的 **竖向 Agents 运营页**：列表 / 搜索 / 排序 / 筛选 / 归档、实时 attention、打开中的 Terminals + KPI；agent 空闲时启发式刷新 |
+| **Agent**（面板 + pill） | 当前会话的工具明细与 skill / MCP 概况；timeline 回合结束刷新 |
 
 计量维度（本地 SQLite）：tools（skill / MCP / shell / file）、agent 创建、用户消息、model（按消息加权）。详见 [activity/README.md](./activity/README.md) · [架构](./activity/docs/architecture.md)。
 

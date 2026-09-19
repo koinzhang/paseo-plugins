@@ -15,8 +15,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Explorer Agents rows show a warning badge (ShieldAlert icon, plus a count when there are multiple) when the host reports pending permission requests; those agents also rank first with other attention-worthy agents.
 - Explorer Agents row bot icon uses theme status colors for attention: success for finished-but-unread turns, warning for pending permissions (badge kept), danger for failed agents; the icon returns to muted once the host clears attention after viewing.
 - Explorer Agents rows show a host-style spinning ring at the bottom-right of the bot icon while `status = "running"`; it disappears when the turn ends.
-- Explorer agent status (permission badge, attention colors, running spinner) refreshes on the host's `agent_update` push (300ms debounce, workspace-filtered); the 15s poll remains as a fallback.
-- Workspace / Agent panel usage queries and the composer pill refresh when a matching agent leaves `running` / `initializing` (`agent_update`, 300ms debounce + 2s settle refetch for ingest race); pill empty-state poll slowed from 1.5s to 5s. Global surface and Terminals keep their existing poll intervals.
+- Explorer agent status (permission badge, attention colors, running spinner) accelerates from directory `agent_update` pushes (incremental status cache); the 15s poll remains the completeness guarantee and does not call `agents.list({ subscribe })` (avoids stealing the host's single observation slot on Paseo 0.8).
+- Agent panel / composer pill usage queries refresh on real timeline turn terminal events (`turn_completed` / `turn_failed` / `turn_canceled` / `replacement`, 300ms debounce + 2s ingest settle); Workspace panel gets a best-effort directory hint when an agent leaves `running` / `initializing`, with the 15s query poll owning completeness. Pill empty-state poll slowed from 1.5s to 5s. Global surface and Terminals keep their existing poll intervals.
+- Shared activity time formatting: `FormattedTime` / `formatActivityTime` (app language + locale, 24-hour clock; same-day time only, same-year month/day + time, else include year) used by Agent panel, Workspace rank / Updated meta, and the composer popover.
+
+### Changed
+
+- Agent Activity panel and composer popover: Skills / MCP detail uses the same header toggle icon pattern as Workspace rank (no tab strip).
+- Agent Activity panel KPIs use dense `UsageStats` (aligned with Workspace).
+- Workspace skills / MCP rank toggle is hidden when only one kind has data.
+
+### Fixed
+
+- Workspace agent status enrichment filters by placement `projectId` (daemon shape), not `projects.list` remote keys — stops the 15s poll from wiping live permission / attention state.
+- In-flight status polls are cancelled before applying a newer directory push, so stale responses cannot overwrite live agent state.
+- Skill path resolution refreshes empty handles and falls back to home roots when project cwd lookup fails.
 
 ## [0.2.0] - 2026-09-19
 

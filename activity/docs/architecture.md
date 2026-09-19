@@ -20,8 +20,8 @@ Agent Activity      → 单 agent · 工具明细（Skills / MCP）· Pill 快�
 分工原则：
 
 - Global = 习惯与 provider 对比（热力图、Insights、Models）
-- Workspace = **竖向 Agents 运营页**（列表、搜索、筛选、归档、显示偏好）+ 本仓 KPI + 打开中的 Terminals（032，host SDK 直连：列表 / 预览 / 关闭，不进本地库）+ Agents 行实时 attention（033–036：pending permission 徽标、status 色、running spinner；`agent_update` 近实时，15s 轮询兜底）；**不做**热力图 / provider·model 拆分 / 时间窗（024 / 027）
-- Agent = 当前会话工具明细 + pill；Messages 计入 KPI（031），Models 仍仅全局（015）
+- Workspace = **竖向 Agents 运营页**（列表、搜索、筛选、归档、显示偏好）+ 本仓 KPI + 打开中的 Terminals（032，host SDK 直连：列表 / 预览 / 关闭，不进本地库）+ Agents 行实时 attention（033–036：pending permission 徽标、status 色、running spinner；目录 `agent_update` 加速，15s 轮询保证完整，038 不抢宿主 observation slot）；**不做**热力图 / provider·model 拆分 / 时间窗（024 / 027）
+- Agent = 当前会话工具明细 + pill；Messages 计入 KPI（031），Models 仍仅全局（015）；UI 时间统一 `FormattedTime`（039）
 
 产品定位已超出「纯统计」：Workspace 面把 activity 数据接到 agent 管理上。对外说明见 [`README.md`](../README.md)。
 
@@ -34,7 +34,7 @@ server/          handlers · store · ingest · background-sync · hooks
 ~/.paseo/.../    SQLite：tool_calls · user_messages · agents
 ```
 
-**查询面以本地库为准**；Paseo timeline / `agents.list` 只作采集与回填 / 状态 enrichment，不在 UI 路径全量现算。Workspace Agents 行的 attention / lifecycle 另订 `paseo.agents.subscribe`（`agent_update`）近实时 invalidate，15s 轮询兜底（035）。本地用量查询（Workspace / Agent / pill）在回合结束离开 `running`/`initializing` 时同样经 `agent_update` 失效（037，300ms + 2s settle）；Global 与 Terminals 仍靠轮询。Terminals 不经本地库，走 host `terminals.*`（032）。
+**查询面以本地库为准**；Paseo timeline / `agents.list` 只作采集与回填 / 状态 enrichment，不在 UI 路径全量现算。Workspace Agents 行的 attention / lifecycle：目录 `paseo.agents.subscribe`（`agent_update`）增量更新状态缓存作加速，15s 轮询保证完整（035，038 修正：不调用 `list({ subscribe })`；按 placement `projectId` 过滤）。本地用量刷新（037，038 修正）：Agent / pill 订 `timeline` 真实 turn 终态事件；Workspace 仅为离开 `running`/`initializing` 的启发式提示；均 300ms + 2s settle，轮询兜底。Global 与 Terminals 仍靠轮询。Terminals 不经本地库，走 host `terminals.*`（032）。
 
 ### 正交事件维
 
@@ -85,5 +85,6 @@ server/          handlers · store · ingest · background-sync · hooks
 | `usage.list` / `export` 无 workspaceId、无 UI | 契约稳定；非查询主路径 | 022 |
 | Pill 幽灵层 | 宿主缺陷，插件不绕行 | 013 |
 | Spec 编号 `027` 重复 | drop-header 与 agent-activity-title | 索引可读性 |
+| 0.8 目录 observation 单 slot | 不调用 `agents.list({ subscribe })`；推送仅加速 | 038 |
 
 演进与任务拆解见 [`specs/README.md`](../specs/README.md)；本文件描述稳定架构，细节以编号目录 `spec.md` / `plan.md` 为准。

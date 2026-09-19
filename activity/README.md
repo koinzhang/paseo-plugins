@@ -7,8 +7,8 @@ It still answers “how am I using Paseo” (tools, messages, models, habits). W
 | Scope | Role |
 |---|---|
 | **Global** | Cross-workspace habits: heatmap, provider filter, insights, most-used skills / MCP / models |
-| **Workspace** | Per-workspace agent fleet: ranked list + display prefs + archive; live status (permission / finished / error / running); open Terminals; shell / file / messages KPIs |
-| **Agent** | Current session: tool KPIs, Skills / MCP detail, SKILL.md reader, composer pill |
+| **Workspace** | Per-workspace agent fleet: ranked list + display prefs + archive; live status (permission / finished / error / running); open Terminals; shell / file / messages KPIs; times via shared `FormattedTime` |
+| **Agent** | Current session: dense tool KPIs, Skills / MCP header toggle, SKILL.md reader, composer pill; refreshes on timeline turn end |
 
 Architecture notes: [docs/architecture.md](./docs/architecture.md).
 
@@ -26,9 +26,9 @@ Ingests every agent's Paseo timeline into a local SQLite database. Queries read 
 ## Where it shows up
 
 - **Sidebar Activity** — global view by provider (heatmap, KPIs, insights, most used)
-- **Explorer → Activity** — workspace agents as a management list (search / sort / group / status / lifecycle / archive), live attention (permission badge, status colors, running spinner via `agent_update`), open Terminals (list / preview / close), plus workspace KPIs and top skills / MCP; usage numbers refresh when a turn ends
-- **Agent workspace panel** — per-agent tool detail (KPI including messages / Skills / MCP / SKILL.md); refreshes when the agent's turn ends
-- **Composer pill** — current agent's skill / MCP summary; hidden when empty; refreshes on turn end (5s empty poll fallback)
+- **Explorer → Activity** — workspace agents as a management list (search / sort / group / status / lifecycle / archive), live attention (permission badge, status colors, running spinner; directory push + 15s poll), open Terminals (list / preview / close), plus workspace KPIs and top skills / MCP (toggle hidden when only one kind has data); usage queries get a best-effort refresh hint when agents leave running
+- **Agent workspace panel** — per-agent tool detail (dense KPI including messages / Skills / MCP toggle / SKILL.md); refreshes on timeline turn terminal events
+- **Composer pill** — current agent's skill / MCP summary (header toggle); hidden when empty; refreshes on timeline turn end (5s empty poll fallback)
 - **Command Center** — Activity · Workspace Activity · Agent Activity
 
 ## Data
@@ -78,7 +78,7 @@ This plugin is spec-driven: read [specs/README.md](./specs/README.md) before cod
 
 ## Publish
 
-Release history: [CHANGELOG.md](./CHANGELOG.md). npm releases go through a GitHub Release tag `activity-vX.Y.Z` (not push-to-`main` alone). Steps: [CONTRIBUTING.md § Publishing to npm](../CONTRIBUTING.md#publishing-to-npm).
+Release history: [CHANGELOG.md](./CHANGELOG.md) (current **0.3.0**). npm releases go through a GitHub Release tag `activity-vX.Y.Z` (not push-to-`main` alone). Steps: [CONTRIBUTING.md § Publishing to npm](../CONTRIBUTING.md#publishing-to-npm).
 
 ## License
 

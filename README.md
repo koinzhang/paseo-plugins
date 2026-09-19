@@ -20,8 +20,8 @@ Three scopes — not stats-only:
 | Scope | Role |
 |---|---|
 | **Global** (sidebar) | Habits across workspaces: heatmap, providers, insights, most-used skills / MCP / models |
-| **Workspace** (Explorer Activity) | Vertical agent ops for the current workspace: list / search / sort / filter / archive, live attention, open Terminals + KPIs |
-| **Agent** (panel + pill) | Current session tool detail and skill / MCP summary |
+| **Workspace** (Explorer Activity) | Vertical agent ops for the current workspace: list / search / sort / filter / archive, live attention, open Terminals + KPIs; refresh hint on agent idle |
+| **Agent** (panel + pill) | Current session tool detail and skill / MCP summary; refreshes on timeline turn end |
 
 Counted dimensions (local SQLite): tools (skill / MCP / shell / file), agent creations, user messages, models (messages-weighted). Details: [activity/README.md](./activity/README.md) · [architecture](./activity/docs/architecture.md).
 
