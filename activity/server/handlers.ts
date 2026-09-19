@@ -5,6 +5,7 @@ import { homedir } from "node:os";
 import { basename, dirname, resolve, sep } from "node:path";
 import { realpathSync, statSync } from "node:fs";
 import {
+  aggregateAgents,
   aggregateByProvider,
   aggregateMcpByTool,
   aggregateShellTop,
@@ -14,6 +15,7 @@ import {
   isFileWrite,
   isShellCall,
   usageActivityByDayRpc,
+  usageAgentsRpc,
   usageByProviderRpc,
   usageExportRpc,
   usageListRpc,
@@ -210,6 +212,27 @@ export function createByProviderHandler(store: UsageStore) {
         skills: finalizeSkillPaths(provider.skills, roots, homeDir),
       })),
     };
+  };
+}
+
+export function createAgentsHandler(store: UsageStore) {
+  return async (
+    input: RpcInput<typeof usageAgentsRpc>,
+  ): Promise<RpcOutput<typeof usageAgentsRpc>> => {
+    const rows = store.select({
+      workspaceId: input.workspaceId,
+      from: input.from,
+      to: input.to,
+    });
+    // Registry lookup ignores the window so titles stay available for agents
+    // created before it; activity counts still come from the filtered rows.
+    const agents = store.selectAgents({ workspaceId: input.workspaceId });
+    const messages = store.selectUserMessages({
+      workspaceId: input.workspaceId,
+      from: input.from,
+      to: input.to,
+    });
+    return { items: aggregateAgents(rows, agents, messages) };
   };
 }
 

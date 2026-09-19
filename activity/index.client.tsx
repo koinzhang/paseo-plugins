@@ -2,6 +2,7 @@ import type { PluginClientContext } from "@getpaseo/plugin/client";
 import { GlobalUsageSurface } from "./client/global-surface.tsx";
 import { UsagePanel } from "./client/panel.tsx";
 import { contributePills } from "./client/pill.tsx";
+import { WorkspaceActivityPanel } from "./client/workspace-panel.tsx";
 
 const GLOBAL_SURFACE_ID = "activity";
 
@@ -20,6 +21,15 @@ export default function contribute(client: PluginClientContext) {
     icon: "Activity",
     context: "agent",
     Component: UsagePanel,
+  });
+
+  client.addWorkspacePanel({
+    id: "workspace-activity",
+    title: "Activity",
+    icon: "Activity",
+    context: "workspace",
+    locations: ["explorer"],
+    Component: WorkspaceActivityPanel,
   });
 
   client.addCommandCenterItem({

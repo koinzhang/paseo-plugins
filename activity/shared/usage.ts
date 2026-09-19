@@ -203,6 +203,43 @@ export const usageByProviderRpc = defineRpc({
   }),
 });
 
+export const AgentUsageItemSchema = z.object({
+  agentId: z.string(),
+  provider: z.string(),
+  /** Registry title; null when unknown. */
+  title: z.string().nullable(),
+  /** All tool calls (any category). */
+  callCount: z.number().int().nonnegative(),
+  /** exact + inferred; low excluded (same as UI totals). */
+  skillCalls: z.number().int().nonnegative(),
+  mcpCalls: z.number().int().nonnegative(),
+  shellCalls: z.number().int().nonnegative(),
+  fileReads: z.number().int().nonnegative(),
+  fileWrites: z.number().int().nonnegative(),
+  messageCount: z.number().int().nonnegative(),
+  /** 019: at least one coding op in the window. */
+  coding: z.boolean(),
+  /** Registry creation time; null when the agent is not in the registry. */
+  createdAt: z.string().nullable(),
+  /** Registry archive time; null for active agents (025). */
+  archivedAt: z.string().nullable(),
+  /** Latest tool call / message time in the window. */
+  lastActivityAt: z.string().nullable(),
+});
+export type AgentUsageItem = z.infer<typeof AgentUsageItemSchema>;
+
+export const usageAgentsRpc = defineRpc({
+  name: "usage.agents",
+  input: z.object({
+    from: z.string().optional(),
+    to: z.string().optional(),
+    workspaceId: z.string().optional(),
+  }),
+  output: z.object({
+    items: z.array(AgentUsageItemSchema),
+  }),
+});
+
 const PROVIDER_LABELS: Record<string, string> = {
   claude: "Claude",
   opencode: "OpenCode",
@@ -583,6 +620,100 @@ export function aggregateByProvider(
     );
 
   return { totals, providers };
+}
+
+/** Aggregate tool_calls + user_messages per agent, enriched with the agents registry (024). */
+export function aggregateAgents(
+  rows: ReadonlyArray<{
+    agentId: string;
+    provider: string;
+    category: string;
+    confidence: string | null;
+    detailType: string | null;
+    command?: string | null;
+    ts: string | null;
+    ingestedAt: string;
+  }>,
+  agents: ReadonlyArray<{
+    agentId: string;
+    provider: string;
+    title?: string | null;
+    createdAt?: string | null;
+    archivedAt?: string | null;
+  }> = [],
+  messages: ReadonlyArray<{
+    agentId?: string;
+    provider: string;
+    ts?: string | null;
+    ingestedAt?: string;
+  }> = [],
+): AgentUsageItem[] {
+  const map = new Map<string, AgentUsageItem>();
+
+  function ensure(agentId: string, provider: string): AgentUsageItem {
+    let acc = map.get(agentId);
+    if (!acc) {
+      acc = {
+        agentId,
+        provider: normalizeProvider(provider),
+        title: null,
+        callCount: 0,
+        skillCalls: 0,
+        mcpCalls: 0,
+        shellCalls: 0,
+        fileReads: 0,
+        fileWrites: 0,
+        messageCount: 0,
+        coding: false,
+        createdAt: null,
+        archivedAt: null,
+        lastActivityAt: null,
+      };
+      map.set(agentId, acc);
+    }
+    return acc;
+  }
+
+  function touch(acc: AgentUsageItem, at: string | null | undefined): void {
+    if (at && (!acc.lastActivityAt || at > acc.lastActivityAt)) acc.lastActivityAt = at;
+  }
+
+  for (const row of rows) {
+    const acc = ensure(row.agentId, row.provider);
+    acc.callCount += 1;
+    if (row.category === "skill") {
+      if (row.confidence !== "low") acc.skillCalls += 1;
+    } else if (row.category === "mcp") {
+      acc.mcpCalls += 1;
+    }
+    if (isShellCall(row)) acc.shellCalls += 1;
+    if (isFileRead(row)) acc.fileReads += 1;
+    if (isFileWrite(row)) acc.fileWrites += 1;
+    if (isCodingOp(row)) acc.coding = true;
+    touch(acc, row.ts ?? row.ingestedAt);
+  }
+
+  for (const agent of agents) {
+    const acc = ensure(agent.agentId, agent.provider);
+    acc.title = agent.title?.trim() || acc.title;
+    acc.createdAt = agent.createdAt ?? acc.createdAt;
+    acc.archivedAt = agent.archivedAt ?? acc.archivedAt;
+  }
+
+  for (const message of messages) {
+    const agentId = message.agentId?.trim();
+    if (!agentId) continue;
+    const acc = ensure(agentId, message.provider);
+    acc.messageCount += 1;
+    touch(acc, message.ts ?? message.ingestedAt);
+  }
+
+  return [...map.values()].sort(
+    (a, b) =>
+      b.callCount + b.messageCount - (a.callCount + a.messageCount) ||
+      (b.lastActivityAt ?? "").localeCompare(a.lastActivityAt ?? "") ||
+      (a.title ?? a.agentId).localeCompare(b.title ?? b.agentId),
+  );
 }
 
 /** Aggregate user messages by model id (015). Null/blank models are skipped. */

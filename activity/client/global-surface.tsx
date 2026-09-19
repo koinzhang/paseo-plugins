@@ -29,8 +29,7 @@ import { mcpServerColor } from "./rank-color.ts";
 import { selectProviderOptions } from "./provider-filter.ts";
 import { useAppLanguage } from "./use-app-language.ts";
 import { buildActivityInsights, ACTIVITY_LIST_LIMIT } from "../shared/insights.ts";
-
-type RangeId = "all" | "7d" | "30d" | "today";
+import { rangeFrom, RANGE_OPTIONS, type RangeId } from "./range.ts";
 
 /** Max rows for Activity insights and Most used skills / MCP. */
 const LIST_LIMIT = ACTIVITY_LIST_LIMIT;
@@ -61,17 +60,6 @@ function emptyProviderUsage(provider: string, label?: string): ProviderUsageItem
 }
 
 
-
-function rangeFrom(id: RangeId): string | undefined {
-  if (id === "all") return undefined;
-  if (id === "today") {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d.toISOString();
-  }
-  const days = id === "7d" ? 7 : 30;
-  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
-}
 
 function formatCount(value: number): string {
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
@@ -609,12 +597,7 @@ export function GlobalUsageSurface({ theme, layout }: PluginSurfaceProps) {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.filterRow}>
         <TextTabs
-          options={[
-            { id: "all", label: "All time" },
-            { id: "today", label: "Today" },
-            { id: "7d", label: "7 days" },
-            { id: "30d", label: "30 days" },
-          ]}
+          options={RANGE_OPTIONS}
           value={range}
           onChange={(id) => setRange(id as RangeId)}
           styles={styles}

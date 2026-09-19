@@ -9,19 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Coding vs chat agent classification based on file-mutating operations (file writes/edits and shell commands that write to disk).
+- Heatmap month focus: hovering a month label highlights that month's cells and dims the rest.
+- Activity panel in the Explorer sidebar: workspace-scoped KPIs, per-agent ranking (new `usage.agents` RPC), and top skills / MCP.
 
 ### Changed
 
-- Restored Top provider and reordered insights rows.
-- Heatmap cells outside the focused month are dimmed via opacity.
-- Tightened heading sizes and section spacing.
+- Coding vs chat now counts active agents instead of ops: an agent counts as coding when it has a file write/edit/delete or a mutating shell command; created-only agents are excluded from both buckets.
+- Insights rows reordered (calendar → preference → structure); Top provider restored (messages-weighted, All view only) and Tools per message removed.
+- Command Center items renamed: Open Activity (all providers) → All Activity, Activity → Current Activity.
+- Heatmap title renamed from Tool activity to Activity.
+- Smaller headings and tighter section spacing across the global surface and heatmap.
+- Explorer Activity panel: title, workspace name, and range chips share one row; denser KPIs; Active / Archived agent filter (`usage.agents` now returns `archivedAt`).
+
+### Removed
+
+- Command Center Export activity report item; the `usage.export` RPC stays available.
 
 ### Fixed
 
 - Heatmap keeps its 52-week layout for Today / 7D / 30D ranges.
-- Heatmap title renamed from Tool activity to Activity.
-- Hardened heatmap color mixing and month focus styling.
+- Hardened heatmap color mixing against invalid theme color values.
 
 ## [0.1.0] - 2026-09-19
 

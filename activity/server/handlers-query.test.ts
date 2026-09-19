@@ -6,6 +6,7 @@ import { test } from "node:test";
 import type { PluginHandlerContext } from "@getpaseo/plugin/server";
 import {
   createActivityByDayHandler,
+  createAgentsHandler,
   createByProviderHandler,
   createSkillsByNameHandler,
 } from "./handlers.ts";
@@ -59,6 +60,62 @@ test("by-provider and activity-by-day read the local store only", async () => {
     const activity = await createActivityByDayHandler(store)({});
     assert.equal(activity.days[0]?.skills, 1);
     assert.equal(activity.days[0]?.agents, 1);
+  } finally {
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("usage.agents filters by workspace and merges the registry", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "fast-agents-"));
+  const store = createUsageStore({ dir, driver: "sqlite" });
+  try {
+    store.upsertMany([
+      row({ agentId: "a1", callId: "c1", workspaceId: "w1" }),
+      row({ agentId: "a2", callId: "c2", workspaceId: "w2" }),
+    ]);
+    store.upsertAgents([
+      {
+        agentId: "a1",
+        workspaceId: "w1",
+        parentAgentId: null,
+        provider: "codex",
+        title: "Alpha",
+        createdAt: "2026-09-19T10:00:00.000Z",
+        archivedAt: null,
+        updatedAt: "2026-09-19T10:00:00.000Z",
+      },
+      {
+        agentId: "a2",
+        workspaceId: "w2",
+        parentAgentId: null,
+        provider: "codex",
+        title: "Beta",
+        createdAt: "2026-09-19T10:00:00.000Z",
+        archivedAt: null,
+        updatedAt: "2026-09-19T10:00:00.000Z",
+      },
+      {
+        agentId: "a3",
+        workspaceId: "w1",
+        parentAgentId: null,
+        provider: "codex",
+        title: "Archived",
+        createdAt: "2026-09-19T09:00:00.000Z",
+        archivedAt: "2026-09-19T11:00:00.000Z",
+        updatedAt: "2026-09-19T11:00:00.000Z",
+      },
+    ]);
+    const result = await createAgentsHandler(store)({ workspaceId: "w1" });
+    assert.deepEqual(
+      result.items.map((item) => item.agentId),
+      ["a1", "a3"],
+    );
+    assert.equal(result.items[0]?.title, "Alpha");
+    assert.equal(result.items[0]?.callCount, 1);
+    assert.equal(result.items[0]?.skillCalls, 1);
+    assert.equal(result.items[0]?.archivedAt, null);
+    assert.equal(result.items[1]?.archivedAt, "2026-09-19T11:00:00.000Z");
   } finally {
     store.close();
     rmSync(dir, { recursive: true, force: true });

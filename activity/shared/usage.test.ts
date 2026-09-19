@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   aggregateActivityByDay,
+  aggregateAgents,
   aggregateByProvider,
   aggregateMcpByTool,
   aggregateShellTop,
@@ -809,5 +810,105 @@ describe("aggregateActivityByDay", () => {
     assert.equal(days[1]?.mcp, 0);
     assert.equal(days[1]?.agents, 1);
     assert.equal(days[1]?.total, 1);
+  });
+});
+
+describe("aggregateAgents (024)", () => {
+  it("groups by agent, excludes low from skillCalls, and merges the registry", () => {
+    const items = aggregateAgents(
+      [
+        row({
+          callId: "1",
+          agentId: "a1",
+          provider: "claude/opus",
+          name: "Skill",
+          detailType: "plain_text",
+          category: "skill",
+          confidence: "exact",
+          skillName: "review",
+          command: null,
+        }),
+        row({
+          callId: "2",
+          agentId: "a1",
+          provider: "claude/opus",
+          name: "Skill",
+          detailType: "plain_text",
+          category: "skill",
+          confidence: "low",
+          skillName: "review",
+          command: null,
+          ingestedAt: "2026-09-18T03:00:00.000Z",
+        }),
+        row({
+          callId: "3",
+          agentId: "a1",
+          provider: "claude/opus",
+          name: "mcp__knot__search",
+          detailType: "unknown",
+          category: "mcp",
+          mcpServer: "knot",
+          mcpTool: "search",
+          command: null,
+        }),
+        row({
+          callId: "4",
+          agentId: "a1",
+          provider: "claude/opus",
+          command: "rm -rf dist",
+          ingestedAt: "2026-09-18T04:00:00.000Z",
+        }),
+        row({ callId: "5", agentId: "a1", provider: "claude/opus", detailType: "read", command: null }),
+        row({ callId: "6", agentId: "a1", provider: "claude/opus", detailType: "write", command: null }),
+        row({ callId: "7", agentId: "a2", provider: "codex", command: "ls" }),
+      ],
+      [
+        {
+          agentId: "a1",
+          provider: "claude/opus",
+          title: "Review bot",
+          createdAt: "2026-09-18T00:00:00.000Z",
+        },
+        { agentId: "a3", provider: "codex", title: "Idle", createdAt: "2026-09-19T00:00:00.000Z", archivedAt: "2026-09-19T01:00:00.000Z" },
+      ],
+      [
+        { agentId: "a1", provider: "claude/opus", ts: "2026-09-18T05:00:00.000Z" },
+        { agentId: "a1", provider: "claude/opus", ts: "2026-09-18T06:00:00.000Z" },
+        { agentId: "a2", provider: "codex" },
+      ],
+    );
+
+    assert.deepEqual(
+      items.map((item) => item.agentId),
+      ["a1", "a2", "a3"],
+    );
+
+    const a1 = items[0]!;
+    assert.equal(a1.provider, "claude");
+    assert.equal(a1.title, "Review bot");
+    assert.equal(a1.callCount, 6);
+    assert.equal(a1.skillCalls, 1);
+    assert.equal(a1.mcpCalls, 1);
+    assert.equal(a1.shellCalls, 1);
+    assert.equal(a1.fileReads, 1);
+    assert.equal(a1.fileWrites, 1);
+    assert.equal(a1.coding, true);
+    assert.equal(a1.messageCount, 2);
+    assert.equal(a1.archivedAt, null);
+    assert.equal(a1.lastActivityAt, "2026-09-18T06:00:00.000Z");
+
+    const a2 = items[1]!;
+    assert.equal(a2.callCount, 1);
+    assert.equal(a2.coding, false);
+    assert.equal(a2.messageCount, 1);
+    assert.equal(a2.lastActivityAt, "2026-09-18T00:00:00.000Z");
+
+    const a3 = items[2]!;
+    assert.equal(a3.callCount, 0);
+    assert.equal(a3.messageCount, 0);
+    assert.equal(a3.title, "Idle");
+    assert.equal(a3.createdAt, "2026-09-19T00:00:00.000Z");
+    assert.equal(a3.archivedAt, "2026-09-19T01:00:00.000Z");
+    assert.equal(a3.lastActivityAt, null);
   });
 });

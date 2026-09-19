@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import type { PluginServerContext } from "@getpaseo/plugin/server";
 import {
   createActivityByDayHandler,
+  createAgentsHandler,
   createByProviderHandler,
   createExportHandler,
   createListHandler,
@@ -17,6 +18,7 @@ import { resolveAgentModel } from "./server/resolve-model.ts";
 import { createUsageStore } from "./server/store.ts";
 import {
   usageActivityByDayRpc,
+  usageAgentsRpc,
   usageByProviderRpc,
   usageExportRpc,
   usageListRpc,
@@ -50,6 +52,10 @@ export default function contribute(server: PluginServerContext) {
   server.handle(usageByProviderRpc, (input, context) => {
     void background.request(context.paseo);
     return createByProviderHandler(store)(input);
+  });
+  server.handle(usageAgentsRpc, (input, context) => {
+    void background.request(context.paseo);
+    return createAgentsHandler(store)(input);
   });
   server.handle(usageActivityByDayRpc, (input, context) => {
     void background.request(context.paseo);
