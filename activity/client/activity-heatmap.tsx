@@ -14,16 +14,19 @@ type HoveredMonth = { year: number; month: number };
 
 // Derive the activity palette from the active theme.
 function mix(base: string, accent: string, amount: number): string {
-  const parse = (value: string) => {
-    const hex = value.replace("#", "");
+  const parse = (value: string): number[] | null => {
+    const hex = value.replace("#", "").trim();
     const expanded = hex.length === 3 || hex.length === 4
       ? hex.split("").map((c) => c + c).join("")
       : hex;
     // Use first 6 digits only — ignore trailing alpha on 8-digit hex.
     const rgb = expanded.slice(0, 6);
+    if (!/^[0-9a-fA-F]{6}$/.test(rgb)) return null;
     return [0, 2, 4].map((i) => parseInt(rgb.slice(i, i + 2), 16));
   };
-  const a = parse(base); const b = parse(accent);
+  const a = parse(base);
+  const b = parse(accent);
+  if (!a || !b) return base;
   return `rgb(${a.map((v, i) => Math.round(v + (b[i]! - v) * amount)).join(",")})`;
 }
 
@@ -84,7 +87,7 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
     : "";
   const axisWidth = needsScroll ? gridWidth : width;
   const modeLabel = mode === "weekly" ? "Week containing" : mode === "cumulative" ? "Through" : "";
-  const monthBorder = mix(colors.surface2, colors.accent, 0.35);
+  const monthFocus = hoveredMonth != null;
   return (
     <View style={{ gap: compact ? 10 : 12 }} onLayout={event => setWidth(event.nativeEvent.layout.width)}>
       <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -111,7 +114,19 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
               <View key={i} style={{ gap }}>
                 {week.map(cell => {
                   const hidden = cell.future || cell.excluded;
-                  const monthHighlight = !hidden && cellInMonth(cell.key, hoveredMonth);
+                  const inMonth = cellInMonth(cell.key, hoveredMonth);
+                  const level = activityLevel(cell.total, max);
+                  const base = palette[level]!;
+                  // Focus = leave target month as-is; gently mute others toward surface2
+                  // (same space as empty cells — preserves activity hue, avoids surface0 parse issues).
+                  const fill =
+                    hidden
+                      ? base
+                      : monthFocus && inMonth
+                        ? mix(base, colors.accent, 0.04)
+                        : monthFocus && !inMonth
+                          ? mix(base, colors.surface2, 0.36)
+                          : base;
                   return (
                     <Pressable key={cell.key} disabled={hidden} accessibilityRole="button"
                       accessibilityLabel={`${modeLabel} ${cell.key}: ${cell.total} activity, ${cell.skills} skills, ${cell.mcp} MCP, ${cell.agents} agents, ${cell.messages} messages`}
@@ -123,9 +138,7 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
                         width: cellSize,
                         height: cellSize,
                         borderRadius: Math.max(2, cellSize / 4),
-                        backgroundColor: palette[activityLevel(cell.total, max)],
-                        borderWidth: monthHighlight ? 0.1 : 0,
-                        borderColor: monthHighlight ? monthBorder : "transparent",
+                        backgroundColor: fill,
                         opacity: hidden ? 0 : 1,
                       }} />
                   );
