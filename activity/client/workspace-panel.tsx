@@ -2,7 +2,7 @@ import {
   type PluginWorkspacePanelProps,
   usePaseo,
   useRpc,
-  useWorkspace,
+  useSettings,
 } from "@getpaseo/plugin/client";
 import { Icon, useToast } from "@getpaseo/plugin/client/react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,6 +20,11 @@ import {
 } from "react-native";
 import { ACTIVITY_LIST_LIMIT } from "../shared/insights.ts";
 import {
+  EXPLORER_AGENT_DISPLAY_DEFAULTS,
+  explorerAgentDisplaySettings,
+  type ExplorerAgentDisplayValues,
+} from "../shared/explorer-agent-display.ts";
+import {
   providerLabel,
   type AgentUsageItem,
   usageAgentUnarchiveRpc,
@@ -29,12 +34,11 @@ import {
   usageSummaryRpc,
 } from "../shared/usage.ts";
 import { formatDisplayName, formatLocalDateTime, formatUpdatedAt } from "../shared/format.ts";
-import { RANGE_OPTIONS, rangeFrom, type RangeId } from "./range.ts";
 import { useAppLanguage } from "./use-app-language.ts";
 import { UsageStats } from "./usage-stats.tsx";
 
 type AgentSort = "created" | "updated" | "name" | "messages" | "status";
-type AgentGroup = "none" | "provider";
+type AgentGroup = "none" | "provider" | "status";
 type AgentShowField = "provider" | "calls" | "messages" | "updated";
 /** Archive scope: Active / Archived. */
 type AgentStatusFilter = "active" | "archived";
@@ -58,8 +62,8 @@ const MENU_OPTION_ICON_SIZE = 14;
 const RANK_ROW_ESTIMATE = 54;
 
 const SORT_OPTIONS: ReadonlyArray<MenuOption & { id: AgentSort }> = [
-  { id: "created", label: "Created", icon: "CalendarPlus" },
   { id: "updated", label: "Updated", icon: "Clock" },
+  { id: "created", label: "Created", icon: "CalendarPlus" },
   { id: "name", label: "Name", icon: "Type" },
   { id: "messages", label: "Messages", icon: "MessageSquare" },
   { id: "status", label: "Status", icon: "CircleDashed" },
@@ -88,6 +92,7 @@ function attentionRank(agent: {
 const GROUP_OPTIONS: ReadonlyArray<MenuOption & { id: AgentGroup }> = [
   { id: "none", label: "None", icon: "Minus" },
   { id: "provider", label: "Provider", icon: "Server" },
+  { id: "status", label: "Status", icon: "CircleDashed" },
 ];
 
 const SHOW_FIELD_OPTIONS: ReadonlyArray<MenuOption & { id: AgentShowField }> = [
@@ -108,23 +113,6 @@ const LIFECYCLE_FILTER_OPTIONS: ReadonlyArray<MenuOption & { id: AgentLifecycleF
   { id: "error", label: "Error", icon: "CircleAlert" },
   { id: "closed", label: "Closed", icon: "CircleOff" },
 ];
-
-/** Active on by default; archived is opt-in. */
-const DEFAULT_STATUS_FILTERS: ReadonlySet<AgentStatusFilter> = new Set(["active"]);
-
-/** All lifecycle statuses on by default. */
-const DEFAULT_LIFECYCLE_FILTERS: ReadonlySet<AgentLifecycleFilter> = new Set([
-  "idle",
-  "running",
-  "error",
-  "closed",
-]);
-
-const DEFAULT_SHOW_FIELDS: ReadonlySet<AgentShowField> = new Set([
-  "provider",
-  "calls",
-  "messages",
-]);
 
 function optionLabel<T extends string>(
   options: ReadonlyArray<{ id: T; label: string }>,
@@ -421,18 +409,25 @@ export function WorkspaceActivityPanel({
   workspaceId,
   navigation,
 }: PluginWorkspacePanelProps) {
-  const [range, setRange] = useState<RangeId>("all");
-  const [agentSort, setAgentSort] = useState<AgentSort>("created");
-  const [agentGroup, setAgentGroup] = useState<AgentGroup>("none");
-  const [agentShowFields, setAgentShowFields] = useState<ReadonlySet<AgentShowField>>(
-    () => new Set(DEFAULT_SHOW_FIELDS),
+  const displaySettings = useSettings(explorerAgentDisplaySettings);
+  const displayValues: ExplorerAgentDisplayValues =
+    displaySettings.status === "ready"
+      ? displaySettings.values
+      : EXPLORER_AGENT_DISPLAY_DEFAULTS;
+  const agentSort = displayValues.sort;
+  const agentGroup = displayValues.group;
+  const agentShowFields = useMemo(
+    () => new Set(displayValues.show),
+    [displayValues.show],
   );
-  const [agentStatusFilters, setAgentStatusFilters] = useState<ReadonlySet<AgentStatusFilter>>(
-    () => new Set(DEFAULT_STATUS_FILTERS),
+  const agentStatusFilters = useMemo(
+    () => new Set(displayValues.status),
+    [displayValues.status],
   );
-  const [agentLifecycleFilters, setAgentLifecycleFilters] = useState<
-    ReadonlySet<AgentLifecycleFilter>
-  >(() => new Set(DEFAULT_LIFECYCLE_FILTERS));
+  const agentLifecycleFilters = useMemo(
+    () => new Set(displayValues.lifecycle),
+    [displayValues.lifecycle],
+  );
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuFlyout, setMenuFlyout] = useState<MenuFlyout | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<{ top: number; right: number } | null>(null);
@@ -444,10 +439,12 @@ export function WorkspaceActivityPanel({
   const locale = useAppLanguage();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const workspaceName = useWorkspace(workspaceId, (workspace) => workspace.title ?? workspace.name);
   const openAgent = navigation?.openAgent;
-  const from = rangeFrom(range);
-  const window = from ? { from } : {};
+
+  function persistDisplay(next: ExplorerAgentDisplayValues) {
+    if (displaySettings.status !== "ready") return;
+    void displaySettings.save(next, displaySettings.revision);
+  }
 
   const summaryRpc = useRpc(usageSummaryRpc);
   const agentsRpc = useRpc(usageAgentsRpc);
@@ -455,34 +452,34 @@ export function WorkspaceActivityPanel({
   const skillsRpc = useRpc(usageSkillsByNameRpc);
   const mcpRpc = useRpc(usageMcpByToolRpc);
 
-  const agentsQueryKey = ["activity", "workspace-agents", workspaceId, from ?? "all"] as const;
+  const agentsQueryKey = ["activity", "workspace-agents", workspaceId] as const;
 
   const summary = useQuery({
     refetchInterval: 15_000,
     retry: false,
-    queryKey: ["activity", "workspace-summary", workspaceId, from ?? "all"],
-    queryFn: () => summaryRpc({ workspaceId, ...window }),
+    queryKey: ["activity", "workspace-summary", workspaceId],
+    queryFn: () => summaryRpc({ workspaceId }),
   });
 
   const agents = useQuery({
     refetchInterval: 15_000,
     retry: false,
     queryKey: agentsQueryKey,
-    queryFn: () => agentsRpc({ workspaceId, ...window }),
+    queryFn: () => agentsRpc({ workspaceId }),
   });
 
   const skills = useQuery({
     refetchInterval: 15_000,
     retry: false,
-    queryKey: ["activity", "workspace-skills", workspaceId, from ?? "all"],
-    queryFn: () => skillsRpc({ workspaceId, ...window }),
+    queryKey: ["activity", "workspace-skills", workspaceId],
+    queryFn: () => skillsRpc({ workspaceId }),
   });
 
   const mcp = useQuery({
     refetchInterval: 15_000,
     retry: false,
-    queryKey: ["activity", "workspace-mcp", workspaceId, from ?? "all"],
-    queryFn: () => mcpRpc({ workspaceId, ...window }),
+    queryKey: ["activity", "workspace-mcp", workspaceId],
+    queryFn: () => mcpRpc({ workspaceId }),
   });
 
   const paseo = usePaseo();
@@ -539,6 +536,18 @@ export function WorkspaceActivityPanel({
 
   const agentGroups = useMemo(() => {
     if (agentGroup === "none") return null;
+    if (agentGroup === "status") {
+      const active: AgentUsageItem[] = [];
+      const archived: AgentUsageItem[] = [];
+      for (const item of visibleAgentItems) {
+        if (item.archivedAt != null) archived.push(item);
+        else active.push(item);
+      }
+      const groups: Array<[string, AgentUsageItem[]]> = [];
+      if (active.length > 0) groups.push(["Active", active]);
+      if (archived.length > 0) groups.push(["Archived", archived]);
+      return groups;
+    }
     const map = new Map<string, AgentUsageItem[]>();
     for (const item of visibleAgentItems) {
       const list = map.get(item.provider);
@@ -608,26 +617,6 @@ export function WorkspaceActivityPanel({
         width: "100%" as const,
         alignSelf: "center" as const,
       },
-      headerRow: {
-        flexDirection: "row" as const,
-        alignItems: "baseline" as const,
-        justifyContent: "space-between" as const,
-        flexWrap: "wrap" as const,
-        gap: 12,
-      },
-      header: {
-        flexDirection: "row" as const,
-        alignItems: "baseline" as const,
-        gap: 8,
-        flexShrink: 1,
-        minWidth: 0,
-      },
-      headerMeta: {
-        color: theme.colors.foregroundMuted,
-        fontSize: 14,
-        fontWeight: "500" as const,
-        flexShrink: 1,
-      },
       sectionHeaderRow: {
         flexDirection: "row" as const,
         alignItems: "center" as const,
@@ -648,25 +637,6 @@ export function WorkspaceActivityPanel({
         fontWeight: "600" as const,
         flexShrink: 1,
         letterSpacing: -0.3,
-      },
-      rangeBar: {
-        flexDirection: "row" as const,
-        alignItems: "center" as const,
-        flexWrap: "wrap" as const,
-        gap: layout.compact ? 12 : 16,
-      },
-      rangeSegment: {
-        paddingVertical: 6,
-      },
-      chipText: {
-        color: theme.colors.foregroundMuted,
-        fontSize: 14,
-        fontWeight: "500" as const,
-      },
-      chipTextActive: {
-        color: theme.colors.foreground,
-        fontSize: 14,
-        fontWeight: "600" as const,
       },
       panel: {
         gap: 4,
@@ -911,43 +881,37 @@ export function WorkspaceActivityPanel({
 
   function selectMenuOption(id: string) {
     if (menuFlyout === "sort") {
-      setAgentSort(id as AgentSort);
+      persistDisplay({ ...displayValues, sort: id as AgentSort });
       closeMenu();
       return;
     }
     if (menuFlyout === "group") {
-      setAgentGroup(id as AgentGroup);
+      persistDisplay({ ...displayValues, group: id as AgentGroup });
       closeMenu();
       return;
     }
     if (menuFlyout === "status") {
       const status = id as AgentStatusFilter;
-      setAgentStatusFilters((prev) => {
-        const next = new Set(prev);
-        if (next.has(status)) next.delete(status);
-        else next.add(status);
-        return next;
-      });
+      const next = new Set(displayValues.status);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
+      persistDisplay({ ...displayValues, status: [...next] });
       return;
     }
     if (menuFlyout === "lifecycle") {
       const lifecycle = id as AgentLifecycleFilter;
-      setAgentLifecycleFilters((prev) => {
-        const next = new Set(prev);
-        if (next.has(lifecycle)) next.delete(lifecycle);
-        else next.add(lifecycle);
-        return next;
-      });
+      const next = new Set(displayValues.lifecycle);
+      if (next.has(lifecycle)) next.delete(lifecycle);
+      else next.add(lifecycle);
+      persistDisplay({ ...displayValues, lifecycle: [...next] });
       return;
     }
     if (menuFlyout === "show") {
       const field = id as AgentShowField;
-      setAgentShowFields((prev) => {
-        const next = new Set(prev);
-        if (next.has(field)) next.delete(field);
-        else next.add(field);
-        return next;
-      });
+      const next = new Set(displayValues.show);
+      if (next.has(field)) next.delete(field);
+      else next.add(field);
+      persistDisplay({ ...displayValues, show: [...next] });
     }
   }
 
@@ -1035,32 +999,6 @@ export function WorkspaceActivityPanel({
           showsVerticalScrollIndicator={false}
           showsHorizontalScrollIndicator={false}
         >
-        <View style={styles.headerRow}>
-          <View style={styles.header}>
-            <Text style={styles.headerMeta} numberOfLines={1}>
-              {workspaceName ?? workspaceId}
-            </Text>
-          </View>
-          <View style={styles.rangeBar}>
-            {RANGE_OPTIONS.map((option) => {
-              const active = range === option.id;
-              return (
-                <Pressable
-                  key={option.id}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: active }}
-                  onPress={() => setRange(option.id)}
-                  style={styles.rangeSegment}
-                >
-                  <Text style={active ? styles.chipTextActive : styles.chipText}>
-                    {option.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
         {loading ? <ActivityIndicator color={theme.colors.accent} /> : null}
         {error ? (
           <Text style={{ color: theme.colors.statusDanger }}>
@@ -1100,9 +1038,11 @@ export function WorkspaceActivityPanel({
             </View>
             <View style={styles.panel}>
               {agentGroups
-                ? agentGroups.map(([provider, items]) => (
-                    <View key={provider} style={styles.agentGroup}>
-                      <Text style={styles.groupLabel}>{providerLabel(provider)}</Text>
+                ? agentGroups.map(([groupKey, items]) => (
+                    <View key={groupKey} style={styles.agentGroup}>
+                      <Text style={styles.groupLabel}>
+                        {agentGroup === "provider" ? providerLabel(groupKey) : groupKey}
+                      </Text>
                       {items.map(renderAgentRow)}
                     </View>
                   ))

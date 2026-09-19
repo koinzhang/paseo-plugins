@@ -48,6 +48,8 @@
 | [024-explorer-workspace-activity](./024-explorer-workspace-activity/) | 已实现 | Explorer workspace Activity 面板（per-agent 聚合） |
 | [025-explorer-panel-polish](./025-explorer-panel-polish/) | 已实现 | Explorer 面板：表头一行 / dense KPI / Active·Archived agent 筛选 |
 | [026-agent-archive-actions](./026-agent-archive-actions/) | 已实现 | Explorer Agents 行归档 / 反归档按钮 |
+| [027-explorer-drop-header](./027-explorer-drop-header/) | 已实现 | Explorer 去掉分支名与时间 chips |
+| [028-explorer-display-settings](./028-explorer-display-settings/) | 已实现 | Explorer Agents 显示偏好 host settings 持久化 |
 | [027-agent-activity-title](./027-agent-activity-title/) | 已实现 | Command Center 项改名 Current Activity → Agent Activity |
 
 ## 约定

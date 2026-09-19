@@ -12,9 +12,9 @@
 | G2 | KPI 栏用 dense 尺寸（`UsageStats` 新增可选 `dense`）：更小的数值 / 标签 / 内边距；指标只保留 **Shell calls / File reads / File writes / Messages**（不含 skill / MCP / agents） |
 | G3 | Agents 区默认按 **创建时间倒序**；标题右侧设置图标展开**悬浮菜单**（absolute；点卡片外关闭）；视觉与交互对齐宿主侧边栏 `SidebarDisplayPreferencesMenu`：一级 `MenuSurface` 常驻，点/悬停行打开**左侧二级 flyout**（overlap 5）；232 宽、8 圆角、`border`、md 阴影、行 inset hover chip；互斥选项选中后关闭整菜单，Show / Status / Lifecycle 开关不关闭 |
 | G4 | Skills / MCP 合并为一个排行区：默认 **Skills**，点标题右侧图标切到 **MCP**（同全局 Activity 的 rank 图标切换；标题保持 Skills / MCP，不用 "Most used" 前缀），不再上下堆叠 |
-| G5 | **Sort**：Created（默认，创建时间倒序）/ Updated（更新时间倒序）/ Name（字典序）/ Messages（消息数倒序）/ Status（值得关注的状态置顶） |
-| G6 | **Group**：None（默认）/ Provider（按 provider 分组，组标题为 providerLabel） |
-| G7 | **Show**：多选开关，控制 agent 行副文案是否显示 **Provider / Calls / Messages / Updated**（默认前三项开）；Updated 用 app 语言（默认 `en`）+ 当地格式：同年月日+时间，跨年带年份；无勾选项时不渲染副文案行；不显示行尾活动量数字 |
+| G5 | **Sort**：Updated（默认，更新时间倒序）/ Created（创建时间倒序）/ Name（字典序）/ Messages（消息数倒序）/ Status（值得关注的状态置顶）；菜单项 Updated 置顶 |
+| G6 | **Group**：None（默认）/ Provider（按 provider 分组，组标题为 providerLabel）/ Status（按 Active / Archived 分组；Active 在前；空组不渲染） |
+| G7 | **Show**：多选开关，控制 agent 行副文案是否显示 **Provider / Calls / Messages / Updated**（**默认全不选**）；Updated 用 app 语言（默认 `en`）+ 当地格式：同年月日+时间，跨年带年份；无勾选项时不渲染副文案行；不显示行尾活动量数字 |
 | G8 | Sort=Status 时的排序数据来自客户端 `paseo.agents.list`（`includeArchived`，15s 轮询）：rank = attention（`requiresAttention` / `permission` / `error`）0 → running 1 → idle 2 → initializing 3 → closed/unknown 4；同级按 Updated 降序 |
 | G9 | workspace 级 Command Center「Workspace Activity」→ `openPanel("workspace-activity", { location: "explorer" })`；Explorer 面板本身由宿主管理（无法默认展示，需手动添加一次），此项提供 ⌘K 快捷打开 |
 | G10 | **Status**（多选）：Active（默认开）/ Archived（默认关）。控制是否列出未归档 / 归档 agent |

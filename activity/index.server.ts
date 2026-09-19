@@ -29,11 +29,13 @@ import {
   usageSkillsByNameRpc,
   usageSummaryRpc,
 } from "./shared/usage.ts";
+import { explorerAgentDisplaySettings } from "./shared/explorer-agent-display.ts";
 
 export default function contribute(server: PluginServerContext) {
   const store = createUsageStore();
   const background = createBackgroundSync(store);
   console.log(`[activity] store ready (driver=${store.driver})`);
+  server.registerSettings(explorerAgentDisplaySettings);
 
   server.handle(usageSummaryRpc, (input, context) => {
     void background.request(context.paseo);
