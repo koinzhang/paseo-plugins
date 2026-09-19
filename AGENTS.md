@@ -37,9 +37,26 @@ paseo plugin ls                   # 确认 running
 
 改完 `client/` / `server/` / `shared/` / 入口 / `paseo-plugin.json` 后**主动** `paseo plugin reload activity`，不必等用户再说「重载」。
 
+## 版本控制（jj）
+
+本仓库存在 `.jj/`（colocate 模式），版本控制操作**优先用 jj**，git 只作远程契约（fetch / push / PR / CI）。
+
+```bash
+jj st / jj diff / jj log                    # 查看
+jj describe -m "..." && jj new              # 提交（无暂存区，改动自动 snapshot）
+jj bookmark set main -r @ && jj git push    # 推送
+jj undo / jj op log / jj op restore         # 恢复
+```
+
+约束：
+
+- 不要用 git 做写操作（`git add` / `commit` / `checkout` / `reset` / `stash`）；只读命令（`git log` / `status` / `diff`）可用
+- **不要点 Paseo 的 commit 按钮**（内部是 `git add -A && git commit`，会与 jj 工作副本状态错位）；需要提交时用 jj
+- worktree 隔离的 workspace 没有 `.jj`：jj 不可用，也不要执行 `jj git init --colocate`（会与主 checkout 形成双 store）
+
 ## Commit 格式
 
-创建 git commit 时使用 Conventional Commits：`<type>(<scope>): <description>`。
+提交信息（`jj describe` / git commit）使用 Conventional Commits：`<type>(<scope>): <description>`。
 
 - type：`feat` / `fix` / `docs` / `style` / `refactor` / `perf` / `test` / `build` / `ci` / `chore` / `revert`
 - scope：插件 id（如 `activity`）或 `ci` / `docs` / `repo`
