@@ -1,5 +1,8 @@
 # paseo-plugins
 
+[![CI](https://github.com/koinzhang/paseo-plugins/actions/workflows/ci.yml/badge.svg)](https://github.com/koinzhang/paseo-plugins/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 English | [简体中文](./README.zh-CN.md)
 
 A monorepo for Paseo plugins. Each plugin lives in its own directory with its own `paseo-plugin.json` and follows the repo's spec-driven workflow.
@@ -53,6 +56,8 @@ npm test
 
 This repo is spec-driven: read [activity/specs/README.md](./activity/specs/README.md) before coding, then the matching numbered directory. New features get a new numbered directory (`specs/00N-...`); update the spec first when implementation diverges.
 
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full contribution workflow, and [SECURITY.md](./SECURITY.md) for private vulnerability reporting.
+
 ## Layout
 
 ```
@@ -64,3 +69,7 @@ activity/
   shared/                 # RPC contracts (zod), classification and formatting
   specs/                  # numbered specs 001–015 (spec / plan / tasks / contracts)
 ```
+
+## License
+
+[MIT](./LICENSE) © koinzhang

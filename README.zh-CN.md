@@ -1,5 +1,8 @@
 # paseo-plugins
 
+[![CI](https://github.com/koinzhang/paseo-plugins/actions/workflows/ci.yml/badge.svg)](https://github.com/koinzhang/paseo-plugins/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 [English](./README.md) | 简体中文
 
 Paseo 插件 monorepo。所有插件独立目录、独立 `paseo-plugin.json`，共用本仓库的 spec 驱动开发流程。
@@ -53,6 +56,8 @@ npm test
 
 本仓库采用 spec 驱动开发：编码前先读 [activity/specs/README.md](./activity/specs/README.md) 总览，再读对应编号目录；新功能建新编号目录（`specs/00N-...`），实现与 spec 出现偏差时先更新 spec。
 
+完整贡献流程见 [CONTRIBUTING.md](./CONTRIBUTING.md)；漏洞私下上报见 [SECURITY.md](./SECURITY.md)。
+
 ## 目录结构
 
 ```
@@ -64,3 +69,7 @@ activity/
   shared/                 # RPC 契约（zod）、分类与格式化
   specs/                  # 001–015 编号 spec / plan / tasks / contracts
 ```
+
+## 许可证
+
+[MIT](./LICENSE) © koinzhang
