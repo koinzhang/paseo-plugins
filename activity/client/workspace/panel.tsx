@@ -246,7 +246,10 @@ export function WorkspaceActivityPanel({
     () => (skills.data?.items ?? []).filter((item) => item.total > 0),
     [skills.data],
   );
-  const allMcp = mcp.data?.items ?? [];
+  const allMcp = useMemo(
+    () => (mcp.data?.items ?? []).filter((item) => item.count > 0),
+    [mcp.data],
+  );
   const skillItems = useMemo(() => allSkills.slice(0, ACTIVITY_LIST_LIMIT), [allSkills]);
   const mcpItems = useMemo(() => allMcp.slice(0, ACTIVITY_LIST_LIMIT), [allMcp]);
 
@@ -267,8 +270,15 @@ export function WorkspaceActivityPanel({
   const terminalItems = terminals.data?.entries ?? [];
   const showAgents = agentItems.length > 0;
   const showRank = skillItems.length > 0 || mcpItems.length > 0;
+  const showRankToggle = skillItems.length > 0 && mcpItems.length > 0;
   const showTerminals = terminalItems.length > 0;
   const showContent = showAgents || showRank || showTerminals;
+
+  useEffect(() => {
+    if (skillItems.length === 0 && mcpItems.length === 0) return;
+    if (rankKind === "skills" && skillItems.length === 0) setRankKind("mcp");
+    else if (rankKind === "mcp" && mcpItems.length === 0) setRankKind("skills");
+  }, [skillItems.length, mcpItems.length, rankKind]);
 
   const styles = useMemo(
     () => ({
@@ -865,6 +875,7 @@ export function WorkspaceActivityPanel({
               onToggleKind={() =>
                 setRankKind((prev) => (prev === "skills" ? "mcp" : "skills"))
               }
+              showToggle={showRankToggle}
               skillItems={skillItems}
               mcpItems={mcpItems}
               mutedColor={theme.colors.foregroundMuted}

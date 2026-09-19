@@ -43,6 +43,7 @@ export type RankSectionStyles = {
 export function RankSection({
   rankKind,
   onToggleKind,
+  showToggle = true,
   skillItems,
   mcpItems,
   mutedColor,
@@ -50,30 +51,37 @@ export function RankSection({
 }: {
   rankKind: RankKind;
   onToggleKind: () => void;
+  showToggle?: boolean;
   skillItems: ReadonlyArray<SkillByNameItem>;
   mcpItems: ReadonlyArray<McpByToolItem>;
   mutedColor: string;
   styles: RankSectionStyles;
 }): ReactNode {
+  if (skillItems.length === 0 && mcpItems.length === 0) return null;
+
+  const items = rankKind === "skills" ? skillItems : mcpItems;
+
   return (
     <View style={{ gap: 12 }}>
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>{rankTitle(rankKind)}</Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={rankAction(rankKind).accessibilityLabel}
-          hitSlop={8}
-          onPress={onToggleKind}
-          style={styles.titleAction}
-        >
-          <Icon name={rankAction(rankKind).icon} size={16} color={mutedColor} />
-        </Pressable>
+        {showToggle ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={rankAction(rankKind).accessibilityLabel}
+            hitSlop={8}
+            onPress={onToggleKind}
+            style={styles.titleAction}
+          >
+            <Icon name={rankAction(rankKind).icon} size={16} color={mutedColor} />
+          </Pressable>
+        ) : null}
       </View>
       <View
         style={[
           styles.panel,
           {
-            minHeight: Math.max(skillItems.length, mcpItems.length, 1) * RANK_ROW_ESTIMATE,
+            minHeight: Math.max(items.length, 1) * RANK_ROW_ESTIMATE,
           },
         ]}
       >
@@ -110,11 +118,6 @@ export function RankSection({
                 <CountText value={item.count} styles={styles} />
               </View>
             ))}
-        {(rankKind === "skills" ? skillItems.length : mcpItems.length) === 0 ? (
-          <Text style={styles.empty}>
-            {rankKind === "skills" ? "No skills yet" : "No MCP yet"}
-          </Text>
-        ) : null}
       </View>
     </View>
   );
