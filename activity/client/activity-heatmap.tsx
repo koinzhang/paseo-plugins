@@ -124,9 +124,12 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
                       ? base
                       : monthFocus && inMonth
                         ? mix(base, colors.accent, 0.04)
-                        : monthFocus && !inMonth
-                          ? mix(base, colors.surface2, 0.36)
-                          : base;
+                        : base;
+                  const opacity = hidden
+                    ? 0
+                    : monthFocus && !inMonth
+                      ? 0.64
+                      : 1;
                   return (
                     <Pressable key={cell.key} disabled={hidden} accessibilityRole="button"
                       accessibilityLabel={`${modeLabel} ${cell.key}: ${cell.total} activity, ${cell.skills} skills, ${cell.mcp} MCP, ${cell.agents} agents, ${cell.messages} messages`}
@@ -139,7 +142,7 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
                         height: cellSize,
                         borderRadius: Math.max(2, cellSize / 4),
                         backgroundColor: fill,
-                        opacity: hidden ? 0 : 1,
+                        opacity,
                       }} />
                   );
                 })}
