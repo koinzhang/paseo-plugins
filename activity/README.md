@@ -26,16 +26,16 @@ Everything lives on the daemon machine in `~/.paseo/plugin-data/activity/` (SQLi
 
 Requires Paseo >= 0.8.0.
 
-From npm:
-
-```bash
-paseo plugin install npm:@koinzhang/paseo-plugin-activity
-```
-
-Or straight from Git:
+From Git (Paseo 0.8 and later):
 
 ```bash
 paseo plugin install https://github.com/koinzhang/paseo-plugins.git:activity
+```
+
+From npm (Paseo 0.9 and later; this is the source paseo.cafe hands to Paseo 0.9+):
+
+```bash
+paseo plugin install npm:@koinzhang/paseo-plugin-activity
 ```
 
 After source changes, reload and check status:
