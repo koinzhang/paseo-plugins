@@ -6,7 +6,7 @@ import {
 } from "@getpaseo/plugin/client";
 import { useToast } from "@getpaseo/plugin/client/react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -170,6 +170,27 @@ export function WorkspaceActivityPanel({
     queryKey: ["activity", "workspace-agent-status", workspaceId],
     queryFn: () => loadWorkspaceAgentStatuses(paseo, workspaceId),
   });
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const unsubscribe = paseo.agents.subscribe((update) => {
+      if (update.kind === "upsert") {
+        const { workspaceId: agentWorkspaceId } = update.agent;
+        if (agentWorkspaceId != null && agentWorkspaceId !== workspaceId) return;
+      }
+      if (timer != null) clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = null;
+        void queryClient.invalidateQueries({
+          queryKey: ["activity", "workspace-agent-status", workspaceId],
+        });
+      }, 300);
+    });
+    return () => {
+      unsubscribe();
+      if (timer != null) clearTimeout(timer);
+    };
+  }, [paseo, queryClient, workspaceId]);
 
   const agentItems = agents.data?.items ?? [];
   const visibleAgentItems = useMemo(() => {

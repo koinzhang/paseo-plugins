@@ -58,7 +58,8 @@
 | [031-scope-architecture-remediation](./031-scope-architecture-remediation/) | 已实现 | 架构文档；拆分 workspace panel；agents 翻页；Agent Messages KPI |
 | [032-terminals-section](./032-terminals-section/) | 已实现 | Workspace 面板 Terminals 区块：host SDK 只读列出 + 展开输出预览 |
 | [033-agent-permission-badge](./033-agent-permission-badge/) | 已实现 | Agents 行 pending permission warning 徽标；attention 排序含 pendingPermissions |
-| [034-agent-attention-colors](./034-agent-attention-colors/) | 已实现 | Agents 行机器人图标：finished→accent、error→statusDanger，查看后恢复 |
+| [034-agent-attention-colors](./034-agent-attention-colors/) | 已实现 | Agents 行机器人图标：finished→statusSuccess、permission→statusWarning、error→statusDanger |
+| [035-agent-status-subscription](./035-agent-status-subscription/) | 已实现 | 订阅 agent_update 近实时刷新状态查询（300ms 防抖，15s 轮询兜底） |
 
 ## 约定
 
