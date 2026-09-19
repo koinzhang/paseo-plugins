@@ -38,9 +38,11 @@ UI 入口：
 需要 Paseo >= 0.8.0。
 
 ```bash
-paseo plugin install https://github.com/koinzhang/paseo-plugins.git:activity
+paseo plugin add koinzhang/paseo-plugins --path activity
 paseo plugin ls                # 确认 running
 ```
+
+npm（Paseo 0.9+）：`paseo plugin install npm:@koinzhang/paseo-plugin-activity`。
 
 本地 checkout（开发）改为安装目录：
 

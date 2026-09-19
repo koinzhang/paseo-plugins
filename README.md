@@ -38,9 +38,11 @@ Data lives in `~/.paseo/plugin-data/activity/` (SQLite `usage.db`). The Paseo ti
 Requires Paseo >= 0.8.0.
 
 ```bash
-paseo plugin install https://github.com/koinzhang/paseo-plugins.git:activity
+paseo plugin add koinzhang/paseo-plugins --path activity
 paseo plugin ls                # confirm running
 ```
+
+From npm (Paseo 0.9+): `paseo plugin install npm:@koinzhang/paseo-plugin-activity`.
 
 For a local checkout (development), install the directory instead:
 

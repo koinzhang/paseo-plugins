@@ -29,7 +29,7 @@ Requires Paseo >= 0.8.0.
 From Git (Paseo 0.8 and later):
 
 ```bash
-paseo plugin install https://github.com/koinzhang/paseo-plugins.git:activity
+paseo plugin add koinzhang/paseo-plugins --path activity
 ```
 
 From npm (Paseo 0.9 and later; this is the source paseo.cafe hands to Paseo 0.9+):
