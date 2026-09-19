@@ -36,3 +36,7 @@ Explorer 面板的 agent 状态（permission / attention / lifecycle）走 `["ac
 - [ ] pending permission / finished / error 出现与清除在 1s 内反映到列表（待真机目视确认）
 - [ ] 切换 workspace 不再收到旧 workspace 的刷新（待真机目视确认）
 - [x] `npm run typecheck` / `paseo plugin reload activity` → running
+
+## 2026-09-19 审查修正（038，优先于上述原设计）
+
+0.8.0 agents.subscribe 只挂本地监听，现有推送依赖宿主 observation；不调用 list({ subscribe: {} }) 抢占宿主单 slot。轮询承担完整性保证。035 改为增量缓存更新；037 单 agent 改真实 timeline turn 事件，workspace 仅为启发式刷新提示，不保证回合结束语义。详见 ../038-sdk-api-remediation/。

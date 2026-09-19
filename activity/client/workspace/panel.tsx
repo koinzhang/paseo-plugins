@@ -3,6 +3,7 @@ import {
   usePaseo,
   useRpc,
   useSettings,
+  useWorkspace,
 } from "@getpaseo/plugin/client";
 import { useToast } from "@getpaseo/plugin/client/react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -32,7 +33,7 @@ import {
   usageSummaryRpc,
 } from "../../shared/usage.ts";
 import { useAppLanguage } from "../use-app-language.ts";
-import { useAgentTurnEnd } from "../use-agent-turn-end.ts";
+import { useWorkspaceActivityRefresh } from "../use-agent-turn-end.ts";
 import { UsageStats } from "../usage-stats.tsx";
 import { AgentsSection } from "./agents-section.tsx";
 import {
@@ -48,6 +49,7 @@ import {
   agentUpdatedAt,
   matchesAgentFilters,
   optionLabel,
+  type AgentStatusInfo,
   type AgentGroup,
   type AgentLifecycleFilter,
   type AgentShowField,
@@ -58,7 +60,7 @@ import {
 } from "./constants.ts";
 import { MenuOptionList, MenuSubTrigger } from "./display-menu.tsx";
 import { matchesAgentTitle } from "./filters.ts";
-import { loadWorkspaceAgentStatuses } from "./list-host-agents.ts";
+import { agentStatusInfo, loadWorkspaceAgentStatuses } from "./list-host-agents.ts";
 import { RankSection } from "./rank-section.tsx";
 import { TerminalsSection, type TerminalListItem } from "./terminals-section.tsx";
 
@@ -165,35 +167,43 @@ export function WorkspaceActivityPanel({
     queryFn: () => hostInfoRpc({}),
   });
 
+  const projectId = useWorkspace(workspaceId, (workspace) => workspace.projectId);
+  const projects = useQuery({
+    queryKey: ["activity", "host-projects"],
+    queryFn: () => paseo.projects.list(),
+    staleTime: 60_000,
+    retry: false,
+  });
+  const projectKey = projects.data?.projects.find((project) => project.projectId === projectId)?.projectKey;
+  const statusQueryKey = useMemo(
+    () => ["activity", "workspace-agent-status", workspaceId, projectKey ?? null],
+    [workspaceId, projectKey],
+  );
   const statuses = useQuery({
+    enabled: projects.isFetched,
     refetchInterval: 15_000,
     retry: false,
-    queryKey: ["activity", "workspace-agent-status", workspaceId],
-    queryFn: () => loadWorkspaceAgentStatuses(paseo, workspaceId),
+    queryKey: statusQueryKey,
+    queryFn: () => loadWorkspaceAgentStatuses(paseo, workspaceId, projectKey),
   });
 
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const unsubscribe = paseo.agents.subscribe((update) => {
-      if (update.kind === "upsert") {
-        const { workspaceId: agentWorkspaceId } = update.agent;
-        if (agentWorkspaceId != null && agentWorkspaceId !== workspaceId) return;
+  useEffect(() => paseo.agents.subscribe((update) => {
+    // This local listener accelerates the owned polling query without taking the
+    // daemon's shared observation slot or re-fetching the directory on each push.
+    queryClient.setQueryData<Record<string, AgentStatusInfo>>(statusQueryKey, (previous) => {
+      if (!previous) return previous;
+      const id = update.kind === "remove" ? update.agentId : update.agent.id;
+      if (update.kind === "remove" || update.agent.workspaceId !== workspaceId) {
+        if (!(id in previous)) return previous;
+        const next = { ...previous };
+        delete next[id];
+        return next;
       }
-      if (timer != null) clearTimeout(timer);
-      timer = setTimeout(() => {
-        timer = null;
-        void queryClient.invalidateQueries({
-          queryKey: ["activity", "workspace-agent-status", workspaceId],
-        });
-      }, 300);
+      return { ...previous, [id]: agentStatusInfo(update.agent) };
     });
-    return () => {
-      unsubscribe();
-      if (timer != null) clearTimeout(timer);
-    };
-  }, [paseo, queryClient, workspaceId]);
+  }), [paseo, queryClient, workspaceId, statusQueryKey]);
 
-  useAgentTurnEnd({ workspaceId }, () => {
+  useWorkspaceActivityRefresh(workspaceId, () => {
     void queryClient.invalidateQueries({
       queryKey: ["activity", "workspace-summary", workspaceId],
     });
@@ -370,14 +380,14 @@ export function WorkspaceActivityPanel({
         lineHeight: AGENT_HEADER_HEIGHT,
       },
       panel: {
-        gap: 4,
+        gap: 2,
         overflow: "hidden" as const,
       },
       listRow: {
         flexDirection: "row" as const,
         alignItems: "center" as const,
         gap: 12,
-        paddingVertical: 12,
+        paddingVertical: 6,
       },
       agentListRow: {
         flexDirection: "row" as const,

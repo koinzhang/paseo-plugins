@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -123,7 +123,7 @@ test("usage.agents filters by workspace and merges the registry", async () => {
   }
 });
 
-test("skills-by-name never awaits agent.refresh", async () => {
+test("skills-by-name refreshes an empty handle and resolves project skills", async () => {
   const dir = mkdtempSync(join(tmpdir(), "fast-skills-"));
   const store = createUsageStore({ dir, driver: "sqlite" });
   let refreshed = 0;
@@ -133,15 +133,36 @@ test("skills-by-name never awaits agent.refresh", async () => {
         current: () => null,
         refresh: async () => {
           refreshed += 1;
+          return { agent: { id: "a1", provider: "codex", cwd: dir } };
         },
       }),
     },
   } as unknown as PaseoApi;
   try {
+    mkdirSync(join(dir, ".claude/skills/demo"), { recursive: true });
+    writeFileSync(join(dir, ".claude/skills/demo/SKILL.md"), "# Demo");
     store.upsertMany([row()]);
     const result = await createSkillsByNameHandler(store)({ agentId: "a1" }, { paseo });
     assert.equal(result.items[0]?.skillName, "demo");
-    assert.equal(refreshed, 0);
+    assert.equal(refreshed, 1);
+    assert.equal(result.items[0]?.skillPath, join(dir, ".claude/skills/demo/SKILL.md"));
+  } finally {
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("skills-by-name keeps counts when agent metadata is unavailable", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "missing-agent-"));
+  const store = createUsageStore({ dir, driver: "sqlite" });
+  const paseo = { agents: { ref: () => ({
+    current: () => null,
+    refresh: async () => null,
+  }) } } as unknown as PaseoApi;
+  try {
+    store.upsertMany([row()]);
+    const result = await createSkillsByNameHandler(store)({ agentId: "a1" }, { paseo });
+    assert.equal(result.items[0]?.skillName, "demo");
   } finally {
     store.close();
     rmSync(dir, { recursive: true, force: true });

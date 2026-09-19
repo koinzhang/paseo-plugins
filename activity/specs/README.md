@@ -59,9 +59,10 @@
 | [032-terminals-section](./032-terminals-section/) | 已实现 | Workspace 面板 Terminals 区块：host SDK 只读列出 + 展开输出预览 |
 | [033-agent-permission-badge](./033-agent-permission-badge/) | 已实现 | Agents 行 pending permission warning 徽标；attention 排序含 pendingPermissions |
 | [034-agent-attention-colors](./034-agent-attention-colors/) | 已实现 | Agents 行机器人图标：finished→statusSuccess、permission→statusWarning、error→statusDanger |
-| [035-agent-status-subscription](./035-agent-status-subscription/) | 已实现 | 订阅 agent_update 近实时刷新状态查询（300ms 防抖，15s 轮询兜底） |
+| [035-agent-status-subscription](./035-agent-status-subscription/) | 已实现（038 修正） | 目录事件增量更新状态缓存，15s 轮询保证完整性 |
 | [036-agent-running-spinner](./036-agent-running-spinner/) | 已实现 | Agents 行 running 状态：图标右下角 host 风格环形 loading |
-| [037-turn-end-refresh](./037-turn-end-refresh/) | 已实现 | 回合结束事件驱动刷新 Workspace / Agent / pill 本地用量查询；pill 空态轮询 1.5s→5s |
+| [037-turn-end-refresh](./037-turn-end-refresh/) | 已实现（038 修正） | Agent/pill 真实 timeline turn 刷新；Workspace 启发式提示 + 轮询 |
+| [038-sdk-api-remediation](./038-sdk-api-remediation/) | 已实现 | SDK 审查修复：分页轮询、projectKey 过滤、timeline 事件、skill cwd 恢复 |
 
 ## 约定
 

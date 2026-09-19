@@ -151,14 +151,21 @@ export function createListHandler(store: UsageStore) {
   };
 }
 
-function skillRootsForQuery(
+async function skillRootsForQuery(
   paseo: PaseoApi,
   agentId: string | undefined,
   homeDir: string,
-): string[] {
+): Promise<string[]> {
   if (!agentId) return buildHomeSkillRoots(homeDir);
   const handle = paseo.agents.ref(agentId);
-  const snapshot = handle.current();
+  let snapshot = handle.current();
+  if (!snapshot) {
+    try {
+      snapshot = (await handle.refresh())?.agent ?? handle.current();
+    } catch (error) {
+      console.error("[activity] could not resolve agent skill roots", error);
+    }
+  }
   if (snapshot?.cwd) {
     return buildSkillRoots(agentFromSnapshot(snapshot), homeDir);
   }
@@ -178,7 +185,7 @@ export function createSkillsByNameHandler(store: UsageStore) {
       from: input.from,
       to: input.to,
     });
-    const roots = skillRootsForQuery(context.paseo, input.agentId, homeDir);
+    const roots = await skillRootsForQuery(context.paseo, input.agentId, homeDir);
     const items = finalizeSkillPaths(aggregateSkillsByName(rows), roots, homeDir);
     return { items };
   };
@@ -248,7 +255,12 @@ export function createAgentsHandler(store: UsageStore) {
   };
 }
 
-/** Host Unarchive ≡ refreshAgent; CLI surface is `paseo agent reload`. */
+/**
+ * 0.8 SDK has no reload API (handle.refresh is a read). Run CLI on this daemon's
+ * machine, inheriting PATH and PASEO_HOME / PASEO_HOST / PASEO_LISTEN. CLI also
+ * resolves its pid/config socket. Requires that environment to target this daemon;
+ * do not substitute the client UI's remote host or hard-code a default port.
+ */
 export function createUnarchiveAgentHandler(store: UsageStore) {
   return async (
     input: RpcInput<typeof usageAgentUnarchiveRpc>,

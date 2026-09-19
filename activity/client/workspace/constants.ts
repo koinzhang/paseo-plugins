@@ -50,7 +50,7 @@ export const MENU_SUBMENU_OVERLAP = 5;
 export const MENU_WIDTH = 232;
 export const MENU_OPTION_ICON_SIZE = 14;
 /** Approx list-row height (padding + title/meta) for stable Skills/MCP section size. */
-export const RANK_ROW_ESTIMATE = 54;
+export const RANK_ROW_ESTIMATE = 42;
 /** Visible agents per page in Explorer; pager hidden when pageCount ≤ 1. */
 export const AGENT_PAGE_SIZE = 40;
 export const HOST_AGENT_PAGE_LIMIT = 200;

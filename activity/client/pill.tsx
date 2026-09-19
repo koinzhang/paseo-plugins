@@ -1,3 +1,4 @@
+import { watchPillDirectory } from "./pill-directory.ts";
 import {
   type PluginButtonContentProps,
   type PluginButtonIconProps,
@@ -177,31 +178,13 @@ export function contributePills(client: PluginClientContext) {
     entry.registration.update({ label: TITLE, visible: true });
   }
 
-  const unsubscribe = client.paseo.agents.subscribe((update) => {
-    if (update.kind === "remove") {
-      removePill(update.agentId);
-      return;
-    }
-    const { id, workspaceId, status } = update.agent;
+  const unsubscribe = watchPillDirectory(client.paseo.agents, (agent) => {
+    const { id, workspaceId, status } = agent;
     if (!workspaceId) return;
-    if (pills.has(id)) {
-      // turn_ended ingest races with idle; remount hidden pills so they can catch up.
-      if (status === "idle") reviveHiddenPill(id);
-      return;
-    }
     addPill(id, workspaceId);
-  });
-
-  client.paseo.agents
-    .list()
-    .then((result) => {
-      result.entries.forEach(({ agent }) => {
-        if (agent.workspaceId) addPill(agent.id, agent.workspaceId);
-      });
-    })
-    .catch((error: unknown) => {
-      console.error("[activity] could not seed composer pills", error);
-    });
+    // A read/push is a refresh hint, not proof of turn completion.
+    if (status === "idle") reviveHiddenPill(id);
+  }, removePill);
 
   return () => {
     unsubscribe();
