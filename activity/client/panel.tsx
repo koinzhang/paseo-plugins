@@ -314,7 +314,7 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
           <Text style={styles.listMeta}>{conversationLabel}</Text>
         )}
       </View>
-      {!loading && !error ? <UsageStats compact={layout.compact} colors={theme.colors} items={[
+      {!loading && !error ? <UsageStats compact={layout.compact} dense colors={theme.colors} items={[
         { label: "Skill calls", value: skillItems.reduce((sum, item) => sum + item.total, 0).toLocaleString() },
         { label: "MCP calls", value: mcpItems.reduce((sum, item) => sum + item.count, 0).toLocaleString() },
         { label: "Shell calls", value: (usageSummary.data?.shellCalls ?? 0).toLocaleString() },
