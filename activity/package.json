@@ -4,6 +4,11 @@
   "description": "Local usage analytics for Paseo: tool calls, agents, messages, and model usage.",
   "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/koinzhang/paseo-plugins.git",
+    "directory": "activity"
+  },
   "files": [
     "paseo-plugin.json",
     "CHANGELOG.md",
