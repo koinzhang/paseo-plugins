@@ -84,6 +84,15 @@ Breaking changes: add `!` after type/scope (`feat(activity)!: ...`) and/or a `BR
 
 Do not rewrite old history to match this style; apply from new commits onward.
 
+## Changelog
+
+Each plugin keeps its own `CHANGELOG.md` next to its `package.json` (for example [`activity/CHANGELOG.md`](./activity/CHANGELOG.md)). Every plugin is an independent npm package with its own version and release tag, so there is no root changelog; repo-wide changes belong in the commit history and PR description.
+
+- Follow [Keep a Changelog](https://keepachangelog.com/): newest release first, `## [Unreleased]` on top.
+- Add entries under `Unreleased` in the same PR as the change, grouped as `Added` / `Changed` / `Fixed` / `Removed`. Document user-visible behavior, not `docs` / `ci` / `chore` commits.
+- At release time, rename `Unreleased` to the new version with the release date; do not write the whole changelog at release time.
+- The file ships in the npm tarball (listed in `package.json` `files`) and is the source for the GitHub Release notes.
+
 ## Publishing to npm
 
 npm packages are published by **GitHub Release**, not by pushing `main` alone.
@@ -92,23 +101,27 @@ Workflow: [`.github/workflows/publish.yml`](./.github/workflows/publish.yml). Au
 
 ### Activity (`@koinzhang/paseo-plugin-activity`)
 
-1. Bump version and land it on `main`:
+1. Bump version and land it on `main`, including the changelog:
 
    ```bash
    cd activity
    npm version patch --no-git-tag-version   # or minor / major
-   git add package.json package-lock.json
+   # edit CHANGELOG.md: rename [Unreleased] to [X.Y.Z] - YYYY-MM-DD
+   git add package.json package-lock.json CHANGELOG.md
    git commit -m "chore(activity): release X.Y.Z"
    git push origin main
    ```
 
-2. Create a tag and publish a GitHub Release (tag form: `activity-vX.Y.Z`):
+2. Create a tag and publish a GitHub Release (tag form: `activity-vX.Y.Z`), using that changelog section as the release notes:
 
    ```bash
    git tag activity-vX.Y.Z
    git push origin activity-vX.Y.Z
-   gh release create activity-vX.Y.Z --title "activity X.Y.Z" --generate-notes
+   awk '/^## \[X\.Y\.Z\]/{f=1;next} /^## \[|^\[/{f=0} f' activity/CHANGELOG.md \
+     | gh release create activity-vX.Y.Z --title "activity X.Y.Z" --notes-file -
    ```
+
+   (Run from the repo root, or drop the `activity/` prefix if you are still in `activity/`.)
 
 3. Confirm the **Publish** workflow succeeded and the version appears on npm:
 

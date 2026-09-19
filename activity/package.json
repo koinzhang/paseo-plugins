@@ -6,6 +6,7 @@
   "type": "module",
   "files": [
     "paseo-plugin.json",
+    "CHANGELOG.md",
     "index.client.ts",
     "index.client.tsx",
     "index.server.ts",

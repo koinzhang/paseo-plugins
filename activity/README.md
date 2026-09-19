@@ -64,7 +64,7 @@ This plugin is spec-driven: read [specs/README.md](./specs/README.md) before cod
 
 ## Publish
 
-npm releases go through a GitHub Release tag `activity-vX.Y.Z` (not push-to-`main` alone). Steps: [CONTRIBUTING.md § Publishing to npm](../CONTRIBUTING.md#publishing-to-npm).
+Release history: [CHANGELOG.md](./CHANGELOG.md). npm releases go through a GitHub Release tag `activity-vX.Y.Z` (not push-to-`main` alone). Steps: [CONTRIBUTING.md § Publishing to npm](../CONTRIBUTING.md#publishing-to-npm).
 
 ## License
 
