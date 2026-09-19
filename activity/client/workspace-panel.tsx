@@ -4,9 +4,9 @@ import {
   useRpc,
   useSettings,
 } from "@getpaseo/plugin/client";
-import { Icon, useToast } from "@getpaseo/plugin/client/react-native";
+import { Icon, TextInput, useToast } from "@getpaseo/plugin/client/react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -136,6 +136,13 @@ function matchesAgentFilters(
   }
   // initializing / unknown: visible when Active is on and any lifecycle is selected
   return true;
+}
+
+function matchesAgentTitle(item: AgentUsageItem, query: string): boolean {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  const title = (item.title ?? item.agentId).toLowerCase();
+  return title.includes(needle);
 }
 
 function agentUpdatedAt(
@@ -431,8 +438,11 @@ export function WorkspaceActivityPanel({
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuFlyout, setMenuFlyout] = useState<MenuFlyout | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<{ top: number; right: number } | null>(null);
+  const [agentSearchOpen, setAgentSearchOpen] = useState(false);
+  const [agentSearchQuery, setAgentSearchQuery] = useState("");
   const rootRef = useRef<View>(null);
   const triggerRef = useRef<View>(null);
+  const searchInputRef = useRef<{ focus?: () => void } | null>(null);
   const [rankKind, setRankKind] = useState<RankKind>("skills");
   const [busyAgentId, setBusyAgentId] = useState<string | null>(null);
   const padding = layout.compact ? 16 : 24;
@@ -440,6 +450,22 @@ export function WorkspaceActivityPanel({
   const toast = useToast();
   const queryClient = useQueryClient();
   const openAgent = navigation?.openAgent;
+
+  useEffect(() => {
+    setAgentSearchOpen(false);
+    setAgentSearchQuery("");
+  }, [workspaceId]);
+
+  useEffect(() => {
+    if (!agentSearchOpen) return;
+    const id = setTimeout(() => searchInputRef.current?.focus?.(), 0);
+    return () => clearTimeout(id);
+  }, [agentSearchOpen]);
+
+  function closeAgentSearch() {
+    setAgentSearchOpen(false);
+    setAgentSearchQuery("");
+  }
 
   function persistDisplay(next: ExplorerAgentDisplayValues) {
     if (displaySettings.status !== "ready") return;
@@ -509,8 +535,10 @@ export function WorkspaceActivityPanel({
   const agentItems = agents.data?.items ?? [];
   const visibleAgentItems = useMemo(() => {
     const byId = statuses.data;
-    const filtered = agentItems.filter((item) =>
-      matchesAgentFilters(item, agentStatusFilters, agentLifecycleFilters, byId),
+    const filtered = agentItems.filter(
+      (item) =>
+        matchesAgentFilters(item, agentStatusFilters, agentLifecycleFilters, byId) &&
+        matchesAgentTitle(item, agentSearchQuery),
     );
     const byName = (a: AgentUsageItem, b: AgentUsageItem) =>
       (a.title ?? a.agentId).localeCompare(b.title ?? b.agentId);
@@ -532,7 +560,14 @@ export function WorkspaceActivityPanel({
       const rankB = byId?.[b.agentId]?.rank ?? 4;
       return rankA - rankB || updatedAt(b).localeCompare(updatedAt(a)) || byName(a, b);
     });
-  }, [agentItems, agentStatusFilters, agentLifecycleFilters, agentSort, statuses.data]);
+  }, [
+    agentItems,
+    agentStatusFilters,
+    agentLifecycleFilters,
+    agentSearchQuery,
+    agentSort,
+    statuses.data,
+  ]);
 
   const agentGroups = useMemo(() => {
     if (agentGroup === "none") return null;
@@ -631,11 +666,40 @@ export function WorkspaceActivityPanel({
         borderRadius: 6,
         flexShrink: 0,
       },
+      headerActions: {
+        flexDirection: "row" as const,
+        alignItems: "center" as const,
+        gap: 2,
+        flexShrink: 0,
+      },
+      searchField: {
+        flex: 1,
+        minWidth: 0,
+        flexDirection: "row" as const,
+        alignItems: "center" as const,
+        gap: 6,
+        height: 28,
+        paddingHorizontal: 8,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        backgroundColor: theme.colors.surface1,
+      },
+      searchInput: {
+        flex: 1,
+        minWidth: 0,
+        padding: 0,
+        margin: 0,
+        color: theme.colors.foreground,
+        fontSize: 13,
+        lineHeight: 18,
+        ...(Platform.OS === "web" ? ({ outlineStyle: "none" } as object) : null),
+      },
       sectionTitle: {
         color: theme.colors.foreground,
         fontSize: layout.compact ? 18 : 20,
         fontWeight: "600" as const,
-        flexShrink: 1,
+        flexShrink: 0,
         letterSpacing: -0.3,
       },
       panel: {
@@ -1019,20 +1083,60 @@ export function WorkspaceActivityPanel({
             <View style={styles.agentsHeaderWrap}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionTitle}>Agents</Text>
-                <View ref={triggerRef} collapsable={false}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Agent display options"
-                    accessibilityState={{ expanded: menuOpen }}
-                    hitSlop={8}
-                    onPress={() => {
-                      if (menuOpen) closeMenu();
-                      else openMenu();
-                    }}
-                    style={styles.titleAction}
-                  >
-                    <Icon name="Settings2" size={14} color={theme.colors.foregroundMuted} />
-                  </Pressable>
+                {agentSearchOpen ? (
+                  <View style={styles.searchField}>
+                    <Icon name="Search" size={14} color={theme.colors.foregroundMuted} />
+                    <TextInput
+                      ref={searchInputRef as never}
+                      value={agentSearchQuery}
+                      onChangeText={setAgentSearchQuery}
+                      placeholder="Search agents"
+                      placeholderTextColor={theme.colors.foregroundMuted}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      returnKeyType="search"
+                      style={styles.searchInput}
+                      accessibilityLabel="Search agents by title"
+                    />
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Close agent search"
+                      hitSlop={8}
+                      onPress={closeAgentSearch}
+                      style={styles.titleAction}
+                    >
+                      <Icon name="X" size={14} color={theme.colors.foregroundMuted} />
+                    </Pressable>
+                  </View>
+                ) : null}
+                <View style={styles.headerActions}>
+                  {agentSearchOpen ? null : (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Search agents"
+                      accessibilityState={{ expanded: false }}
+                      hitSlop={8}
+                      onPress={() => setAgentSearchOpen(true)}
+                      style={styles.titleAction}
+                    >
+                      <Icon name="Search" size={14} color={theme.colors.foregroundMuted} />
+                    </Pressable>
+                  )}
+                  <View ref={triggerRef} collapsable={false}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Agent display options"
+                      accessibilityState={{ expanded: menuOpen }}
+                      hitSlop={8}
+                      onPress={() => {
+                        if (menuOpen) closeMenu();
+                        else openMenu();
+                      }}
+                      style={styles.titleAction}
+                    >
+                      <Icon name="Settings2" size={14} color={theme.colors.foregroundMuted} />
+                    </Pressable>
+                  </View>
                 </View>
               </View>
             </View>

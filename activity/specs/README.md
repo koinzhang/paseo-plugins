@@ -51,6 +51,7 @@
 | [027-explorer-drop-header](./027-explorer-drop-header/) | 已实现 | Explorer 去掉分支名与时间 chips |
 | [028-explorer-display-settings](./028-explorer-display-settings/) | 已实现 | Explorer Agents 显示偏好 host settings 持久化 |
 | [027-agent-activity-title](./027-agent-activity-title/) | 已实现 | Command Center 项改名 Current Activity → Agent Activity |
+| [029-explorer-agent-search](./029-explorer-agent-search/) | 已实现 | Explorer Agents 按标题搜索（图标展开输入框） |
 
 ## 约定
 
