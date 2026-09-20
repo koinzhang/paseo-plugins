@@ -55,7 +55,7 @@
 
 - 窗口：本地今天往前 29 天 00:00 起（`fixedWindowFrom(30)`）→ 固定 30 根日柱，含今天
 - 独立查询：`usage.activity-by-day` 带固定 `from`，与热力图的时间窗查询分离；provider 过滤仍生效
-- 标题右侧：`N agents · last 30 days`；空窗口：`No agents created in the last 30 days`
+- 标题：`Agents`；空窗口：`No agents created in the last 30 days`
 - 移除页脚 `Longest lifetime · all time` 与 `Measured over N archived agents`
 - **051 修订**：查询改为 `usage.agent-creations`（注册表单表 + 当日 provider 明细），柱按 provider 堆叠、悬浮显示 provider 明细浮层；窗口与 30 根日柱不变
 

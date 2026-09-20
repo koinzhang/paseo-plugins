@@ -1,6 +1,6 @@
 import { defineRpc } from "@getpaseo/plugin";
 import { z } from "zod";
-import { CategorySchema, ConfidenceSchema, normalizeProvider } from "./classify.ts";
+import { CategorySchema, ConfidenceSchema, brandProviderId, normalizeProvider } from "./classify.ts";
 import { formatDisplayName } from "./format.ts";
 
 export const usageSummaryRpc = defineRpc({
@@ -369,7 +369,7 @@ export function aggregateAgentCreations(
     if (options.to && agent.createdAt > options.to) continue;
     const day = localDayKey(agent.createdAt);
     if (!day) continue;
-    const id = normalizeProvider(agent.provider);
+    const id = brandProviderId(agent.provider);
     const counts = byDay.get(day) ?? new Map<string, number>();
     counts.set(id, (counts.get(id) ?? 0) + 1);
     byDay.set(day, counts);
@@ -414,6 +414,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   opencode: "OpenCode",
   codex: "Codex",
   pi: "Pi",
+  omp: "Oh My Pi",
   cursor: "Cursor",
   codebuddy: "CodeBuddy",
 };

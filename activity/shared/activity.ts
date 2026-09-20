@@ -189,7 +189,7 @@ export type CreationBucket = {
   /** Local day key; stable identity across refetches. */
   key: string;
   count: number;
-  /** Providers with creations that day, highest count first (051). */
+  /** Providers with creations that day, highest day-count first (051). Stack order uses `stackCreationProviders`. */
   providers: CreationProviderSlice[];
 };
 
@@ -252,4 +252,24 @@ export function rankCreationProviders(
   return [...totals.values()].sort(
     (a, b) => b.count - a.count || a.provider.localeCompare(b.provider),
   );
+}
+
+/**
+ * Day segments in top→bottom paint order for a column stack (051): follows
+ * window rank so every bar shares the same series order; largest window total
+ * sits at the bottom. Providers with no creations that day are omitted.
+ */
+export function stackCreationProviders(
+  ranked: readonly CreationProviderSlice[],
+  dayProviders: readonly CreationProviderSlice[],
+): CreationProviderSlice[] {
+  const byId = new Map(dayProviders.map((slice) => [slice.provider, slice]));
+  // `ranked` is window-total descending; reverse so the first child (top of a
+  // column + flex-end stack) is the smallest series present that day.
+  return [...ranked]
+    .reverse()
+    .flatMap((item) => {
+      const slice = byId.get(item.provider);
+      return slice && slice.count > 0 ? [slice] : [];
+    });
 }

@@ -28,7 +28,7 @@ import {
 import { AgentCreations } from "./agent-creations.tsx";
 
 import { UsageStats } from "./usage-stats.tsx";
-import { entityColor } from "./rank-color.ts";
+import { chartColorScheme, entityColor } from "./rank-color.ts";
 import { selectProviderOptions } from "./provider-filter.ts";
 import { useAppLanguage } from "./use-app-language.ts";
 import { buildActivityInsights, buildActivityKpi, ACTIVITY_LIST_LIMIT } from "../shared/insights.ts";
@@ -162,7 +162,7 @@ function RankList({
     rankMeta: TextStyle;
     emptyHint: TextStyle;
   };
-  colors: { accent: string; foregroundMuted: string };
+  colors: { accent: string; foregroundMuted: string; surface0: string };
   headerAction?: {
     icon: "Sparkles" | "Plug" | "Bot";
     accessibilityLabel: string;
@@ -195,7 +195,7 @@ function RankList({
               size={14}
               color={
                 item.kind === "mcp"
-                  ? entityColor(item.server ?? "", colors.accent)
+                  ? entityColor(item.server ?? "", chartColorScheme(colors.surface0))
                   : colors.accent
               }
             />

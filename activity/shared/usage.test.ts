@@ -1012,6 +1012,18 @@ describe("aggregateAgentCreations (051)", () => {
     assert.deepEqual(days[1]?.providers, [{ provider: "codex", label: "Codex", count: 1 }]);
   });
 
+  it("keeps Oh My Pi (omp) distinct from Pi in creation buckets", () => {
+    const days = aggregateAgentCreations([
+      agent("pi", "2026-09-19T01:00:00.000Z"),
+      agent("omp", "2026-09-19T02:00:00.000Z"),
+      agent("omp", "2026-09-19T03:00:00.000Z"),
+    ]);
+    assert.deepEqual(days[0]?.providers, [
+      { provider: "omp", label: "Oh My Pi", count: 2 },
+      { provider: "pi", label: "Pi", count: 1 },
+    ]);
+  });
+
   it("honours provider, from and to filters and skips invalid timestamps", () => {
     const rows = [
       agent("codex", "2026-09-19T03:00:00.000Z"),

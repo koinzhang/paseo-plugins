@@ -27,6 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Top provider / Top model KPI tiles show the name only (no share), matching the provider-filtered shape; shares stay available from `usage.by-provider`.
 - Agent creations bars round only the top segment's top corners — stacked joints and bar bottoms are square.
 - Global KPI tile 3 and Insights row 3 swapped: `Peak weekday` moved to the KPI (penultimate tile, next to `Longest streak`) and `Workspaces` reads with the volume counts in Insights.
+- Agent creations / MCP rank colours use a soft fixed chart palette (light + dark, inferred from `surface0` luminance) instead of accent-hue hashing; known Paseo providers map to stable slots.
+- Agent creations stacked segments follow window-wide provider rank (largest series at the bottom on every bar), not each day's local count order.
+- Agent creations header no longer shows `N agents · last 30 days` (title is `Agents` only).
+- Chart palette: light / dark colour sets swapped (bright fills on light UI, deep fills on dark UI).
+- Agent creations colours: branded providers (Claude / Codex / Cursor / OpenCode / Pi) always keep brand accents; theme `accent` only when the window leader has no brand colour; other providers use the soft chart palette.
 
 ### Fixed
 

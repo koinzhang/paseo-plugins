@@ -44,11 +44,11 @@
 
 - 窗口：`fixedWindowFrom(30)` → 本地今天往前 29 天 00:00 起，恒 30 根日柱（含今天）
 - 分桶：`buildAgentCreationBuckets(days, { from, today })` 零填充 `[from, today]`；越界日丢弃；`count>0` 的切片才保留
-- 堆叠顺序与配色：`rankCreationProviders(buckets)` 给出窗口内 provider 排名（总量降序，同值按 id 升序），颜色 = `entityColor(provider, theme.accent)`；每根柱内按同一排名顺序自下而上堆叠
+- 堆叠顺序与配色：`rankCreationProviders(buckets)` 给出窗口内 provider 排名（总量降序，同值按 id 升序），驱动配色与浮层行序；`stackCreationProviders` 按同一排名为每根柱生成自顶而下的段序——**窗口总量最大的系列贴底**，当日无创建的系列省略；配色优先级（`creationProviderColors`）：① 有品牌色的 provider 固定用品牌色（含榜首）② 榜首无品牌色时用主题 `accent` ③ 其余用 chart palette
 - 段圆角：**仅最上方一段**取 3px 上圆角，其余段与所有底角为直角（053 修订；051 原为每段 3px 全圆角，接缝出现缺口）
 - 柱高：每段 `max(2, round(count / 窗口峰值 * 图高))`；当日 0 创建显示 2px 的 `surface2` 底槽（无圆角）
 - 浮层：`hovered ?? selected`（悬浮 / 聚焦 / 点击切换），绝对定位于柱区上方 6px，水平按柱中心夹紧在图宽内；内容为窗口内所有 provider 的 `label: count` 行（当日为 0 显示 0）+ 底部日期；`accessibilityLiveRegion="polite"`
-- 标题右侧 `N agents · last 30 days`（N = 窗口内创建数）；窗口内为 0 时显示 `No agents created in the last 30 days`
+- 标题：`Agents`；窗口内为 0 时显示 `No agents created in the last 30 days`
 - 每根柱有无障碍标签：`<日期>: N agents — <provider> <count>, …`
 
 ### 4.3 最长寿命含活跃 agent（G4）
@@ -67,6 +67,8 @@
 | `pickLongestAgentLifetime(agents, { provider, now })`（含活跃行） | `shared/usage.ts`（纯函数） |
 | `buildAgentCreationBuckets(days, { from, today })` | `shared/activity.ts`（纯函数） |
 | `rankCreationProviders(buckets)` | `shared/activity.ts`（纯函数） |
+| `stackCreationProviders(ranked, dayProviders)` | `shared/activity.ts`（纯函数；柱内顶→底段序） |
+| `creationProviderColors(rankedIds, accent, scheme)` | `client/rank-color.ts`（榜首 accent，其余色板） |
 | `entityColor(key, accent)` | `client/rank-color.ts` |
 | `createAgentCreationsHandler(store)` | `server/handlers.ts` |
 

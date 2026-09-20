@@ -124,6 +124,16 @@ export function normalizeProvider(provider: string): string {
   return head;
 }
 
+/**
+ * Chart / brand colour identity. Same as `normalizeProvider`, except Oh My Pi
+ * (`omp`) stays distinct from Pi so the creations histogram can colour them apart.
+ */
+export function brandProviderId(provider: string): string {
+  const head = (provider.split("/")[0] ?? provider).toLowerCase();
+  if (head === "omp") return "omp";
+  return normalizeProvider(provider);
+}
+
 function expandHome(path: string, homeDir?: string): string {
   if (homeDir && path.startsWith("~/")) {
     return `${homeDir.replace(/\/+$/, "")}/${path.slice(2)}`;

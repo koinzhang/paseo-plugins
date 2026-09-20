@@ -3,10 +3,12 @@ import { Pressable, Text, View } from "react-native";
 import {
   buildAgentCreationBuckets,
   rankCreationProviders,
+  stackCreationProviders,
   type CreationBucket,
+  type CreationProviderSlice,
 } from "../shared/activity.ts";
 import type { AgentCreationDay } from "../shared/usage.ts";
-import { entityColor } from "./rank-color.ts";
+import { chartColorScheme, creationProviderColors } from "./rank-color.ts";
 import { fixedWindowFrom } from "./range.ts";
 
 type ThemeColors = {
@@ -14,6 +16,7 @@ type ThemeColors = {
   border: string;
   foreground: string;
   foregroundMuted: string;
+  surface0: string;
   surface2: string;
 };
 
@@ -34,7 +37,8 @@ function agentCountText(count: number): string {
 /**
  * Agent creations per local day over a fixed window (051): the last
  * `windowDays` days ending today, independent of the range chips. Bars stack by
- * provider; hovering a bar shows a provider breakdown card with the date.
+ * window-ranked provider (largest series at the bottom); hovering a bar shows a
+ * provider breakdown card with the date.
  */
 export function AgentCreations({ days, windowDays, colors, compact, locale }: {
   days: readonly AgentCreationDay[];
@@ -70,8 +74,11 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
   const slot = buckets.length > 0 ? (width + gap) / buckets.length : 0;
   const anchorX = activeIndex >= 0 ? activeIndex * slot + (slot - gap) / 2 : 0;
   const tooltipLeft = Math.max(0, Math.min(anchorX - tooltipSize.width / 2, width - tooltipSize.width));
-  const colorByProvider = new Map(
-    providers.map((item) => [item.provider, entityColor(item.provider, colors.accent)]),
+  const scheme = chartColorScheme(colors.surface0);
+  const colorByProvider = creationProviderColors(
+    providers.map((item) => item.provider),
+    colors.accent,
+    scheme,
   );
   const countByProvider = new Map(
     (active?.providers ?? []).map((item) => [item.provider, item.count]),
@@ -80,14 +87,9 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
 
   return (
     <View style={{ gap: compact ? 10 : 12 }}>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <Text style={{ color: colors.foreground, fontSize: compact ? 13 : 15, fontWeight: "500" }}>
-          Agents
-        </Text>
-        <Text style={{ color: colors.foregroundMuted, fontSize: 12 }}>
-          {agentCountText(total)} · last {windowDays} days
-        </Text>
-      </View>
+      <Text style={{ color: colors.foreground, fontSize: compact ? 13 : 15, fontWeight: "500" }}>
+        Agents
+      </Text>
 
       {total === 0 ? (
         <Text style={{ color: colors.foregroundMuted, fontSize: 14 }}>
@@ -101,7 +103,7 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
                 <Pressable
                   key={bucket.key}
                   accessibilityRole="button"
-                  accessibilityLabel={`${dayLabel(bucket.key, locale)}: ${agentCountText(bucket.count)}${providerBreakdown(bucket)}`}
+                  accessibilityLabel={`${dayLabel(bucket.key, locale)}: ${agentCountText(bucket.count)}${providerBreakdown(bucket, providers)}`}
                   accessibilityState={{ selected: activeKey === bucket.key }}
                   onHoverIn={() => setHovered(bucket.key)}
                   onHoverOut={() => setHovered(null)}
@@ -118,7 +120,7 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
                   {bucket.providers.length === 0 ? (
                     <View style={{ height: 2, backgroundColor: colors.surface2 }} />
                   ) : (
-                    bucket.providers.map((slice, index) => (
+                    stackCreationProviders(providers, bucket.providers).map((slice, index) => (
                       <View
                         key={slice.provider}
                         style={{
@@ -194,7 +196,12 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
   );
 }
 
-function providerBreakdown(bucket: CreationBucket): string {
-  if (bucket.providers.length === 0) return "";
-  return ` — ${bucket.providers.map((slice) => `${slice.label} ${slice.count}`).join(", ")}`;
+function providerBreakdown(
+  bucket: CreationBucket,
+  ranked: readonly CreationProviderSlice[],
+): string {
+  const stacked = stackCreationProviders(ranked, bucket.providers);
+  if (stacked.length === 0) return "";
+  // Top→bottom to match the painted stack.
+  return ` — ${stacked.map((slice) => `${slice.label} ${slice.count}`).join(", ")}`;
 }

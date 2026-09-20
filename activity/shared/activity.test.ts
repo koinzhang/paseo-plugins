@@ -6,6 +6,7 @@ import {
   buildAgentCreationBuckets,
   computeStreaks,
   rankCreationProviders,
+  stackCreationProviders,
 } from "./activity.ts";
 
 const days = [
@@ -174,5 +175,25 @@ describe("agent creation buckets (051)", () => {
       ["claude", 3],
       ["codex", 1],
     ]);
+  });
+
+  it("stacks day segments by window rank with largest series at the bottom", () => {
+    const buckets = buildAgentCreationBuckets(
+      [
+        day("2026-03-08", [["codex", 1], ["claude", 1]]),
+        day("2026-03-09", [["claude", 2], ["amp", 3]]),
+      ],
+      { from: new Date(2026, 2, 7).toISOString(), today },
+    );
+    const ranked = rankCreationProviders(buckets);
+    // Top→bottom paint order: smallest window total present first.
+    assert.deepEqual(
+      stackCreationProviders(ranked, buckets[1]!.providers).map((s) => s.provider),
+      ["codex", "claude"],
+    );
+    assert.deepEqual(
+      stackCreationProviders(ranked, buckets[2]!.providers).map((s) => s.provider),
+      ["claude", "amp"],
+    );
   });
 });
