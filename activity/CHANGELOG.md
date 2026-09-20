@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Attention pill icon/list now follow the same `agents.subscribe` in-memory store as visibility (no separate 15s react-query path), so tint updates with pushes; partial directory pushes keep prior permission/attention fields; background polls no longer disable the pill.
-- Attention pill no longer falls back to `openPanel("usage")` when `openAgent` is unavailable (that opened Agent Activity on click); sync-in-flight pills are `disabled` instead.
+- Attention pill row open uses the existing `navigation.openAgent` bridge (registered by Agent / Workspace / Global panels); no `openPanel("usage")` fallback. Preview fetch tries projected then canonical timeline tail.
 - Attention pill visibility is synced from the contribute layer (directory + subscribe + 15s poll). Starting at `visible: false` previously unmounted the icon, so the show effect never ran and the pill stayed hidden even when peers needed attention.
 
 ## [0.3.0] - 2026-09-19

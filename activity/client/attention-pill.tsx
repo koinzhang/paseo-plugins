@@ -1,5 +1,4 @@
 import {
-  type PluginButtonContentProps,
   type PluginButtonIconProps,
   type PluginButtonRegistration,
   type PluginClientContext,
@@ -12,7 +11,7 @@ import {
   filterAttentionAgents,
   type AttentionAgentItem,
 } from "./attention-agents.ts";
-import { AttentionPopover, openAttentionAgent } from "./attention-popover.tsx";
+import { AttentionPopover } from "./attention-popover.tsx";
 import {
   clearAttentionStatuses,
   getAttentionStatuses,
@@ -58,18 +57,6 @@ export function contributeAttentionPills(client: PluginClientContext): () => voi
   let disposed = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
 
-  function AttentionPopoverContent(props: PluginButtonContentProps) {
-    return (
-      <AttentionPopover
-        {...props}
-        openAgentSession={(targetId) => {
-          if (props.context !== "agent") return;
-          openAttentionAgent(targetId);
-        }}
-      />
-    );
-  }
-
   function setWorkspacePillsDisabled(workspaceId: string, disabled: boolean) {
     for (const entry of pills.values()) {
       if (entry.workspaceId !== workspaceId) continue;
@@ -103,7 +90,7 @@ export function contributeAttentionPills(client: PluginClientContext): () => voi
       disabled: false,
       behavior: {
         kind: "popover",
-        Content: AttentionPopoverContent,
+        Content: AttentionPopover,
       },
     });
   }

@@ -25,3 +25,8 @@ export function tryOpenAgent(agentId: string): boolean {
   open({ agentId });
   return true;
 }
+
+/** Focus another agent conversation via the registered host navigation bridge. */
+export function openAttentionAgent(agentId: string): void {
+  tryOpenAgent(agentId);
+}

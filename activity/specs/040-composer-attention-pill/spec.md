@@ -50,7 +50,7 @@ Workspace Activity（Explorer）已展示同仓 agents 的 live attention（fini
 
 ### 4.3 打开会话
 
-优先 `navigation.openAgent({ agentId })`（面板 / Global 注册的 bridge）。不可用时**不回退** `openPanel`（避免误开 Agent Activity）；点击无响应。状态 sync 进行中 pill `disabled: true`。
+点行 `openAttentionAgent` → `tryOpenAgent`（面板 / Global 挂载时用 `navigation.openAgent` 注册的 bridge）+ `close()`。不回退 `openPanel`，不改宿主。
 
 ### 4.4 列表 UI
 

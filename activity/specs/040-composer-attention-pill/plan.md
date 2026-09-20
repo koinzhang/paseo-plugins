@@ -9,8 +9,7 @@ agents.list (projectKeys + workspaceId) ──15s──┐
 agents.subscribe (增量) ──────────────────────┼─→ query ["activity","workspace-agent-status",workspaceId,projectId]
                                                └─→ filterAttentionAgents(statuses, currentAgentId)
                                                     ├─ count 0 → pill.visible=false
-                                                    ├─ count 1 → behavior.action → openAgent
-                                                    └─ count ≥2 → behavior.popover → AttentionPopover 列表
+                                                    └─ count ≥1 → behavior.popover → AttentionPopover → tryOpenAgent
 ```
 
 ## 模块
@@ -21,10 +20,10 @@ agents.subscribe (增量) ──────────────────
 | `client/attention-agents.test.ts` | 过滤 / 排序 / tint |
 | `client/use-workspace-agent-statuses.ts` | 共享 query + subscribe（供 Workspace panel 与 attention pill） |
 | `client/open-agent.ts` | `setOpenAgent` / `tryOpenAgent` bridge；面板挂载时注册 |
-| `client/attention-pill.tsx` | `contributeAttentionPills`：目录监听注册 pill；icon 驱动 visible/label/behavior/色 |
-| `client/attention-popover.tsx` | ≥2 列表；行点击 open + close |
+| `client/attention-pill.tsx` | `contributeAttentionPills`：目录监听注册 pill；contribute sync visible/label/behavior |
+| `client/attention-popover.tsx` | ≥1 列表；行点击 `openAttentionAgent` + `close` |
 | `client/workspace/agent-row.tsx` | 可选隐藏归档（popover 复用） |
-| `client/workspace/panel.tsx` / `client/panel.tsx` | 改用共享 hook；注册 openAgent bridge |
+| `client/workspace/panel.tsx` / `client/panel.tsx` | 注册 openAgent bridge；Explorer / Agent 各自用 props.navigation |
 | `index.client.tsx` | `contributePills` 后串联 `contributeAttentionPills` |
 
 ## Pill 行为切换
@@ -45,3 +44,4 @@ Agent / Workspace / Global 面板 mount 时 `setOpenAgent(navigation?.openAgent 
 - 不调用 `agents.list({ subscribe })`（038）
 - 不跨 workspace
 - popover 已知 013 风险，不额外绕行
+- 不改宿主；composer pill 无 `navigation`，靠已挂载 panel/surface 的 bridge

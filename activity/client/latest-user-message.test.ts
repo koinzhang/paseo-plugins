@@ -16,14 +16,13 @@ describe("pickLatestUserMessageText", () => {
     assert.equal(text, "latest");
   });
 
-  it("returns null when none", () => {
-    assert.equal(pickLatestUserMessageText([]), null);
-    assert.equal(
-      pickLatestUserMessageText([
-        { item: { type: "assistant_message", text: "hi" }, seqStart: 1 },
-      ]),
-      null,
-    );
+  it("when seq missing, prefers later list entry", () => {
+    const text = pickLatestUserMessageText([
+      { item: { type: "user_message", text: "older" } },
+      { item: { type: "assistant_message", text: "reply" } },
+      { item: { type: "user_message", text: "newer" } },
+    ]);
+    assert.equal(text, "newer");
   });
 });
 

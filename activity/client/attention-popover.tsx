@@ -2,13 +2,13 @@ import {
   type PluginButtonContentProps,
   useAgent,
 } from "@getpaseo/plugin/client";
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { Text, View, type TextStyle, type ViewStyle } from "react-native";
 import {
   filterAttentionAgents,
   type AttentionAgentItem,
 } from "./attention-agents.ts";
-import { tryOpenAgent } from "./open-agent.ts";
+import { openAttentionAgent } from "./open-agent.ts";
 import { useLatestUserMessagePreview } from "./use-latest-user-message.ts";
 import { useAttentionStatuses } from "./attention-status-store.ts";
 import { AgentRow, type AgentRowStyles } from "./workspace/agent-row.tsx";
@@ -26,12 +26,22 @@ function AttentionRow({
 }): ReactNode {
   const title = useAgent(item.agentId, (agent) => agent.title);
   const preview = useLatestUserMessagePreview(item.agentId);
+  useEffect(() => {
+    if (preview.isError) {
+      console.warn("[activity] latest user message preview failed", item.agentId, preview.error);
+    }
+  }, [preview.isError, preview.error, item.agentId]);
+
+  const meta =
+    preview.data ??
+    (preview.isLoading ? "…" : null);
+
   return (
     <AgentRow
       label={title ?? item.agentId}
       archived={false}
       canOpen
-      meta={preview.data ?? null}
+      meta={meta}
       permissionCount={item.permissionCount}
       attentionKind={item.kind}
       running={false}
@@ -45,11 +55,7 @@ function AttentionRow({
 }
 
 /** Popover body: other agents in this workspace that need attention. */
-export function AttentionPopover(
-  props: PluginButtonContentProps & {
-    openAgentSession: (agentId: string) => void;
-  },
-) {
+export function AttentionPopover(props: PluginButtonContentProps) {
   if (props.context !== "agent") {
     return (
       <Text style={{ color: props.theme.colors.foregroundMuted }}>
@@ -61,12 +67,9 @@ export function AttentionPopover(
 }
 
 function AttentionPopoverAgent(
-  props: PluginButtonContentProps & {
-    context: "agent";
-    openAgentSession: (agentId: string) => void;
-  },
+  props: PluginButtonContentProps & { context: "agent" },
 ) {
-  const { theme, workspaceId, agentId, close, openAgentSession } = props;
+  const { theme, workspaceId, agentId, close } = props;
   const statuses = useAttentionStatuses(workspaceId);
   const items = useMemo(
     () => filterAttentionAgents(statuses, agentId),
@@ -146,15 +149,11 @@ function AttentionPopoverAgent(
           theme={theme}
           styles={styles}
           onOpen={() => {
-            openAgentSession(item.agentId);
+            openAttentionAgent(item.agentId);
             close();
           }}
         />
       ))}
     </View>
   );
-}
-
-export function openAttentionAgent(agentId: string): void {
-  tryOpenAgent(agentId);
 }
