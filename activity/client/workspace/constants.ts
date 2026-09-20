@@ -54,12 +54,19 @@ export function countDirectSubAgents(
   return count;
 }
 
-/** parentId → direct child count from usage.agents registry rows (041). */
+/** parentId → direct child count from usage.agents, scoped by Status filter (041). */
 export function countSubAgentsByParent(
-  items: ReadonlyArray<{ parentAgentId?: string | null }>,
+  items: ReadonlyArray<{ parentAgentId?: string | null; archivedAt?: string | null }>,
+  statusFilters: ReadonlySet<AgentStatusFilter>,
 ): Record<string, number> {
+  const includeActive = statusFilters.has("active");
+  const includeArchived = statusFilters.has("archived");
+  if (!includeActive && !includeArchived) return {};
+
   const counts: Record<string, number> = {};
   for (const item of items) {
+    const archived = item.archivedAt != null;
+    if (archived ? !includeArchived : !includeActive) continue;
     const parentId = item.parentAgentId?.trim();
     if (!parentId) continue;
     counts[parentId] = (counts[parentId] ?? 0) + 1;

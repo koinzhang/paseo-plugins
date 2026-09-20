@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { countDirectSubAgents, countSubAgentsByParent, type AgentStatusInfo } from "./constants.ts";
+import {
+  countDirectSubAgents,
+  countSubAgentsByParent,
+  type AgentStatusFilter,
+  type AgentStatusInfo,
+} from "./constants.ts";
 
 function info(partial: Partial<AgentStatusInfo> = {}): AgentStatusInfo {
   return {
@@ -14,6 +19,20 @@ function info(partial: Partial<AgentStatusInfo> = {}): AgentStatusInfo {
     ...partial,
   };
 }
+
+function filters(...ids: AgentStatusFilter[]): ReadonlySet<AgentStatusFilter> {
+  return new Set(ids);
+}
+
+const children = [
+  { parentAgentId: null },
+  { parentAgentId: "parent" },
+  { parentAgentId: " parent " },
+  { parentAgentId: "other" },
+  { parentAgentId: "" },
+  { parentAgentId: "parent", archivedAt: "2026-09-20T00:00:00.000Z" },
+  { parentAgentId: "gone", archivedAt: "2026-09-20T00:00:00.000Z" },
+];
 
 test("countDirectSubAgents counts only direct children", () => {
   const byId = {
@@ -29,13 +48,19 @@ test("countDirectSubAgents counts only direct children", () => {
   assert.equal(countDirectSubAgents("parent", undefined), 0);
 });
 
-test("countSubAgentsByParent aggregates registry parent ids", () => {
-  const counts = countSubAgentsByParent([
-    { parentAgentId: null },
-    { parentAgentId: "parent" },
-    { parentAgentId: " parent " },
-    { parentAgentId: "other" },
-    { parentAgentId: "" },
-  ]);
-  assert.deepEqual(counts, { parent: 2, other: 1 });
+test("countSubAgentsByParent follows Status Active / Archived filters", () => {
+  assert.deepEqual(countSubAgentsByParent(children, filters("active")), {
+    parent: 2,
+    other: 1,
+  });
+  assert.deepEqual(countSubAgentsByParent(children, filters("archived")), {
+    parent: 1,
+    gone: 1,
+  });
+  assert.deepEqual(countSubAgentsByParent(children, filters("active", "archived")), {
+    parent: 3,
+    other: 1,
+    gone: 1,
+  });
+  assert.deepEqual(countSubAgentsByParent(children, filters()), {});
 });

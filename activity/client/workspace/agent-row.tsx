@@ -155,7 +155,11 @@ export function AgentRow({
           style={[styles.titleAction, { opacity: showAction ? 1 : 0 }]}
         >
           {busy ? (
-            <ActivityIndicator size="small" color={theme.colors.foregroundMuted} />
+            <ActivityIndicator
+              size={14}
+              color={theme.colors.foregroundMuted}
+              style={{ width: 14, height: 14 }}
+            />
           ) : (
             <Icon
               name={archived ? "ArchiveRestore" : "Archive"}

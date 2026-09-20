@@ -7,7 +7,7 @@
 - `shared/usage.ts`：`AgentUsageItem.parentAgentId`；`aggregateAgents` 从 registry 合并
 - `constants.ts`：`countSubAgentsByParent(items)`；保留 host 侧 `countDirectSubAgents`
 - `list-host-agents.ts`：`resolveParentAgentId`（一等字段优先，否则 `paseo.parent-agent-id` label）；推送缺省时保留 previous
-- `agents-section.tsx`：用全量 `agentItems` 预聚合 parent → count，传入 `AgentRow.subAgentCount`
+- `agents-section.tsx`：用全量 `agentItems` + `statusFilters` 预聚合 parent → count，传入 `AgentRow.subAgentCount`
 - `agent-row.tsx`：角标位优先 `running` → 否则数字
 - `panel.tsx`：样式 + 传入 `agentItems`
 
@@ -26,4 +26,4 @@
 ## 依赖边界
 
 - 不新增 RPC；`usage.agents` 已含 registry
-- 只计直接子节点；含已归档子 agent
+- 只计直接子节点；归档口径跟随 Status 筛选项（Active / Archived / 两者）

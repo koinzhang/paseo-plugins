@@ -20,6 +20,7 @@ import {
   SEARCH_TITLE_GAP,
   type AgentGroup,
   type AgentShowField,
+  type AgentStatusFilter,
   type AgentStatusInfo,
 } from "./constants.ts";
 import { formatAgentMeta } from "./filters.ts";
@@ -54,6 +55,7 @@ export function AgentsSection({
   statuses,
   agentItems,
   visibleAgentItems,
+  statusFilters,
   statusFiltersEmpty,
   busyAgentId,
   openAgent,
@@ -76,6 +78,8 @@ export function AgentsSection({
   agentItems: ReadonlyArray<AgentUsageItem>;
   /** Already filtered / sorted / search-matched. */
   visibleAgentItems: ReadonlyArray<AgentUsageItem>;
+  /** Status menu Active / Archived — scopes subagent badge counts. */
+  statusFilters: ReadonlySet<AgentStatusFilter>;
   statusFiltersEmpty: boolean;
   busyAgentId: string | null;
   openAgent?: (opts: { agentId: string }) => void;
@@ -169,7 +173,10 @@ export function AgentsSection({
     );
   }, [agentGroup, pageItems]);
 
-  const subAgentCounts = useMemo(() => countSubAgentsByParent(agentItems), [agentItems]);
+  const subAgentCounts = useMemo(
+    () => countSubAgentsByParent(agentItems, statusFilters),
+    [agentItems, statusFilters],
+  );
 
   function renderAgentRow(item: AgentUsageItem): ReactNode {
     const label = item.title ?? item.agentId;

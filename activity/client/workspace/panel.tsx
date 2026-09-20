@@ -842,6 +842,7 @@ export function WorkspaceActivityPanel({
               statuses={statuses.data}
               agentItems={agentItems}
               visibleAgentItems={visibleAgentItems}
+              statusFilters={agentStatusFilters}
               statusFiltersEmpty={
                 agentStatusFilters.size === 0 || agentLifecycleFilters.size === 0
               }
