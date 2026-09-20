@@ -5,8 +5,6 @@ All notable changes to `@koinzhang/paseo-plugin-activity` are documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
 ## [0.5.0] - 2026-09-20
 
 Requires Paseo **>= 0.9.0-beta.2**.
@@ -115,7 +113,8 @@ Last release that supports Paseo **0.8.0**. Later versions require Paseo **>= 0.
 - Command Center entries: open panels and export a markdown usage report.
 - Plugin renamed from `tool-usage` to `activity`, migrating the old data directory automatically.
 
-[Unreleased]: https://github.com/koinzhang/paseo-plugins/compare/activity-v0.4.0...HEAD
+[Unreleased]: https://github.com/koinzhang/paseo-plugins/compare/activity-v0.5.0...HEAD
+[0.5.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/activity-v0.5.0
 [0.4.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/activity-v0.4.0
 [0.3.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/activity-v0.3.0
 [0.2.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/activity-v0.2.0
