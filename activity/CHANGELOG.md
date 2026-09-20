@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Composer **Needs attention** pill (same workspace): one shared entry for other agents with finished / permission / error attention; click always opens the same popover list (Explorer-style rows); icon tint follows aggregate priority.
 - Explorer Agents rows show the direct subagent count at the bottom-right of the bot icon when the local registry has children (`parentAgentId`); the count follows the Agents Status filter (Active / Archived / both). Host list also resolves the legacy `paseo.parent-agent-id` label. The running spinner keeps priority on that corner.
+- Explorer Agents **Show → Prompt**: optional row meta for the latest user message preview (host timeline; same path as the attention pill).
 
 ### Changed
 
@@ -20,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Explorer Agents lifecycle **Closed** updates near-real-time via host `useAgent` snapshots (no `list({ subscribe })`); directory `remove` keeps the row as Closed instead of dropping status; missing `workspaceId` on pushes still merges when the agent is already tracked.
 - Attention pill icon/list now follow the same `agents.subscribe` in-memory store as visibility (no separate 15s react-query path), so tint updates with pushes; partial directory pushes keep prior permission/attention fields; background polls no longer disable the pill.
 - Attention pill row open uses the existing `navigation.openAgent` bridge (registered by Agent / Workspace / Global panels); no `openPanel("usage")` fallback. Preview fetch tries projected then canonical timeline tail.
 - Attention pill visibility is synced from the contribute layer (directory + subscribe + 15s poll). Starting at `visible: false` previously unmounted the icon, so the show effect never ran and the pill stayed hidden even when peers needed attention.

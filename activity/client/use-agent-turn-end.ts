@@ -40,7 +40,10 @@ function useActivityRefresh(scope: AgentTurnEndScope, onTurnEnd: () => void): vo
         })
       : paseo.agents.subscribe((update) => {
           // Workspace-wide hint only. The 15s query poll owns completeness.
-          if (update.kind !== "upsert") return;
+          if (update.kind === "remove") {
+            schedule();
+            return;
+          }
           const agent = update.agent;
           if (agent.workspaceId !== workspaceId) return;
           if (agent.status !== "running" && agent.status !== "initializing") schedule();

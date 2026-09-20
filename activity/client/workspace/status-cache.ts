@@ -9,7 +9,11 @@ export function updateWorkspaceStatusCache(
   const previous = queryClient.getQueryData<Record<string, AgentStatusInfo>>(queryKey);
   if (!previous) return;
   const id = update.kind === "remove" ? update.agentId : update.agent.id;
-  if (!(id in previous) && (update.kind === "remove" || update.agent.workspaceId !== workspaceId)) return;
+  if (!(id in previous)) {
+    if (update.kind === "remove") return;
+    if (update.agent.workspaceId != null && update.agent.workspaceId !== workspaceId) return;
+    if (update.agent.workspaceId == null) return;
+  }
   // cancelQueries cancels synchronously, even when the SDK ignores AbortSignal.
   // Restore our captured latest cache after cancellation reverts the old fetch.
   void queryClient.cancelQueries({ queryKey, exact: true });

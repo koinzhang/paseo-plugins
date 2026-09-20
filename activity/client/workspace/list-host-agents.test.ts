@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { attentionKind } from "./constants.ts";
-import { agentStatusInfo, loadWorkspaceAgentStatuses } from "./list-host-agents.ts";
+import { agentStatusInfo, applyAgentStatusUpdate, loadWorkspaceAgentStatuses } from "./list-host-agents.ts";
 
 test("workspace status uses daemon placement project ID on every page and rejects other workspaces", async () => {
   let pages = 0;
@@ -76,4 +76,28 @@ test("agentStatusInfo falls back to paseo.parent-agent-id label when field is nu
     labels: { "paseo.parent-agent-id": "other" },
   });
   assert.equal(prefersField.parentAgentId, "root");
+});
+
+test("applyAgentStatusUpdate marks remove as closed and merges upserts without workspaceId", () => {
+  const map = {
+    a: agentStatusInfo({ id: "a", workspaceId: "w", status: "idle" }),
+    b: agentStatusInfo({ id: "b", workspaceId: "w", status: "running", pendingPermissions: [{}] }),
+  };
+  applyAgentStatusUpdate(map, "w", { kind: "remove", agentId: "a" });
+  assert.equal(map.a.status, "closed");
+  assert.equal(map.a.permissionCount, 0);
+  applyAgentStatusUpdate(map, "w", {
+    kind: "upsert",
+    agent: { id: "b", status: "closed" },
+  });
+  assert.equal(map.b.status, "closed");
+  assert.equal(map.b.permissionCount, 1);
+  applyAgentStatusUpdate(map, "w", {
+    kind: "upsert",
+    agent: { id: "c", status: "idle" },
+  });
+  assert.equal(
+    (map as Record<string, ReturnType<typeof agentStatusInfo>>).c,
+    undefined,
+  );
 });

@@ -5,7 +5,7 @@ export type WorkspaceTheme = PluginWorkspacePanelProps["theme"];
 
 export type AgentSort = "created" | "updated" | "name" | "messages" | "status";
 export type AgentGroup = "none" | "provider" | "status";
-export type AgentShowField = "provider" | "calls" | "messages" | "updated";
+export type AgentShowField = "provider" | "calls" | "messages" | "updated" | "prompt";
 /** Archive scope: Active / Archived. */
 export type AgentStatusFilter = "active" | "archived";
 /** Lifecycle for non-archived agents: Idle / Running / Error / Closed. */
@@ -112,6 +112,7 @@ export const SHOW_FIELD_OPTIONS: ReadonlyArray<MenuOption & { id: AgentShowField
   { id: "calls", label: "Calls", icon: "Terminal" },
   { id: "messages", label: "Messages", icon: "MessageSquare" },
   { id: "updated", label: "Updated", icon: "Clock" },
+  { id: "prompt", label: "Prompt", icon: "Quote" },
 ];
 
 export const STATUS_FILTER_OPTIONS: ReadonlyArray<MenuOption & { id: AgentStatusFilter }> = [

@@ -86,8 +86,24 @@ export function applyAgentStatusUpdate(
   map: Record<string, AgentStatusInfo>, workspaceId: string, update: HostAgentUpdate,
 ): void {
   const id = update.kind === "remove" ? update.agentId : update.agent.id;
-  if (update.kind === "remove" || update.agent.workspaceId !== workspaceId) delete map[id];
-  else map[id] = agentStatusInfo(update.agent, map[id]);
+  if (update.kind === "remove") {
+    // Keep the row as Closed so Lifecycle filters work until the next list poll.
+    const previous = map[id];
+    if (!previous) return;
+    map[id] = agentStatusInfo(
+      { id, workspaceId, status: "closed", updatedAt: previous.updatedAt ?? undefined },
+      previous,
+    );
+    return;
+  }
+  const agentWorkspaceId = update.agent.workspaceId;
+  if (agentWorkspaceId != null && agentWorkspaceId !== workspaceId) {
+    delete map[id];
+    return;
+  }
+  // Missing workspaceId: still merge when we already track the agent (043).
+  if (agentWorkspaceId == null && !(id in map)) return;
+  map[id] = agentStatusInfo(update.agent, map[id]);
 }
 
 /** Map host agent → status; preserve prior attention fields when the push omits them. */

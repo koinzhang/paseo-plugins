@@ -9,7 +9,7 @@ export const explorerAgentDisplaySettings = defineSettings({
   schema: z.object({
     sort: z.enum(["created", "updated", "name", "messages", "status"]).default("updated"),
     group: z.enum(["none", "provider", "status"]).default("none"),
-    show: z.array(z.enum(["provider", "calls", "messages", "updated"])).default([]),
+    show: z.array(z.enum(["provider", "calls", "messages", "updated", "prompt"])).default([]),
     status: z.array(z.enum(["active", "archived"])).default(["active"]),
     lifecycle: z
       .array(z.enum(["idle", "running", "error", "closed"]))

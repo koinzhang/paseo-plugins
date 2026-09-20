@@ -6,10 +6,10 @@ import { agentStatusInfo, loadWorkspaceAgentStatuses, type HostAgentUpdate } fro
 import { agentUpdatedAt } from "./constants.ts";
 import type { AgentUsageItem } from "../../shared/usage.ts";
 
-test("late poll cannot erase live permission or remove; cancellation preserves earlier pushes", async () => {
+test("late poll cannot erase live permission or closed-on-remove; cancellation preserves earlier pushes", async () => {
   const client = new QueryClient();
   const key = ["activity", "workspace-agent-status", "w"];
-  const stale = { a: agentStatusInfo({ id: "a", workspaceId: "w" }), b: agentStatusInfo({ id: "b", workspaceId: "w" }) };
+  const stale = { a: agentStatusInfo({ id: "a", workspaceId: "w" }), b: agentStatusInfo({ id: "b", workspaceId: "w", status: "idle" }) };
   client.setQueryData(key, stale);
   let finish!: (value: typeof stale) => void;
   const pending = client.fetchQuery({ queryKey: key, queryFn: () => new Promise<typeof stale>(resolve => { finish = resolve; }) });
@@ -20,7 +20,7 @@ test("late poll cannot erase live permission or remove; cancellation preserves e
   await Promise.resolve();
   const current = client.getQueryData<typeof stale>(key)!;
   assert.equal(current.a.permissionCount, 1);
-  assert.equal(current.b, undefined);
+  assert.equal(current.b?.status, "closed");
   assert.equal(client.getQueryState(key)?.status, "success");
   assert.equal(client.getQueryState(key)?.fetchStatus, "idle");
   client.clear();
@@ -37,11 +37,11 @@ test("first paginated load replays upserts and removes and releases its listener
       if (pages === 1) return { entries: [{ agent: { id: "a", workspaceId: "w" } }], pageInfo: { hasMore: true, nextCursor: "next" } };
       listener({ kind: "upsert", agent: { id: "a", workspaceId: "w", pendingPermissions: [{}] } });
       listener({ kind: "remove", agentId: "b" });
-      return { entries: [{ agent: { id: "b", workspaceId: "w" } }], pageInfo: { hasMore: false, nextCursor: null } };
+      return { entries: [{ agent: { id: "b", workspaceId: "w", status: "idle" } }], pageInfo: { hasMore: false, nextCursor: null } };
     },
   } }, "w");
   assert.equal(map.a?.permissionCount, 1);
-  assert.equal(map.b, undefined);
+  assert.equal(map.b?.status, "closed");
   assert.equal(unsubscribed, true);
 });
 

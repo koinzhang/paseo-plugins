@@ -10,6 +10,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { providerLabel, type AgentUsageItem } from "../../shared/usage.ts";
+import { useLatestUserMessagePreview } from "../use-latest-user-message.ts";
 import { AgentRow, type AgentRowStyles } from "./agent-row.tsx";
 import {
   AGENT_PAGE_SIZE,
@@ -45,6 +46,72 @@ export type AgentsSectionStyles = AgentRowStyles & {
   pagerButtonDisabled: ViewStyle;
   pagerLabel: TextStyle;
 };
+
+function WorkspaceAgentRow({
+  item,
+  theme,
+  styles,
+  locale,
+  agentShowFields,
+  statuses,
+  subAgentCount,
+  busyAgentId,
+  openAgent,
+  onArchive,
+  onUnarchive,
+}: {
+  item: AgentUsageItem;
+  theme: WorkspaceTheme;
+  styles: AgentsSectionStyles;
+  locale: string;
+  agentShowFields: ReadonlySet<AgentShowField>;
+  statuses: Record<string, AgentStatusInfo> | undefined;
+  subAgentCount: number;
+  busyAgentId: string | null;
+  openAgent?: (opts: { agentId: string }) => void;
+  onArchive: (item: AgentUsageItem) => void;
+  onUnarchive: (item: AgentUsageItem) => void;
+}): ReactNode {
+  const showPrompt = agentShowFields.has("prompt");
+  const preview = useLatestUserMessagePreview(item.agentId, showPrompt);
+  useEffect(() => {
+    if (!showPrompt || !preview.isError) return;
+    console.warn("[activity] latest user message preview failed", item.agentId, preview.error);
+  }, [showPrompt, preview.isError, preview.error, item.agentId]);
+
+  const promptPreview = showPrompt
+    ? (preview.data ?? (preview.isLoading ? "…" : null))
+    : null;
+  const label = item.title ?? item.agentId;
+  const archived = item.archivedAt != null;
+  const canOpen = openAgent != null && !archived;
+  const meta = formatAgentMeta(item, agentShowFields, statuses, locale, promptPreview);
+  const statusInfo = statuses?.[item.agentId];
+  const permissionCount = statusInfo?.permissionCount ?? 0;
+  const busy = busyAgentId === item.agentId;
+
+  return (
+    <AgentRow
+      label={label}
+      archived={archived}
+      canOpen={canOpen}
+      meta={meta}
+      permissionCount={permissionCount}
+      attentionKind={attentionKind(statusInfo)}
+      running={isAgentRunning(statusInfo)}
+      subAgentCount={subAgentCount}
+      busy={busy}
+      actionDisabled={busy || busyAgentId != null}
+      theme={theme}
+      styles={styles}
+      onOpen={() => openAgent?.({ agentId: item.agentId })}
+      onArchiveToggle={() => {
+        if (archived) onUnarchive(item);
+        else onArchive(item);
+      }}
+    />
+  );
+}
 
 export function AgentsSection({
   theme,
@@ -179,33 +246,20 @@ export function AgentsSection({
   );
 
   function renderAgentRow(item: AgentUsageItem): ReactNode {
-    const label = item.title ?? item.agentId;
-    const archived = item.archivedAt != null;
-    const canOpen = openAgent != null && !archived;
-    const meta = formatAgentMeta(item, agentShowFields, statuses, locale);
-    const statusInfo = statuses?.[item.agentId];
-    const permissionCount = statusInfo?.permissionCount ?? 0;
-    const busy = busyAgentId === item.agentId;
     return (
-      <AgentRow
+      <WorkspaceAgentRow
         key={item.agentId}
-        label={label}
-        archived={archived}
-        canOpen={canOpen}
-        meta={meta}
-        permissionCount={permissionCount}
-        attentionKind={attentionKind(statusInfo)}
-        running={isAgentRunning(statusInfo)}
-        subAgentCount={subAgentCounts[item.agentId] ?? 0}
-        busy={busy}
-        actionDisabled={busy || busyAgentId != null}
+        item={item}
         theme={theme}
         styles={styles}
-        onOpen={() => openAgent?.({ agentId: item.agentId })}
-        onArchiveToggle={() => {
-          if (archived) onUnarchive(item);
-          else onArchive(item);
-        }}
+        locale={locale}
+        agentShowFields={agentShowFields}
+        statuses={statuses}
+        subAgentCount={subAgentCounts[item.agentId] ?? 0}
+        busyAgentId={busyAgentId}
+        openAgent={openAgent}
+        onArchive={onArchive}
+        onUnarchive={onUnarchive}
       />
     );
   }

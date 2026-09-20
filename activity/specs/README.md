@@ -66,6 +66,8 @@
 | [039-unified-activity-time](./039-unified-activity-time/) | 已实现 | UI 时间统一 `FormattedTime` / `formatActivityTime`（app lang + locale） |
 | [040-composer-attention-pill](./040-composer-attention-pill/) | 已实现（待真机） | Composer attention pill：同 workspace 非当前 finished/permission 捷径 |
 | [041-agent-subagent-badge](./041-agent-subagent-badge/) | 已实现（待真机） | Explorer Agents 图标右下角：子 agent 数量；running loading 优先 |
+| [042-show-prompt](./042-show-prompt/) | 已实现（待真机） | Show → Prompt：行 meta 展示最新用户消息预览 |
+| [043-live-closed-status](./043-live-closed-status/) | 已实现（待真机） | Explorer：useAgent 近实时 Closed；remove 不丢 lifecycle |
 
 ## 约定
 

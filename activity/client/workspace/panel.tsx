@@ -37,6 +37,7 @@ import { useAppLanguage } from "../use-app-language.ts";
 import { useWorkspaceActivityRefresh } from "../use-agent-turn-end.ts";
 import { UsageStats } from "../usage-stats.tsx";
 import { AgentsSection } from "./agents-section.tsx";
+import { WorkspaceAgentLiveStatusSync } from "./agent-live-status-sync.tsx";
 import {
   AGENT_HEADER_HEIGHT,
   GROUP_OPTIONS,
@@ -183,6 +184,10 @@ export function WorkspaceActivityPanel({
   });
 
   const agentItems = agents.data?.items ?? [];
+  const liveStatusAgentIds = useMemo(
+    () => agentItems.map((item) => item.agentId),
+    [agentItems],
+  );
   const visibleAgentItems = useMemo(() => {
     const byId = statuses.data;
     const filtered = agentItems
@@ -833,7 +838,12 @@ export function WorkspaceActivityPanel({
           ) : null}
 
           {showAgents ? (
-            <AgentsSection
+            <>
+              <WorkspaceAgentLiveStatusSync
+                agentIds={liveStatusAgentIds}
+                workspaceId={workspaceId}
+              />
+              <AgentsSection
               theme={theme}
               styles={styles}
               locale={locale}
@@ -860,6 +870,7 @@ export function WorkspaceActivityPanel({
               onUnarchive={(item) => void unarchiveAgent(item)}
               resetKey={workspaceId}
             />
+            </>
           ) : null}
 
           {showTerminals ? (
