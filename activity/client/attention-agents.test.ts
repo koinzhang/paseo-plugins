@@ -15,6 +15,7 @@ function status(partial: Partial<AgentStatusInfo>): AgentStatusInfo {
     permissionCount: 0,
     requiresAttention: false,
     attentionReason: null,
+    parentAgentId: null,
     ...partial,
   };
 }

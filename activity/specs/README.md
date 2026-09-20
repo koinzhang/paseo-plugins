@@ -65,6 +65,7 @@
 | [038-sdk-api-remediation](./038-sdk-api-remediation/) | 已实现 | SDK 审查修复：分页轮询、placement 项目过滤（已修正回归）、timeline 事件、skill cwd 恢复 |
 | [039-unified-activity-time](./039-unified-activity-time/) | 已实现 | UI 时间统一 `FormattedTime` / `formatActivityTime`（app lang + locale） |
 | [040-composer-attention-pill](./040-composer-attention-pill/) | 已实现（待真机） | Composer attention pill：同 workspace 非当前 finished/permission 捷径 |
+| [041-agent-subagent-badge](./041-agent-subagent-badge/) | 已实现（待真机） | Explorer Agents 图标右下角：子 agent 数量；running loading 优先 |
 
 ## 约定
 

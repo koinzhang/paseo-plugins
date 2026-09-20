@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Composer **Needs attention** pill (same workspace): one shared entry for other agents with finished / permission / error attention; click always opens the same popover list (Explorer-style rows); icon tint follows aggregate priority.
+- Explorer Agents rows show the direct subagent count at the bottom-right of the bot icon when the local registry has children (`parentAgentId`); host list also resolves the legacy `paseo.parent-agent-id` label. The running spinner keeps priority on that corner.
 
 ### Changed
 

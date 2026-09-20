@@ -870,6 +870,7 @@ describe("aggregateAgents (024)", () => {
           createdAt: "2026-09-18T00:00:00.000Z",
         },
         { agentId: "a3", provider: "codex", title: "Idle", createdAt: "2026-09-19T00:00:00.000Z", updatedAt: "2026-09-19T02:00:00.000Z", archivedAt: "2026-09-19T01:00:00.000Z" },
+        { agentId: "a4", provider: "codex", title: "Child", createdAt: "2026-09-19T03:00:00.000Z", parentAgentId: "a1" },
       ],
       [
         { agentId: "a1", provider: "claude/opus", ts: "2026-09-18T05:00:00.000Z" },
@@ -880,7 +881,7 @@ describe("aggregateAgents (024)", () => {
 
     assert.deepEqual(
       items.map((item) => item.agentId),
-      ["a1", "a2", "a3"],
+      ["a1", "a2", "a4", "a3"],
     );
 
     const a1 = items[0]!;
@@ -896,6 +897,7 @@ describe("aggregateAgents (024)", () => {
     assert.equal(a1.messageCount, 2);
     assert.equal(a1.archivedAt, null);
     assert.equal(a1.updatedAt, null);
+    assert.equal(a1.parentAgentId, null);
     assert.equal(a1.lastActivityAt, "2026-09-18T06:00:00.000Z");
 
     const a2 = items[1]!;
@@ -904,7 +906,11 @@ describe("aggregateAgents (024)", () => {
     assert.equal(a2.messageCount, 1);
     assert.equal(a2.lastActivityAt, "2026-09-18T00:00:00.000Z");
 
-    const a3 = items[2]!;
+    const a4 = items[2]!;
+    assert.equal(a4.parentAgentId, "a1");
+    assert.equal(a4.title, "Child");
+
+    const a3 = items[3]!;
     assert.equal(a3.callCount, 0);
     assert.equal(a3.messageCount, 0);
     assert.equal(a3.title, "Idle");

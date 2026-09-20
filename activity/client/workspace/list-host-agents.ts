@@ -14,12 +14,24 @@ export type HostAgentEntry = {
     requiresAttention?: boolean;
     attentionReason?: string | null;
     pendingPermissions?: ReadonlyArray<unknown>;
+    parentAgentId?: string | null;
+    labels?: Readonly<Record<string, string>>;
   };
 };
 
 export type HostAgentUpdate =
   | { kind: "remove"; agentId: string }
   | { kind: "upsert"; agent: HostAgentEntry["agent"] };
+
+/** Prefer first-class parentAgentId; fall back to legacy label (agent-crew / older snapshots). */
+export const PARENT_AGENT_ID_LABEL = "paseo.parent-agent-id";
+
+export function resolveParentAgentId(agent: HostAgentEntry["agent"]): string | null {
+  const firstClass = agent.parentAgentId;
+  if (typeof firstClass === "string" && firstClass.trim()) return firstClass.trim();
+  const legacy = agent.labels?.[PARENT_AGENT_ID_LABEL];
+  return typeof legacy === "string" && legacy.trim() ? legacy.trim() : null;
+}
 
 type HostAgentsApi = {
   agents: {
@@ -95,6 +107,12 @@ export function agentStatusInfo(
     agent.attentionReason !== undefined
       ? agent.attentionReason
       : (previous?.attentionReason ?? null);
+  const parentSpecified =
+    agent.parentAgentId !== undefined ||
+    (agent.labels != null && PARENT_AGENT_ID_LABEL in agent.labels);
+  const parentAgentId = parentSpecified
+    ? resolveParentAgentId(agent)
+    : (previous?.parentAgentId ?? null);
   return {
     rank: attentionRank({
       status: agent.status,
@@ -108,5 +126,6 @@ export function agentStatusInfo(
     permissionCount,
     requiresAttention,
     attentionReason,
+    parentAgentId,
   };
 }

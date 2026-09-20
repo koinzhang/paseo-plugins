@@ -16,6 +16,8 @@ export type AgentRowStyles = {
   agentListRow: ViewStyle;
   agentIconWrap: ViewStyle;
   runningBadge: ViewStyle;
+  subAgentBadge: ViewStyle;
+  subAgentBadgeText: TextStyle;
   listMain: ViewStyle;
   listLink: TextStyle;
   listTitle: TextStyle;
@@ -33,6 +35,7 @@ export function AgentRow({
   permissionCount,
   attentionKind,
   running,
+  subAgentCount = 0,
   busy,
   actionDisabled,
   theme,
@@ -47,6 +50,8 @@ export function AgentRow({
   permissionCount: number;
   attentionKind: AgentAttentionKind;
   running: boolean;
+  /** Direct child sessions; corner badge yields to running spinner. */
+  subAgentCount?: number;
   busy: boolean;
   actionDisabled: boolean;
   theme: WorkspaceTheme;
@@ -77,6 +82,9 @@ export function AgentRow({
           : theme.colors.foregroundMuted;
   const stateLabels: string[] = [];
   if (!archived && running) stateLabels.push("running");
+  if (subAgentCount > 0) {
+    stateLabels.push(subAgentCount === 1 ? "1 subagent" : `${subAgentCount} subagents`);
+  }
   if (permissionCount > 0) {
     stateLabels.push(
       permissionCount === 1 ? "1 pending permission" : `${permissionCount} pending permissions`,
@@ -85,6 +93,9 @@ export function AgentRow({
   if (!archived && attentionKind === "error") stateLabels.push("failed");
   if (!archived && attentionKind === "finished") stateLabels.push("turn finished, unread");
   const stateSuffix = stateLabels.length > 0 ? `, ${stateLabels.join(", ")}` : "";
+  const showRunning = running && !archived;
+  const showSubAgentCount = !showRunning && subAgentCount > 0;
+  const subAgentLabel = subAgentCount > 99 ? "99+" : String(subAgentCount);
 
   const body = (
     <>
@@ -94,9 +105,18 @@ export function AgentRow({
           size={18}
           color={botColor}
         />
-        {running && !archived ? (
+        {showRunning ? (
           <View style={styles.runningBadge}>
             <RunningIndicator theme={theme} />
+          </View>
+        ) : showSubAgentCount ? (
+          <View
+            accessibilityLabel={
+              subAgentCount === 1 ? "1 subagent" : `${subAgentCount} subagents`
+            }
+            style={styles.subAgentBadge}
+          >
+            <Text style={styles.subAgentBadgeText}>{subAgentLabel}</Text>
           </View>
         ) : null}
       </View>

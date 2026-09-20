@@ -14,6 +14,7 @@ import { AgentRow, type AgentRowStyles } from "./agent-row.tsx";
 import {
   AGENT_PAGE_SIZE,
   attentionKind,
+  countSubAgentsByParent,
   isAgentRunning,
   SEARCH_ANIM_MS,
   SEARCH_TITLE_GAP,
@@ -51,6 +52,7 @@ export function AgentsSection({
   agentGroup,
   agentShowFields,
   statuses,
+  agentItems,
   visibleAgentItems,
   statusFiltersEmpty,
   busyAgentId,
@@ -70,6 +72,8 @@ export function AgentsSection({
   agentGroup: AgentGroup;
   agentShowFields: ReadonlySet<AgentShowField>;
   statuses: Record<string, AgentStatusInfo> | undefined;
+  /** Full workspace registry list (unfiltered) — source for subagent counts (041). */
+  agentItems: ReadonlyArray<AgentUsageItem>;
   /** Already filtered / sorted / search-matched. */
   visibleAgentItems: ReadonlyArray<AgentUsageItem>;
   statusFiltersEmpty: boolean;
@@ -165,6 +169,8 @@ export function AgentsSection({
     );
   }, [agentGroup, pageItems]);
 
+  const subAgentCounts = useMemo(() => countSubAgentsByParent(agentItems), [agentItems]);
+
   function renderAgentRow(item: AgentUsageItem): ReactNode {
     const label = item.title ?? item.agentId;
     const archived = item.archivedAt != null;
@@ -183,6 +189,7 @@ export function AgentsSection({
         permissionCount={permissionCount}
         attentionKind={attentionKind(statusInfo)}
         running={isAgentRunning(statusInfo)}
+        subAgentCount={subAgentCounts[item.agentId] ?? 0}
         busy={busy}
         actionDisabled={busy || busyAgentId != null}
         theme={theme}

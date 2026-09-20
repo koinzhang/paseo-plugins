@@ -388,6 +388,27 @@ export function WorkspaceActivityPanel({
         justifyContent: "center" as const,
         backgroundColor: theme.colors.surface0,
       },
+      subAgentBadge: {
+        position: "absolute" as const,
+        right: -5,
+        bottom: -5,
+        minWidth: 14,
+        height: 14,
+        paddingHorizontal: 3,
+        borderRadius: 7,
+        alignItems: "center" as const,
+        justifyContent: "center" as const,
+        backgroundColor: theme.colors.surface0,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+      },
+      subAgentBadgeText: {
+        color: theme.colors.foregroundMuted,
+        fontSize: 9,
+        fontWeight: "700" as const,
+        fontVariant: ["tabular-nums" as const],
+        lineHeight: 11,
+      },
       listMain: {
         flex: 1,
         minWidth: 0,
@@ -819,6 +840,7 @@ export function WorkspaceActivityPanel({
               agentGroup={agentGroup}
               agentShowFields={agentShowFields}
               statuses={statuses.data}
+              agentItems={agentItems}
               visibleAgentItems={visibleAgentItems}
               statusFiltersEmpty={
                 agentStatusFilters.size === 0 || agentLifecycleFilters.size === 0

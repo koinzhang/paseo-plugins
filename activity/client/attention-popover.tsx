@@ -97,6 +97,8 @@ function AttentionPopoverAgent(
         justifyContent: "center",
       } satisfies ViewStyle,
       runningBadge: { display: "none" } as ViewStyle,
+      subAgentBadge: { display: "none" } as ViewStyle,
+      subAgentBadgeText: { display: "none" } as TextStyle,
       listMain: { flex: 1, minWidth: 0, gap: 3 } satisfies ViewStyle,
       listLink: title,
       listTitle: title,

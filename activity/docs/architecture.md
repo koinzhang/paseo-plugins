@@ -20,7 +20,7 @@ Agent Activity      → 单 agent · 工具明细（Skills / MCP）· Pill 快�
 分工原则：
 
 - Global = 习惯与 provider 对比（热力图、Insights、Models）
-- Workspace = **竖向 Agents 运营页**（列表、搜索、筛选、归档、显示偏好）+ 本仓 KPI + 打开中的 Terminals（032，host SDK 直连：列表 / 预览 / 关闭，不进本地库）+ Agents 行实时 attention（033–036：pending permission 徽标、status 色、running spinner；目录 `agent_update` 加速，15s 轮询保证完整，038 不抢宿主 observation slot）；**不做**热力图 / provider·model 拆分 / 时间窗（024 / 027）
+- Workspace = **竖向 Agents 运营页**（列表、搜索、筛选、归档、显示偏好）+ 本仓 KPI + 打开中的 Terminals（032，host SDK 直连：列表 / 预览 / 关闭，不进本地库）+ Agents 行实时 attention（033–036：pending permission 徽标、status 色、running spinner；041：子 agent 数量角标，running 优先；目录 `agent_update` 加速，15s 轮询保证完整，038 不抢宿主 observation slot）；**不做**热力图 / provider·model 拆分 / 时间窗（024 / 027）
 - Agent = 当前会话工具明细 + pill；Messages 计入 KPI（031），Models 仍仅全局（015）；UI 时间统一 `FormattedTime`（039）
 
 产品定位已超出「纯统计」：Workspace 面把 activity 数据接到 agent 管理上。对外说明见 [`README.md`](../README.md)。

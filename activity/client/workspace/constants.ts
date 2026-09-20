@@ -19,6 +19,8 @@ export type AgentStatusInfo = {
   permissionCount: number;
   requiresAttention: boolean;
   attentionReason: string | null;
+  /** Host parent session; null for top-level agents. */
+  parentAgentId: string | null;
 };
 
 /** Icon highlight for attention states; permission keeps the 033 warning badge. */
@@ -37,6 +39,32 @@ export function attentionKind(info: AgentStatusInfo | undefined): AgentAttention
 /** Host lifecycle says the agent is actively working a turn (spinner badge). */
 export function isAgentRunning(info: AgentStatusInfo | undefined): boolean {
   return info?.status === "running";
+}
+
+/** Direct children only (`parentAgentId === agentId`); host status map is the source. */
+export function countDirectSubAgents(
+  agentId: string,
+  byId: Record<string, AgentStatusInfo> | undefined,
+): number {
+  if (!byId) return 0;
+  let count = 0;
+  for (const info of Object.values(byId)) {
+    if (info.parentAgentId === agentId) count += 1;
+  }
+  return count;
+}
+
+/** parentId → direct child count from usage.agents registry rows (041). */
+export function countSubAgentsByParent(
+  items: ReadonlyArray<{ parentAgentId?: string | null }>,
+): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const item of items) {
+    const parentId = item.parentAgentId?.trim();
+    if (!parentId) continue;
+    counts[parentId] = (counts[parentId] ?? 0) + 1;
+  }
+  return counts;
 }
 
 export type MenuOption = { id: string; label: string; icon: string };

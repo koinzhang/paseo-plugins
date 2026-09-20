@@ -227,6 +227,8 @@ export const AgentUsageItemSchema = z.object({
   updatedAt: z.string().nullable(),
   /** Registry archive time; null for active agents (025). */
   archivedAt: z.string().nullable(),
+  /** Registry parent session; null for top-level agents (041). */
+  parentAgentId: z.string().nullable(),
   /** Latest tool call / message time in the window. */
   lastActivityAt: z.string().nullable(),
 });
@@ -666,6 +668,7 @@ export function aggregateAgents(
     createdAt?: string | null;
     updatedAt?: string | null;
     archivedAt?: string | null;
+    parentAgentId?: string | null;
   }> = [],
   messages: ReadonlyArray<{
     agentId?: string;
@@ -694,6 +697,7 @@ export function aggregateAgents(
         createdAt: null,
         updatedAt: null,
         archivedAt: null,
+        parentAgentId: null,
         lastActivityAt: null,
       };
       map.set(agentId, acc);
@@ -726,6 +730,9 @@ export function aggregateAgents(
     acc.createdAt = agent.createdAt ?? acc.createdAt;
     acc.updatedAt = agent.updatedAt ?? acc.updatedAt;
     acc.archivedAt = agent.archivedAt ?? acc.archivedAt;
+    if (agent.parentAgentId !== undefined) {
+      acc.parentAgentId = agent.parentAgentId?.trim() || null;
+    }
   }
 
   for (const message of messages) {
