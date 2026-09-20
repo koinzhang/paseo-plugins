@@ -20,12 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Global KPI reordered to lead with Top / Longest: Agents, Longest agent, Workspaces, Top provider, Top model, Longest streak; Insights fixed at 8 rows.
+- Global KPI reordered to lead with Top / Longest: Agents, Longest agent, Top provider, Top model, Peak weekday, Longest streak; Insights fixed at 8 rows.
 - Agent creations histogram ignores the range chips (always the last 30 local days) and no longer depends on `usage.activity-by-day`.
 - `mcpServerColor` renamed to `entityColor`; the same accent-derived stable colour now covers MCP servers and providers.
 - KPI values and labels shrink to fit their tile instead of wrapping onto a second line (Global / Workspace / Agent share `UsageStats`); line height is fixed so the label baselines stay aligned.
 - Top provider / Top model KPI tiles show the name only (no share), matching the provider-filtered shape; shares stay available from `usage.by-provider`.
 - Agent creations bars round only the top segment's top corners — stacked joints and bar bottoms are square.
+- Global KPI tile 3 and Insights row 3 swapped: `Peak weekday` moved to the KPI (penultimate tile, next to `Longest streak`) and `Workspaces` reads with the volume counts in Insights.
 
 ### Fixed
 

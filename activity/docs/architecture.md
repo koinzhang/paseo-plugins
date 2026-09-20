@@ -12,7 +12,7 @@
 | **Agent** | Agent workspace tab · Composer pills · CC `Agent Activity` | `client/panel.tsx` + `pill.tsx` + `attention-pill.tsx`（040） | 本 agent 工具；同仓其它会话 attention 捷径 | 无（全程） |
 
 ```text
-Global Activity     → 跨 workspace · 习惯 / provider 对比 · KPI（Agents / Longest agent / Workspaces / Top provider / Top model / Longest streak，050）· 热力图 · Agent creations 直方图（固定 30 天，按 provider 堆叠，051）· Insights / Models
+Global Activity     → 跨 workspace · 习惯 / provider 对比 · KPI（Agents / Longest agent / Top provider / Top model / Peak weekday / Longest streak，050/054）· 热力图 · Agent creations 直方图（固定 30 天，按 provider 堆叠，051）· Insights / Models
 Workspace Activity  → 单 workspace · Agents 运营（排序筛选归档）· KPI · Terminals（host SDK：列表 / 预览 / 关闭）· Top skills/MCP
 Agent Activity      → 单 agent · 工具明细（Skills / MCP）· Pill 快捷入口
 ```

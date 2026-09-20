@@ -79,6 +79,7 @@
 | [051-creations-provider-stack](./051-creations-provider-stack/) | 已实现，页面验收待完成 | 创建直方图按 provider 堆叠 + 浮层明细（`usage.agent-creations`）；最长寿命含活跃 agent |
 | [052-kpi-text-fit](./052-kpi-text-fit/) | 已实现 | KPI 数值 / 标签自适应缩小，永不换行（隐藏副本测量 + 单次推导字号） |
 | [053-kpi-and-bar-polish](./053-kpi-and-bar-polish/) | 已实现 | KPI Top provider / Top model 只显示名称；堆叠柱仅顶部一段带上圆角 |
+| [054-kpi-insights-swap](./054-kpi-insights-swap/) | 已实现 | KPI `Workspaces` ↔ Insights `Peak weekday` 互换 |
 
 ## 约定
 

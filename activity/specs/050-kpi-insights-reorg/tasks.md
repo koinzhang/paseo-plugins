@@ -4,7 +4,7 @@
 
 - [x] T1.1 `buildActivityKpi`（6 格）+ `buildActivityInsights`（8 行）改写
   - 验收：顺序与文案固定；Top provider 过滤态显示名称；Top model 保持 provider 内排名
-  - 验证：`shared/insights.test.ts`（insights 3 例 + kpi 2 例）
+  - 验证：`shared/insights.test.ts`（insights 3 例 + kpi 2 例）；054 起 KPI 第 3 格 = Peak weekday、Insights 第 3 行 = Workspaces
 - [x] T1.2 `formatCount` 上移到 `shared/format.ts`
   - 验证：`shared/format.test.ts` `formatCount`
 - [x] T1.3 `global-surface.tsx` 接线（删除本地 `formatCount` 与旧 KPI 数组）

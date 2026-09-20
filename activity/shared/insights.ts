@@ -145,11 +145,14 @@ function peakWeekdayValue(days: readonly ActivityDay[], locale: string): string 
 }
 
 /**
- * Fixed 8-row insights: calendar habit → in-window volume → structure (050).
+ * Fixed 8-row insights: calendar habit → in-window volume → structure (050;
+ * Workspaces moved in from the KPI row in 054).
  */
 export function buildActivityInsights(input: {
   days: readonly ActivityDay[];
   summary: InsightSummary;
+  /** Distinct workspaces among in-window agents (011); was KPI tile 3 before 054. */
+  workspaces: number;
   locale?: string;
 }): InsightRow[] {
   const locale = input.locale ?? "en";
@@ -164,10 +167,7 @@ export function buildActivityInsights(input: {
       label: "Busiest day",
       value: busiest ? formatBusiest(busiest, locale) : "—",
     },
-    {
-      label: "Peak weekday",
-      value: peakWeekdayValue(input.days, locale),
-    },
+    { label: "Workspaces", value: formatCount(input.workspaces) },
     { label: "Messages", value: input.summary.messages.toLocaleString(locale) },
     { label: "Skill calls", value: input.summary.skills.toLocaleString(locale) },
     { label: "MCP calls", value: input.summary.mcp.toLocaleString(locale) },
@@ -183,12 +183,14 @@ export function buildActivityInsights(input: {
 }
 
 /**
- * Fixed 6-tile KPI row, top / longest first (050): agents, longest agent,
- * workspaces, top provider, top model, longest streak.
+ * Fixed 6-tile KPI row (050): agents, longest agent, top provider, top model,
+ * peak weekday (054), longest streak.
  */
 export function buildActivityKpi(input: {
   agents: number;
-  workspaces: number;
+  /** Active days drive the peak-weekday tile (054); was an insights row before. */
+  days: readonly ActivityDay[];
+  locale?: string;
   longestStreak: number;
   /** Longest created→(archived | now) span from the registry (049 / 051). */
   longestAgent: { durationMs: number; active: boolean } | null;
@@ -205,7 +207,6 @@ export function buildActivityKpi(input: {
         ? `${formatDuration(longest.durationMs)}${longest.active ? " · active" : ""}`
         : "—",
     },
-    { label: "Workspaces", value: formatCount(input.workspaces) },
     {
       label: "Top provider",
       value: topProviderValue(input.providers, input.providerFilter),
@@ -214,6 +215,7 @@ export function buildActivityKpi(input: {
       label: "Top model",
       value: topModelValue(input.providers, input.providerFilter),
     },
+    { label: "Peak weekday", value: peakWeekdayValue(input.days, input.locale ?? "en") },
     { label: "Longest streak", value: `${streak} day${streak === 1 ? "" : "s"}` },
   ];
 }

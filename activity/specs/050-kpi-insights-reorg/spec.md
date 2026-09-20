@@ -3,7 +3,7 @@
 - 状态：已实现
 - 日期：2026-09-20
 - 依赖：049（最长寿命 RPC、直方图）、011（Workspaces 口径）、010（streak）、016（provider 排名）、017（Insights 重排）
-- 修订：[051](../051-creations-provider-stack/) 改了本目录的两处契约：§4.1 第 2 格（Longest agent 含活跃 agent，带 `· active`）、§4.3 与 §5（直方图数据源换成 `usage.agent-creations`，柱按 provider 堆叠；`buildAgentCreationHistogram` → `buildAgentCreationBuckets`）；[053](../053-kpi-and-bar-polish/) 去掉 §4.1 第 4/5 格的占比（只显示名称）
+- 修订：[051](../051-creations-provider-stack/) 改了本目录的两处契约：§4.1 第 2 格（Longest agent 含活跃 agent，带 `· active`）、§4.3 与 §5（直方图数据源换成 `usage.agent-creations`，柱按 provider 堆叠；`buildAgentCreationHistogram` → `buildAgentCreationBuckets`）；[053](../053-kpi-and-bar-polish/) 去掉 §4.1 第 4/5 格的占比（只显示名称）；[054](../054-kpi-insights-swap/) 互换 §4.1 第 3 格与 §4.2 第 3 行（KPI 拿 Peak weekday，Insights 拿 Workspaces）
 
 ## 1. 背景
 
@@ -38,14 +38,14 @@
 |---|---|---|
 | 1 | Agents | 窗口内创建数（005）；`formatCount` |
 | 2 | Longest agent | `usage.agent-lifetime.durationMs`（全时段，provider 过滤生效）；`formatDuration`；无样本 `—`；**051**：活跃 agent 以创建→现在参与，值追加 `· active` |
-| 3 | Workspaces | 窗口内 agents 去重 workspace（011） |
-| 4 | Top provider | 窗口内消息加权第一的 **provider 名称**（053 起不带占比）；provider 过滤时显示该 provider 名称 |
-| 5 | Top model | 窗口内 model 消息数第一的**模型名**（053 起不带占比）；provider 过滤时在该 provider 内排名 |
+| 3 | Top provider | 窗口内消息加权第一的 **provider 名称**（053 起不带占比）；provider 过滤时显示该 provider 名称 |
+| 4 | Top model | 窗口内 model 消息数第一的**模型名**（053 起不带占比）；provider 过滤时在该 provider 内排名 |
+| 5 | Peak weekday | 活跃日中 activityVolume 最大的星期（010；054 从 Insights 换入，置于倒数第二格） |
 | 6 | Longest streak | 序列最长连续活跃天数（010） |
 
 ### 4.2 Insights（8 行，顺序固定）
 
-`Active days` → `Busiest day` → `Peak weekday` → `Messages` → `Skill calls` → `MCP calls` → `Messages per agent` → `Coding vs chat`
+`Active days` → `Busiest day` → `Workspaces`（054 从 KPI 换入）→ `Messages` → `Skill calls` → `MCP calls` → `Messages per agent` → `Coding vs chat`
 
 - 计数（Messages / Skill calls / MCP calls）用 app locale 分组
 - 移除 Longest streak / Top provider / Top model（已上移 KPI）

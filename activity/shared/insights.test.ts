@@ -28,7 +28,6 @@ function provider(partial: Partial<ProviderUsageItem> & Pick<ProviderUsageItem, 
 
 describe("buildActivityInsights", () => {
   it("returns calendar → volume → structure 8 rows", () => {
-    // 2026-03-07 Sat, 2026-03-09 Mon — Mon has more messages → Peak weekday Mon
     const days = [
       { date: "2026-03-07", skills: 2, mcp: 0, agents: 1, messages: 4, total: 2 },
       { date: "2026-03-09", skills: 0, mcp: 0, agents: 0, messages: 10, total: 0 },
@@ -43,6 +42,7 @@ describe("buildActivityInsights", () => {
         codingAgents: 3,
         chatAgents: 1,
       },
+      workspaces: 7,
       locale: "en",
     });
 
@@ -52,7 +52,7 @@ describe("buildActivityInsights", () => {
       [
         "Active days",
         "Busiest day",
-        "Peak weekday",
+        "Workspaces",
         "Messages",
         "Skill calls",
         "MCP calls",
@@ -62,7 +62,7 @@ describe("buildActivityInsights", () => {
     );
     assert.equal(rows[0]?.value, "2");
     assert.equal(rows[1]?.value, "Mar 9 · 10 messages");
-    assert.equal(rows[2]?.value, "Mon");
+    assert.equal(rows[2]?.value, "7");
     assert.equal(rows[3]?.value, "14");
     assert.equal(rows[4]?.value, "2");
     assert.equal(rows[5]?.value, "3");
@@ -75,18 +75,20 @@ describe("buildActivityInsights", () => {
     const rows = buildActivityInsights({
       days: [{ date: "2026-03-08", skills: 3, mcp: 1, agents: 2, messages: 0, total: 4 }],
       summary: { skills: 3, mcp: 1, agents: 2, messages: 0, codingAgents: 0, chatAgents: 0 },
+      workspaces: 0,
       locale: "en",
     });
     assert.equal(rows.find((r) => r.label === "Busiest day")?.value, "Mar 8 · 4 calls");
     assert.equal(rows.find((r) => r.label === "Messages per agent")?.value, "0");
     assert.equal(rows.find((r) => r.label === "Coding vs chat")?.value, "—");
-    assert.equal(rows.find((r) => r.label === "Peak weekday")?.value, "Sun");
+    assert.equal(rows.find((r) => r.label === "Workspaces")?.value, "0");
   });
 
   it("groups volume counts with the app locale", () => {
     const rows = buildActivityInsights({
       days: [],
       summary: { skills: 0, mcp: 0, agents: 1, messages: 12345 },
+      workspaces: 0,
       locale: "en",
     });
     assert.equal(rows.find((r) => r.label === "Messages")?.value, "12,345");
@@ -108,11 +110,17 @@ describe("buildActivityKpi", () => {
     messageCount: 4,
     models: [{ model: "opus", count: 4 }],
   });
+  // 2026-03-07 Sat, 2026-03-09 Mon — Mon carries more messages → Peak weekday Mon.
+  const days = [
+    { date: "2026-03-07", skills: 2, mcp: 0, agents: 1, messages: 4, total: 2 },
+    { date: "2026-03-09", skills: 0, mcp: 0, agents: 0, messages: 10, total: 0 },
+  ];
 
   it("leads with top / longest tiles", () => {
     const rows = buildActivityKpi({
       agents: 12345,
-      workspaces: 7,
+      days,
+      locale: "en",
       longestStreak: 6,
       longestAgent: { durationMs: 277.7 * 3_600_000, active: false },
       providers: [codex, claude],
@@ -120,50 +128,56 @@ describe("buildActivityKpi", () => {
     });
     assert.deepEqual(
       rows.map((r) => r.label),
-      ["Agents", "Longest agent", "Workspaces", "Top provider", "Top model", "Longest streak"],
+      ["Agents", "Longest agent", "Top provider", "Top model", "Peak weekday", "Longest streak"],
     );
     assert.equal(rows[0]?.value, "12.3k");
     assert.equal(rows[1]?.value, "11.6 days");
-    assert.equal(rows[2]?.value, "7");
-    assert.equal(rows[3]?.value, "Codex");
-    assert.equal(rows[4]?.value, "Gpt 5.4");
+    assert.equal(rows[2]?.value, "Codex");
+    assert.equal(rows[3]?.value, "Gpt 5.4");
+    assert.equal(rows[4]?.value, "Mon");
     assert.equal(rows[5]?.value, "6 days");
   });
 
   it("marks the longest agent as active while it is still open (051)", () => {
     const rows = buildActivityKpi({
       agents: 3,
-      workspaces: 1,
+      days: [{ date: "2026-03-08", skills: 3, mcp: 1, agents: 2, messages: 0, total: 4 }],
+      locale: "en",
       longestStreak: 2,
       longestAgent: { durationMs: 26 * 3_600_000, active: true },
       providers: [codex],
       providerFilter: "all",
     });
     assert.equal(rows[1]?.value, "26 h · active");
+    assert.equal(rows[4]?.value, "Sun");
   });
 
   it("scopes top tiles to the selected provider and tolerates missing data", () => {
     const rows = buildActivityKpi({
       agents: 0,
-      workspaces: 0,
+      days,
+      locale: "en",
       longestStreak: 1,
       longestAgent: null,
       providers: [codex],
       providerFilter: "codex",
     });
     assert.equal(rows[1]?.value, "—");
-    assert.equal(rows[3]?.value, "Codex");
-    assert.equal(rows[4]?.value, "Gpt 5.4");
+    assert.equal(rows[2]?.value, "Codex");
+    assert.equal(rows[3]?.value, "Gpt 5.4");
+    assert.equal(rows[4]?.value, "Mon");
     assert.equal(rows[5]?.value, "1 day");
 
     const empty = buildActivityKpi({
       agents: 0,
-      workspaces: 0,
+      days: [],
+      locale: "en",
       longestStreak: 0,
       longestAgent: null,
       providers: [],
       providerFilter: "all",
     });
+    assert.equal(empty[2]?.value, "—");
     assert.equal(empty[3]?.value, "—");
     assert.equal(empty[4]?.value, "—");
     assert.equal(empty[5]?.value, "0 days");

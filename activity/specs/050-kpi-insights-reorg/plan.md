@@ -7,17 +7,19 @@
 ```ts
 export type InsightSummary = { skills; mcp; agents; messages; codingAgents?; chatAgents? };
 
-/** 8 行：日历习惯 → 窗口体量 → 结构（050）。 */
+/** 8 行：日历习惯 → 窗口体量 → 结构（050；054 起第 3 行为 Workspaces）。 */
 export function buildActivityInsights(input: {
   days: readonly ActivityDay[];
   summary: InsightSummary;
+  workspaces: number;
   locale?: string;
 }): InsightRow[];
 
-/** 6 格：top / longest 优先（050；051 起 longestAgent 含活跃标记）。 */
+/** 6 格：top / longest 优先（050；051 起 longestAgent 含活跃标记；054 起第 3 格为 Peak weekday）。 */
 export function buildActivityKpi(input: {
   agents: number;
-  workspaces: number;
+  days: readonly ActivityDay[];
+  locale?: string;
   longestStreak: number;
   longestAgent: { durationMs: number; active: boolean } | null;
   providers: readonly ProviderUsageItem[];
@@ -63,8 +65,8 @@ const histogramQuery = useQuery({
 });
 ```
 
-- `kpi = buildActivityKpi({ agents, workspaces, longestStreak: streaks.longest, longestAgent: { durationMs, active } | null, providers: filteredProviders, providerFilter })`（051 起）
-- `insights = buildActivityInsights({ days: activityQuery.data?.days ?? [], summary, locale })`
+- `kpi = buildActivityKpi({ agents, days, locale, longestStreak: streaks.longest, longestAgent: { durationMs, active } | null, providers: filteredProviders, providerFilter })`（051 起；054 起 `days` / `locale` 换入、`workspaces` 换出）
+- `insights = buildActivityInsights({ days: activityQuery.data?.days ?? [], summary, workspaces: summary.workspaces, locale })`（054 起）
 - 删除本地 `formatCount`
 
 ## 3. 影响面

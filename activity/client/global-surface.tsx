@@ -470,6 +470,7 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
         codingAgents: summary.codingAgents,
         chatAgents: summary.chatAgents,
       },
+      workspaces: summary.workspaces,
       locale,
     });
   }, [activityQuery.data?.days, locale, summary]);
@@ -478,7 +479,8 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
     () =>
       buildActivityKpi({
         agents: summary.agents,
-        workspaces: summary.workspaces,
+        days: activityQuery.data?.days ?? [],
+        locale,
         longestStreak: streaks.longest,
         longestAgent: lifetimeQuery.data?.longest
           ? {
@@ -489,7 +491,15 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
         providers: filteredProviders,
         providerFilter,
       }),
-    [filteredProviders, lifetimeQuery.data, providerFilter, streaks.longest, summary.agents, summary.workspaces],
+    [
+      activityQuery.data?.days,
+      filteredProviders,
+      lifetimeQuery.data,
+      locale,
+      providerFilter,
+      streaks.longest,
+      summary.agents,
+    ],
   );
 
   const styles = useMemo(
