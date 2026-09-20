@@ -30,6 +30,7 @@ import { selectProviderOptions } from "./provider-filter.ts";
 import { useAppLanguage } from "./use-app-language.ts";
 import { buildActivityInsights, ACTIVITY_LIST_LIMIT } from "../shared/insights.ts";
 import { rangeFrom, RANGE_OPTIONS, type RangeId } from "./range.ts";
+import { useRegisterOpenAgent } from "./open-agent.ts";
 
 /** Max rows for Activity insights and Most used skills / MCP. */
 const LIST_LIMIT = ACTIVITY_LIST_LIMIT;
@@ -211,7 +212,8 @@ function RankList({
   );
 }
 
-export function GlobalUsageSurface({ theme, layout }: PluginSurfaceProps) {
+export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceProps) {
+  useRegisterOpenAgent(navigation?.openAgent);
   const [range, setRange] = useState<RangeId>("all");
   const [providerFilter, setProviderFilter] = useState<string>("all");
   const [heatmapMode, setHeatmapMode] = useState<HeatmapMode>("daily");

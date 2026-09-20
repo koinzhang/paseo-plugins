@@ -64,6 +64,7 @@
 | [037-turn-end-refresh](./037-turn-end-refresh/) | 已实现（038 修正） | Agent/pill 真实 timeline turn 刷新；Workspace 启发式提示 + 轮询 |
 | [038-sdk-api-remediation](./038-sdk-api-remediation/) | 已实现 | SDK 审查修复：分页轮询、placement 项目过滤（已修正回归）、timeline 事件、skill cwd 恢复 |
 | [039-unified-activity-time](./039-unified-activity-time/) | 已实现 | UI 时间统一 `FormattedTime` / `formatActivityTime`（app lang + locale） |
+| [040-composer-attention-pill](./040-composer-attention-pill/) | 已实现（待真机） | Composer attention pill：同 workspace 非当前 finished/permission 捷径 |
 
 ## 约定
 

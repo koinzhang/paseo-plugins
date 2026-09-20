@@ -1,14 +1,14 @@
-import { updateWorkspaceStatusCache } from "./status-cache.ts";
 import {
   type PluginWorkspacePanelProps,
   usePaseo,
   useRpc,
   useSettings,
-  useWorkspace,
 } from "@getpaseo/plugin/client";
 import { useToast } from "@getpaseo/plugin/client/react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRegisterOpenAgent } from "../open-agent.ts";
+import { useWorkspaceAgentStatuses } from "../use-workspace-agent-statuses.ts";
 import {
   ActivityIndicator,
   Dimensions,
@@ -60,7 +60,6 @@ import {
 } from "./constants.ts";
 import { MenuOptionList, MenuSubTrigger } from "./display-menu.tsx";
 import { matchesAgentTitle } from "./filters.ts";
-import { loadWorkspaceAgentStatuses } from "./list-host-agents.ts";
 import { RankSection } from "./rank-section.tsx";
 import { TerminalsSection, type TerminalListItem } from "./terminals-section.tsx";
 
@@ -106,6 +105,7 @@ export function WorkspaceActivityPanel({
   const toast = useToast();
   const queryClient = useQueryClient();
   const openAgent = navigation?.openAgent;
+  useRegisterOpenAgent(openAgent);
   const rootRef = useRef<View>(null);
   const triggerRef = useRef<View>(null);
 
@@ -167,25 +167,7 @@ export function WorkspaceActivityPanel({
     queryFn: () => hostInfoRpc({}),
   });
 
-  const projectId = useWorkspace(workspaceId, (workspace) => workspace.projectId);
-  // 0.8 agent directory filters match ProjectPlacement.projectKey, which the
-  // daemon builds from projectId, NOT WorkspaceProjectDescriptor.projectKey.
-  const statusQueryKey = useMemo(
-    () => ["activity", "workspace-agent-status", workspaceId, projectId ?? null],
-    [workspaceId, projectId],
-  );
-  const statuses = useQuery({
-    refetchInterval: 15_000,
-    retry: false,
-    queryKey: statusQueryKey,
-    queryFn: () => loadWorkspaceAgentStatuses(paseo, workspaceId, projectId),
-  });
-
-  useEffect(() => paseo.agents.subscribe((update) => {
-    // This local listener accelerates the owned polling query without taking the
-    // daemon's shared observation slot or re-fetching the directory on each push.
-    updateWorkspaceStatusCache(queryClient, statusQueryKey, workspaceId, update);
-  }), [paseo, queryClient, workspaceId, statusQueryKey]);
+  const statuses = useWorkspaceAgentStatuses(workspaceId);
 
   useWorkspaceActivityRefresh(workspaceId, () => {
     void queryClient.invalidateQueries({

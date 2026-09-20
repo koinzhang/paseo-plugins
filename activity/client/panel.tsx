@@ -2,6 +2,7 @@ import { type PluginAgentPanelProps, useAgent, useRpc } from "@getpaseo/plugin/c
 import { Icon } from "@getpaseo/plugin/client/react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useRegisterOpenAgent } from "./open-agent.ts";
 import {
   ActivityIndicator,
   Platform,
@@ -53,6 +54,7 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
   const padding = layout.compact ? 16 : 28;
   const agentTitle = useAgent(agentId, (agent) => agent.title);
   const openAgent = navigation?.openAgent;
+  useRegisterOpenAgent(openAgent);
   const conversationLabel = agentTitle ?? agentId;
 
   const skillsByNameRpc = useRpc(usageSkillsByNameRpc);

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Composer **Needs attention** pill (same workspace): one shared entry for other agents with finished / permission / error attention; click always opens the same popover list (Explorer-style rows); icon tint follows aggregate priority.
+
+### Changed
+
+- Attention pill no longer direct-jumps when only one peer needs attention — always popover for finished / permission / error.
+- Attention popover row meta shows the latest user message preview (host timeline tail; not stored in usage.db) instead of finished / needs-attention labels.
+- Attention pill icon switches with attention kind: `Bell` for permission, `CircleAlert` for error, `CircleCheck` for finished (priority permission > error > finished when mixed).
+
+### Fixed
+
+- Attention pill icon/list now follow the same `agents.subscribe` in-memory store as visibility (no separate 15s react-query path), so tint updates with pushes; partial directory pushes keep prior permission/attention fields; background polls no longer disable the pill.
+- Attention pill no longer falls back to `openPanel("usage")` when `openAgent` is unavailable (that opened Agent Activity on click); sync-in-flight pills are `disabled` instead.
+- Attention pill visibility is synced from the contribute layer (directory + subscribe + 15s poll). Starting at `visible: false` previously unmounted the icon, so the show effect never ran and the pill stayed hidden even when peers needed attention.
+
 ## [0.3.0] - 2026-09-19
 
 ### Added

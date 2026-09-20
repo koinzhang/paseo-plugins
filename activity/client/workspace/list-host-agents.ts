@@ -75,16 +75,38 @@ export function applyAgentStatusUpdate(
 ): void {
   const id = update.kind === "remove" ? update.agentId : update.agent.id;
   if (update.kind === "remove" || update.agent.workspaceId !== workspaceId) delete map[id];
-  else map[id] = agentStatusInfo(update.agent);
+  else map[id] = agentStatusInfo(update.agent, map[id]);
 }
 
-export function agentStatusInfo(agent: HostAgentEntry["agent"]): AgentStatusInfo {
+/** Map host agent → status; preserve prior attention fields when the push omits them. */
+export function agentStatusInfo(
+  agent: HostAgentEntry["agent"],
+  previous?: AgentStatusInfo,
+): AgentStatusInfo {
+  const permissionCount =
+    agent.pendingPermissions !== undefined
+      ? agent.pendingPermissions.length
+      : (previous?.permissionCount ?? 0);
+  const requiresAttention =
+    agent.requiresAttention !== undefined
+      ? agent.requiresAttention === true
+      : (previous?.requiresAttention ?? false);
+  const attentionReason =
+    agent.attentionReason !== undefined
+      ? agent.attentionReason
+      : (previous?.attentionReason ?? null);
   return {
-    rank: attentionRank(agent),
-    updatedAt: agent.updatedAt ?? null,
-    status: agent.status ?? null,
-    permissionCount: agent.pendingPermissions?.length ?? 0,
-    requiresAttention: agent.requiresAttention === true,
-    attentionReason: agent.attentionReason ?? null,
+    rank: attentionRank({
+      status: agent.status,
+      requiresAttention,
+      attentionReason,
+      pendingPermissions: agent.pendingPermissions ??
+        (permissionCount > 0 ? Array.from({ length: permissionCount }) : undefined),
+    }),
+    updatedAt: agent.updatedAt ?? previous?.updatedAt ?? null,
+    status: agent.status ?? previous?.status ?? null,
+    permissionCount,
+    requiresAttention,
+    attentionReason,
   };
 }

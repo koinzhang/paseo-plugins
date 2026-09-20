@@ -9,7 +9,7 @@
 |---|---|---|---|---|
 | **Global** | Sidebar `Activity` · Command Center `Activity` | `client/global-surface.tsx` | Provider | All / Today / 7D / 30D |
 | **Workspace** | Explorer panel · CC `Workspace Activity` | `client/workspace-panel.tsx`（`client/workspace/`） | Agent | 固定 All（027：不恢复时间 chips） |
-| **Agent** | Agent workspace tab · Composer pill · CC `Agent Activity` | `client/panel.tsx` + `pill.tsx` | 本 agent 工具 | 无（全程） |
+| **Agent** | Agent workspace tab · Composer pills · CC `Agent Activity` | `client/panel.tsx` + `pill.tsx` + `attention-pill.tsx`（040） | 本 agent 工具；同仓其它会话 attention 捷径 | 无（全程） |
 
 ```text
 Global Activity     → 跨 workspace · 习惯 / provider 对比 · 热力图 / Insights / Models
@@ -67,7 +67,7 @@ server/          handlers · store · ingest · background-sync · hooks
 | Workspace panel | `usage` / agent |
 | Workspace panel | `workspace-activity` / workspace · `locations: ["explorer"]` |
 | Command Center | `open-usage-global` · `open-usage` · `open-workspace-activity` |
-| Composer pill | per-agent Activity |
+| Composer pills | per-agent Activity（用量）；per-agent Attention（040：同仓 finished/permission） |
 
 ## 4. 采集路径（`index.server.ts`）
 

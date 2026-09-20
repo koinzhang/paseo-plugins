@@ -1,6 +1,7 @@
 import type { PluginClientContext } from "@getpaseo/plugin/client";
 import { GlobalUsageSurface } from "./client/global-surface.tsx";
 import { UsagePanel } from "./client/panel.tsx";
+import { contributeAttentionPills } from "./client/attention-pill.tsx";
 import { contributePills } from "./client/pill.tsx";
 import { WorkspaceActivityPanel } from "./client/workspace-panel.tsx";
 
@@ -65,5 +66,10 @@ export default function contribute(client: PluginClientContext) {
     },
   });
 
-  return contributePills(client);
+  const stopUsagePills = contributePills(client);
+  const stopAttentionPills = contributeAttentionPills(client);
+  return () => {
+    stopUsagePills();
+    stopAttentionPills();
+  };
 }

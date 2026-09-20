@@ -52,7 +52,8 @@ export function AgentRow({
   theme: WorkspaceTheme;
   styles: AgentRowStyles;
   onOpen: () => void;
-  onArchiveToggle: () => void;
+  /** Omit to hide the archive control (attention popover). */
+  onArchiveToggle?: () => void;
 }): ReactNode {
   const [hovered, setHovered] = useState(false);
   // Web: hover-reveal. Native has no hover — keep the action visible.
@@ -122,26 +123,28 @@ export function AgentRow({
           ) : null}
         </View>
       ) : null}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={archived ? `Unarchive ${label}` : `Archive ${label}`}
-        accessibilityState={{ disabled: actionDisabled }}
-        disabled={actionDisabled || !showAction}
-        hitSlop={8}
-        onPress={onArchiveToggle}
-        pointerEvents={showAction ? "auto" : "none"}
-        style={[styles.titleAction, { opacity: showAction ? 1 : 0 }]}
-      >
-        {busy ? (
-          <ActivityIndicator size="small" color={theme.colors.foregroundMuted} />
-        ) : (
-          <Icon
-            name={archived ? "ArchiveRestore" : "Archive"}
-            size={14}
-            color={theme.colors.foregroundMuted}
-          />
-        )}
-      </Pressable>
+      {onArchiveToggle ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={archived ? `Unarchive ${label}` : `Archive ${label}`}
+          accessibilityState={{ disabled: actionDisabled }}
+          disabled={actionDisabled || !showAction}
+          hitSlop={8}
+          onPress={onArchiveToggle}
+          pointerEvents={showAction ? "auto" : "none"}
+          style={[styles.titleAction, { opacity: showAction ? 1 : 0 }]}
+        >
+          {busy ? (
+            <ActivityIndicator size="small" color={theme.colors.foregroundMuted} />
+          ) : (
+            <Icon
+              name={archived ? "ArchiveRestore" : "Archive"}
+              size={14}
+              color={theme.colors.foregroundMuted}
+            />
+          )}
+        </Pressable>
+      ) : null}
     </>
   );
 
