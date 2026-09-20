@@ -5,6 +5,32 @@ All notable changes to `@koinzhang/paseo-plugin-activity` are documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Temporary:** target Paseo **0.8.0** again (`requirements.paseo >=0.8.0`, SDK `0.8.0`, host-slot-safe directory subscribe) so this checkout can run on 0.8 devices. Revert before publishing another 0.9+ release.
+
+### Added
+
+- Global Activity **Agent creations** histogram: a fixed 30-local-day window of daily bars stacked by provider, with per-provider colours and a hover / focus / click card listing every provider's count for that day plus the date.
+- `usage.agent-creations` RPC: daily creation counts with per-provider slices, read from the agent registry alone (no tool-call or message joins).
+- `usage.agent-lifetime` now includes still-active agents (`createdAt → now`, marked `· active` in the KPI) instead of archived agents only.
+- Directory sync lists archived agents (`includeArchived`) so archive metadata (`archivedAt`) is backfilled for agents archived before or between observations; archived entries are registered but never timeline-scanned.
+
+### Changed
+
+- Global KPI reordered to lead with Top / Longest: Agents, Longest agent, Workspaces, Top provider, Top model, Longest streak; Insights fixed at 8 rows.
+- Agent creations histogram ignores the range chips (always the last 30 local days) and no longer depends on `usage.activity-by-day`.
+- `mcpServerColor` renamed to `entityColor`; the same accent-derived stable colour now covers MCP servers and providers.
+- KPI values and labels shrink to fit their tile instead of wrapping onto a second line (Global / Workspace / Agent share `UsageStats`); line height is fixed so the label baselines stay aligned.
+- Top provider / Top model KPI tiles show the name only (no share), matching the provider-filtered shape; shares stay available from `usage.by-provider`.
+- Agent creations bars round only the top segment's top corners — stacked joints and bar bottoms are square.
+
+### Fixed
+
+- Longest-agent metric was understated: agents archived before the plugin could observe them had no `archived_at`, so the tile only ever saw live-hook archives.
+
 ## [0.5.0] - 2026-09-20
 
 Requires Paseo **>= 0.9.0-beta.2**.

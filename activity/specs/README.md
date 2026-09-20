@@ -74,6 +74,11 @@
 | [047-beta2-observation-remediation](./047-beta2-observation-remediation/) | 已实现，页面验收待完成 | 独立目录订阅、明确生命周期/归档、清理与 SDK 契约测试 |
 
 | [048-heatmap-rolling-rectangle](./048-heatmap-rolling-rectangle/) | 已实现 | 热力图固定 364 天完整矩形，今天始终在右下角 |
+| [049-agent-lifetime-creations](./049-agent-lifetime-creations/) | 已实现（050 / 051 修订） | 归档 agent 元数据补扫（`includeArchived`）；最长寿命 RPC；每日创建直方图 |
+| [050-kpi-insights-reorg](./050-kpi-insights-reorg/) | 已实现（051 修订直方图与最长寿命口径） | Global KPI 优先 Top / Longest（6 格）；Insights 固定 8 行；直方图固定 30 天窗口 |
+| [051-creations-provider-stack](./051-creations-provider-stack/) | 已实现，页面验收待完成 | 创建直方图按 provider 堆叠 + 浮层明细（`usage.agent-creations`）；最长寿命含活跃 agent |
+| [052-kpi-text-fit](./052-kpi-text-fit/) | 已实现 | KPI 数值 / 标签自适应缩小，永不换行（隐藏副本测量 + 单次推导字号） |
+| [053-kpi-and-bar-polish](./053-kpi-and-bar-polish/) | 已实现 | KPI Top provider / Top model 只显示名称；堆叠柱仅顶部一段带上圆角 |
 
 ## 约定
 

@@ -50,5 +50,25 @@ export function formatActivityTime(
   return date.toLocaleString(locale, options);
 }
 
-/** @deprecated Prefer `formatActivityTime`. */
-export const formatUpdatedAt = formatActivityTime;
+const MINUTE_MS = 60_000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+
+/** Compact count for KPI tiles: 9999 → `9999`, 12345 → `12.3k`, 1234567 → `1.2M`. */
+export function formatCount(value: number): string {
+  if (value >= 1_000_000) return `${Number((value / 1_000_000).toFixed(1))}M`;
+  if (value >= 10_000) return `${Number((value / 1_000).toFixed(1))}k`;
+  return String(value);
+}
+
+/** Compact locale-independent duration for agent lifetimes (049). */
+export function formatDuration(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0) return "—";
+  if (ms < MINUTE_MS) return "<1 min";
+  if (ms < HOUR_MS) return `${Math.floor(ms / MINUTE_MS)} min`;
+  const hours = ms / HOUR_MS;
+  if (hours < 48) return `${Number(hours.toFixed(1))} h`;
+  const days = ms / DAY_MS;
+  if (days < 60) return `${Number(days.toFixed(1))} days`;
+  return `${Number((days / 30.44).toFixed(1))} months`;
+}

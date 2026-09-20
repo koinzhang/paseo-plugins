@@ -14,6 +14,8 @@ import {
 import {
   providerLabel,
   usageActivityByDayRpc,
+  usageAgentCreationsRpc,
+  usageAgentLifetimeRpc,
   usageByProviderRpc,
   type ProviderUsageItem,
 } from "../shared/usage.ts";
@@ -23,17 +25,21 @@ import {
   computeStreaks,
   type HeatmapMode,
 } from "./activity-heatmap.tsx";
+import { AgentCreations } from "./agent-creations.tsx";
 
 import { UsageStats } from "./usage-stats.tsx";
-import { mcpServerColor } from "./rank-color.ts";
+import { entityColor } from "./rank-color.ts";
 import { selectProviderOptions } from "./provider-filter.ts";
 import { useAppLanguage } from "./use-app-language.ts";
-import { buildActivityInsights, ACTIVITY_LIST_LIMIT } from "../shared/insights.ts";
-import { rangeFrom, RANGE_OPTIONS, type RangeId } from "./range.ts";
+import { buildActivityInsights, buildActivityKpi, ACTIVITY_LIST_LIMIT } from "../shared/insights.ts";
+import { fixedWindowFrom, rangeFrom, RANGE_OPTIONS, type RangeId } from "./range.ts";
 import { useRegisterOpenAgent } from "./open-agent.ts";
 
 /** Max rows for Activity insights and Most used skills / MCP. */
 const LIST_LIMIT = ACTIVITY_LIST_LIMIT;
+
+/** Fixed width of the creations histogram, independent of the range chips (050). */
+const CREATIONS_WINDOW_DAYS = 30;
 
 /** Zeroed provider row when the chip exists all-time but the time window has no rows. */
 function emptyProviderUsage(provider: string, label?: string): ProviderUsageItem {
@@ -61,12 +67,6 @@ function emptyProviderUsage(provider: string, label?: string): ProviderUsageItem
 }
 
 
-
-function formatCount(value: number): string {
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
-  if (value >= 10_000) return `${(value / 1_000).toFixed(1).replace(/\.0$/, "")}k`;
-  return String(value);
-}
 
 function TextTabs({
   options,
@@ -195,7 +195,7 @@ function RankList({
               size={14}
               color={
                 item.kind === "mcp"
-                  ? mcpServerColor(item.server ?? "", colors.accent)
+                  ? entityColor(item.server ?? "", colors.accent)
                   : colors.accent
               }
             />
@@ -225,6 +225,8 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
   const padding = layout.compact ? 16 : 20;
   const byProvider = useRpc(usageByProviderRpc);
   const activityByDay = useRpc(usageActivityByDayRpc);
+  const agentLifetime = useRpc(usageAgentLifetimeRpc);
+  const agentCreations = useRpc(usageAgentCreationsRpc);
 
   const filter = from ? { from } : {};
 
@@ -256,6 +258,29 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
         provider: providerFilter === "all" ? undefined : providerFilter,
       }),
     // Keep prior heatmap while provider / range switches — avoids spinner pushing layout.
+    placeholderData: keepPreviousData,
+  });
+
+  const lifetimeQuery = useQuery({
+    refetchInterval: 15_000,
+    retry: false,
+    // Lifetime is all-time by design (049): only the provider filter applies.
+    queryKey: ["activity", "agent-lifetime", providerFilter],
+    queryFn: () =>
+      agentLifetime({ provider: providerFilter === "all" ? undefined : providerFilter }),
+    placeholderData: keepPreviousData,
+  });
+
+  const histogramQuery = useQuery({
+    refetchInterval: 15_000,
+    retry: false,
+    // Fixed window (050): the creations histogram ignores the range chips.
+    queryKey: ["activity", "agent-creations", "last30", providerFilter],
+    queryFn: () =>
+      agentCreations({
+        from: fixedWindowFrom(CREATIONS_WINDOW_DAYS),
+        provider: providerFilter === "all" ? undefined : providerFilter,
+      }),
     placeholderData: keepPreviousData,
   });
 
@@ -444,28 +469,27 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
         messages: summary.messages,
         codingAgents: summary.codingAgents,
         chatAgents: summary.chatAgents,
-        longestStreak: streaks.longest,
       },
-      providers: filteredProviders,
-      providerFilter,
       locale,
-      limit: LIST_LIMIT,
     });
-  }, [activityQuery.data?.days, filteredProviders, locale, providerFilter, streaks.longest, summary]);
+  }, [activityQuery.data?.days, locale, summary]);
 
   const kpi = useMemo(
-    () => [
-      { value: formatCount(summary.messages), label: "Messages" },
-      { value: formatCount(summary.agents), label: "Agents" },
-      { value: formatCount(summary.workspaces), label: "Workspaces" },
-      { value: formatCount(summary.skills), label: "Skill calls" },
-      { value: formatCount(summary.mcp), label: "MCP calls" },
-      {
-        value: `${streaks.current} day${streaks.current === 1 ? "" : "s"}`,
-        label: "Current streak",
-      },
-    ],
-    [summary, streaks],
+    () =>
+      buildActivityKpi({
+        agents: summary.agents,
+        workspaces: summary.workspaces,
+        longestStreak: streaks.longest,
+        longestAgent: lifetimeQuery.data?.longest
+          ? {
+              durationMs: lifetimeQuery.data.longest.durationMs,
+              active: lifetimeQuery.data.longest.archivedAt == null,
+            }
+          : null,
+        providers: filteredProviders,
+        providerFilter,
+      }),
+    [filteredProviders, lifetimeQuery.data, providerFilter, streaks.longest, summary.agents, summary.workspaces],
   );
 
   const styles = useMemo(
@@ -645,6 +669,16 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
             { id: "weekly", label: "Weekly" },
             { id: "cumulative", label: "Cumulative" },
           ]}
+        />
+      ) : null}
+
+      {showContent ? (
+        <AgentCreations
+          days={histogramQuery.data?.days ?? []}
+          windowDays={CREATIONS_WINDOW_DAYS}
+          colors={theme.colors}
+          compact={layout.compact}
+          locale={locale}
         />
       ) : null}
 

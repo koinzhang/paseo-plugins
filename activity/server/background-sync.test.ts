@@ -152,3 +152,46 @@ test("stopping after agents.list prevents directory writes", async () => {
     f.cleanup();
   }
 });
+
+test("archived agents are registered but never scanned", async () => {
+  const f = fixture();
+  const archived = {
+    id: "archived-1",
+    provider: "codex",
+    createdAt: "2026-09-07T03:34:09.656Z",
+    updatedAt: "2026-09-07T03:34:09.656Z",
+    lastUserMessageAt: null,
+    archivedAt: "2026-09-18T17:18:18.001Z",
+  };
+  const listOptions: Array<Record<string, unknown>> = [];
+  const paseo = {
+    agents: {
+      list: async (options: Record<string, unknown>) => {
+        listOptions.push(options);
+        return {
+          entries: [{ agent: f.agent }, { agent: archived }],
+          pageInfo: { hasMore: false, nextCursor: null, prevCursor: null },
+        };
+      },
+    },
+  } as unknown as PaseoApi;
+  let scans = 0;
+  const sync = createBackgroundSync(f.store, {
+    path: f.path,
+    scan: async () => {
+      scans++;
+      return { syncedAgents: 1, inserted: 0, errors: [] };
+    },
+  });
+  try {
+    await sync.request(paseo);
+    assert.equal(scans, 1);
+    assert.deepEqual(listOptions[0]?.filter, { includeArchived: true });
+    const row = f.store.getAgent("archived-1");
+    assert.equal(row?.createdAt, "2026-09-07T03:34:09.656Z");
+    assert.equal(row?.archivedAt, "2026-09-18T17:18:18.001Z");
+  } finally {
+    sync.stop();
+    f.cleanup();
+  }
+});

@@ -246,6 +246,148 @@ export const usageAgentsRpc = defineRpc({
   }),
 });
 
+/** Archived or still-active agent with a created→(archived | now) span (049 / 051). */
+export const AgentLifetimeItemSchema = z.object({
+  agentId: z.string(),
+  provider: z.string(),
+  workspaceId: z.string().nullable(),
+  title: z.string().nullable(),
+  createdAt: z.string(),
+  /** Null while the agent is active — the span then ends at request time. */
+  archivedAt: z.string().nullable(),
+  durationMs: z.number().int().nonnegative(),
+});
+export type AgentLifetimeItem = z.infer<typeof AgentLifetimeItemSchema>;
+
+/** Longest created→archived / created→now agent over the whole registry (049 / 051). */
+export const usageAgentLifetimeRpc = defineRpc({
+  name: "usage.agent-lifetime",
+  input: z.object({
+    /** Normalized provider id; omit / empty = all providers. */
+    provider: z.string().optional(),
+  }),
+  output: z.object({
+    longest: AgentLifetimeItemSchema.nullable(),
+    /** Rows compared after the provider filter (registry sample). */
+    sampleSize: z.number().int().nonnegative(),
+  }),
+});
+
+/**
+ * Longest-lived agent. Archived agents use their archive time; active agents
+ * count `createdAt → now` (051). Rows need a parseable `createdAt` and a
+ * non-negative span; ties keep the earlier `createdAt`.
+ */
+export function pickLongestAgentLifetime(
+  agents: ReadonlyArray<{
+    agentId: string;
+    provider: string;
+    workspaceId?: string | null;
+    title?: string | null;
+    createdAt?: string | null;
+    archivedAt?: string | null;
+  }>,
+  options: { provider?: string; now?: number } = {},
+): { longest: AgentLifetimeItem | null; sampleSize: number } {
+  const provider = options.provider?.trim() ? normalizeProvider(options.provider) : undefined;
+  const now = options.now ?? Date.now();
+  let longest: AgentLifetimeItem | null = null;
+  let sampleSize = 0;
+  for (const agent of agents) {
+    if (!agent.createdAt) continue;
+    if (provider && normalizeProvider(agent.provider) !== provider) continue;
+    const createdAt = Date.parse(agent.createdAt);
+    if (!Number.isFinite(createdAt)) continue;
+    const end = agent.archivedAt ? Date.parse(agent.archivedAt) : now;
+    if (!Number.isFinite(end)) continue;
+    const durationMs = end - createdAt;
+    if (durationMs < 0) continue;
+    sampleSize += 1;
+    const candidate: AgentLifetimeItem = {
+      agentId: agent.agentId,
+      provider: agent.provider,
+      workspaceId: agent.workspaceId ?? null,
+      title: agent.title ?? null,
+      createdAt: agent.createdAt,
+      archivedAt: agent.archivedAt ?? null,
+      durationMs,
+    };
+    if (
+      !longest ||
+      candidate.durationMs > longest.durationMs ||
+      (candidate.durationMs === longest.durationMs && candidate.createdAt < longest.createdAt)
+    ) {
+      longest = candidate;
+    }
+  }
+  return { longest, sampleSize };
+}
+
+export const AgentCreationProviderSchema = z.object({
+  provider: z.string(),
+  label: z.string(),
+  count: z.number().int().nonnegative(),
+});
+export type AgentCreationProvider = z.infer<typeof AgentCreationProviderSchema>;
+
+export const AgentCreationDaySchema = z.object({
+  /** Local calendar day `YYYY-MM-DD`. */
+  date: z.string(),
+  total: z.number().int().nonnegative(),
+  /** Providers that created agents that day, highest count first. */
+  providers: z.array(AgentCreationProviderSchema),
+});
+export type AgentCreationDay = z.infer<typeof AgentCreationDaySchema>;
+
+/** Daily agent creations with a per-provider breakdown (051). */
+export const usageAgentCreationsRpc = defineRpc({
+  name: "usage.agent-creations",
+  input: z.object({
+    from: z.string().optional(),
+    to: z.string().optional(),
+    /** Normalized provider id; omit / empty = all providers. */
+    provider: z.string().optional(),
+  }),
+  output: z.object({
+    days: z.array(AgentCreationDaySchema),
+  }),
+});
+
+/**
+ * Bucket agent creations by local day and normalized provider (051).
+ * Days without creations are omitted; callers zero-fill the window.
+ */
+export function aggregateAgentCreations(
+  agents: ReadonlyArray<{ provider: string; createdAt: string }>,
+  options: { from?: string; to?: string; provider?: string } = {},
+): AgentCreationDay[] {
+  const provider = options.provider?.trim() ? normalizeProvider(options.provider) : undefined;
+  const byDay = new Map<string, Map<string, number>>();
+  for (const agent of agents) {
+    if (provider && normalizeProvider(agent.provider) !== provider) continue;
+    if (options.from && agent.createdAt < options.from) continue;
+    if (options.to && agent.createdAt > options.to) continue;
+    const day = localDayKey(agent.createdAt);
+    if (!day) continue;
+    const id = normalizeProvider(agent.provider);
+    const counts = byDay.get(day) ?? new Map<string, number>();
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+    byDay.set(day, counts);
+  }
+  return [...byDay.entries()]
+    .map(([date, counts]) => {
+      const providers = [...counts.entries()]
+        .map(([id, count]) => ({ provider: id, label: providerLabel(id), count }))
+        .sort((a, b) => b.count - a.count || a.provider.localeCompare(b.provider));
+      return {
+        date,
+        total: providers.reduce((sum, item) => sum + item.count, 0),
+        providers,
+      };
+    })
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 /** Unarchive via host `refreshAgent` (CLI: `paseo agent reload`). */
 export const usageAgentUnarchiveRpc = defineRpc({
   name: "usage.agent.unarchive",

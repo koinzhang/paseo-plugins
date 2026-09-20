@@ -18,6 +18,9 @@ const AGENT_LIST_PAGE_LIMIT = 200;
 async function listAllAgents(paseo: PaseoApi) {
   return listAllAgentPages(async (cursor) => {
     const result = await paseo.agents.list({
+      // Archived agents only appear with this filter (049): without it their
+      // createdAt / archivedAt never reach the local registry.
+      filter: { includeArchived: true },
       page: { limit: AGENT_LIST_PAGE_LIMIT, ...(cursor ? { cursor } : {}) },
     });
     return { entries: result.entries, pageInfo: result.pageInfo };
@@ -62,6 +65,9 @@ export function createBackgroundSync(store: UsageStore, options: {
     store.upsertAgents(listedEntries.map(({ agent }) => agentRowFromSnapshot(agent)));
     const known = new Set(store.selectAgents().map(agent => agent.agentId));
     store.upsertAgents(agentsFromToolCalls(store.select()).filter(agent => !known.has(agent.agentId)));
+    console.log(
+      `${LOG_PREFIX} directory sync listed=${listedEntries.length} (archived=${listedEntries.filter(entry => entry.agent.archivedAt).length}) registry=${known.size}`,
+    );
 
     const liveIds = new Set(listedEntries.map(({ agent }) => agent.id));
     const pruned: Record<string, string> = Object.create(null);
@@ -74,6 +80,9 @@ export function createBackgroundSync(store: UsageStore, options: {
 
     for (const { agent } of listedEntries) {
       if (controller.signal.aborted) return;
+      // Archived agents contribute registry metadata only: their timeline is
+      // frozen and a full scan per agent would dwarf the 5-minute budget.
+      if (agent.archivedAt) continue;
       const stamp = `${agent.updatedAt}:${agent.lastUserMessageAt ?? ""}`;
       if (checkpoints[agent.id] === stamp) continue;
       const result = await scan(store, paseo, [agent.id], controller.signal, listedEntries);

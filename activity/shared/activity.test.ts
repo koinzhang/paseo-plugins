@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { activityLevel, buildActivityCalendar, computeStreaks } from "./activity.ts";
+import {
+  activityLevel,
+  buildActivityCalendar,
+  buildAgentCreationBuckets,
+  computeStreaks,
+  rankCreationProviders,
+} from "./activity.ts";
 
 const days = [
   { date: "2026-03-07", skills: 2, mcp: 1, agents: 2, messages: 4, total: 9 },
@@ -125,5 +131,48 @@ describe("activity calendar", () => {
       { date: "2026-03-10", skills: 0, mcp: 0, agents: 1, messages: 0, total: 0 },
     ];
     assert.deepEqual(computeStreaks(messageOnly, today), { current: 2, longest: 2 });
+  });
+});
+
+describe("agent creation buckets (051)", () => {
+  const day = (date: string, providers: Array<[string, number]>) => ({
+    date,
+    total: providers.reduce((sum, [, count]) => sum + count, 0),
+    providers: providers.map(([provider, count]) => ({ provider, label: provider, count })),
+  });
+
+  it("zero-fills the window per local day and keeps per-provider slices", () => {
+    const buckets = buildAgentCreationBuckets(
+      [day("2026-03-07", [["claude", 2]]), day("2026-03-09", [["codex", 1], ["claude", 3]])],
+      { from: new Date(2026, 2, 7).toISOString(), today },
+    );
+    assert.deepEqual(buckets.map((bucket) => bucket.key), ["2026-03-07", "2026-03-08", "2026-03-09", "2026-03-10"]);
+    assert.deepEqual(buckets.map((bucket) => bucket.count), [2, 0, 4, 0]);
+    assert.deepEqual(buckets[2]?.providers.map((slice) => [slice.provider, slice.count]), [["codex", 1], ["claude", 3]]);
+    assert.deepEqual(buckets[1]?.providers, []);
+  });
+
+  it("clamps to the window, drops out-of-range days, and keeps today as the last bucket", () => {
+    const buckets = buildAgentCreationBuckets(
+      [day("2026-03-01", [["claude", 5]]), day("2026-03-10", [["claude", 1]]), day("2026-03-11", [["claude", 9]])],
+      { from: new Date(2026, 2, 7).toISOString(), today },
+    );
+    assert.deepEqual(buckets.map((bucket) => bucket.key), ["2026-03-07", "2026-03-08", "2026-03-09", "2026-03-10"]);
+    assert.equal(buckets.reduce((sum, bucket) => sum + bucket.count, 0), 1);
+  });
+
+  it("ranks providers by window totals with a stable tie-break", () => {
+    const buckets = buildAgentCreationBuckets(
+      [
+        day("2026-03-08", [["codex", 1], ["claude", 1]]),
+        day("2026-03-09", [["claude", 2], ["amp", 3]]),
+      ],
+      { from: new Date(2026, 2, 7).toISOString(), today },
+    );
+    assert.deepEqual(rankCreationProviders(buckets).map((item) => [item.provider, item.count]), [
+      ["amp", 3],
+      ["claude", 3],
+      ["codex", 1],
+    ]);
   });
 });

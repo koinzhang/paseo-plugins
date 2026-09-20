@@ -1,4 +1,4 @@
-import type { ActivityDay } from "./usage.ts";
+import type { ActivityDay, AgentCreationDay } from "./usage.ts";
 
 function pad2(value: number): string {
   return String(value).padStart(2, "0");
@@ -177,4 +177,79 @@ export function computeStreaks(
   }
 
   return { current, longest };
+}
+
+export type CreationProviderSlice = {
+  provider: string;
+  label: string;
+  count: number;
+};
+
+export type CreationBucket = {
+  /** Local day key; stable identity across refetches. */
+  key: string;
+  count: number;
+  /** Providers with creations that day, highest count first (051). */
+  providers: CreationProviderSlice[];
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** DST-proof day index for a local calendar date. */
+function dayIndex(date: Date): number {
+  return Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / DAY_MS);
+}
+
+/**
+ * Zero-filled daily buckets over `[from, today]` (051). Days without creations
+ * stay as empty buckets so the histogram never skips a date.
+ */
+export function buildAgentCreationBuckets(
+  days: readonly AgentCreationDay[],
+  options: { from: string; today?: Date },
+): CreationBucket[] {
+  const today = startOfLocalDay(options.today ?? new Date());
+  const todayKey = toDayKey(today);
+  const fromDate = new Date(options.from);
+  const start = startOfLocalDay(Number.isNaN(fromDate.getTime()) ? today : fromDate);
+  const startKey = toDayKey(start);
+  const byDay = new Map<string, CreationProviderSlice[]>();
+  for (const day of days) {
+    if (day.date < startKey || day.date > todayKey) continue;
+    byDay.set(
+      day.date,
+      day.providers.filter((item) => item.count > 0),
+    );
+  }
+  const buckets: CreationBucket[] = [];
+  for (let cursor = start; dayIndex(cursor) <= dayIndex(today); cursor = addDays(cursor, 1)) {
+    const key = toDayKey(cursor);
+    const providers = byDay.get(key) ?? [];
+    buckets.push({
+      key,
+      count: providers.reduce((sum, item) => sum + item.count, 0),
+      providers,
+    });
+  }
+  return buckets;
+}
+
+/**
+ * Providers across the whole window, ranked by total creations (051). Drives
+ * the stable stack order, colour assignment and tooltip rows.
+ */
+export function rankCreationProviders(
+  buckets: readonly CreationBucket[],
+): CreationProviderSlice[] {
+  const totals = new Map<string, CreationProviderSlice>();
+  for (const bucket of buckets) {
+    for (const slice of bucket.providers) {
+      const current = totals.get(slice.provider);
+      if (current) current.count += slice.count;
+      else totals.set(slice.provider, { ...slice });
+    }
+  }
+  return [...totals.values()].sort(
+    (a, b) => b.count - a.count || a.provider.localeCompare(b.provider),
+  );
 }

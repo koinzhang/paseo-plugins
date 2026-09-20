@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   aggregateActivityByDay,
+  aggregateAgentCreations,
   aggregateAgents,
   aggregateByProvider,
   aggregateMcpByTool,
@@ -12,6 +13,7 @@ import {
   isFileRead,
   isFileWrite,
   isShellCall,
+  pickLongestAgentLifetime,
   shellCommandHead,
   shellLooksMutating,
 } from "./usage.ts";
@@ -918,5 +920,119 @@ describe("aggregateAgents (024)", () => {
     assert.equal(a3.updatedAt, "2026-09-19T02:00:00.000Z");
     assert.equal(a3.archivedAt, "2026-09-19T01:00:00.000Z");
     assert.equal(a3.lastActivityAt, null);
+  });
+});
+
+describe("pickLongestAgentLifetime (049 / 051)", () => {
+  const agent = (
+    agentId: string,
+    createdAt: string,
+    archivedAt: string | null,
+    provider = "claude",
+  ) => ({ agentId, provider, workspaceId: "w1", title: agentId, createdAt, archivedAt });
+  const NOW = Date.parse("2026-09-20T00:00:00.000Z");
+
+  it("returns the widest created→archived span", () => {
+    const result = pickLongestAgentLifetime(
+      [
+        agent("short", "2026-09-19T00:00:00.000Z", "2026-09-19T01:00:00.000Z"),
+        agent("long", "2026-09-07T03:34:09.656Z", "2026-09-18T17:18:18.001Z"),
+        agent("active", "2026-09-19T00:00:00.000Z", null),
+      ],
+      { now: NOW },
+    );
+    assert.equal(result.longest?.agentId, "long");
+    assert.equal(
+      result.longest?.durationMs,
+      Date.parse("2026-09-18T17:18:18.001Z") - Date.parse("2026-09-07T03:34:09.656Z"),
+    );
+    assert.equal(result.longest?.title, "long");
+    assert.equal(result.longest?.archivedAt, "2026-09-18T17:18:18.001Z");
+    assert.equal(result.sampleSize, 3);
+  });
+
+  it("counts active agents up to now and reports them as active", () => {
+    const result = pickLongestAgentLifetime(
+      [
+        agent("archived", "2026-09-15T00:00:00.000Z", "2026-09-16T00:00:00.000Z"),
+        agent("still-running", "2026-09-01T00:00:00.000Z", null),
+      ],
+      { now: NOW },
+    );
+    assert.equal(result.longest?.agentId, "still-running");
+    assert.equal(result.longest?.archivedAt, null);
+    assert.equal(result.longest?.durationMs, NOW - Date.parse("2026-09-01T00:00:00.000Z"));
+  });
+
+  it("skips rows without a usable span and keeps ties on the earlier creation", () => {
+    const result = pickLongestAgentLifetime(
+      [
+        agent("no-created", "not-a-date", "2026-09-19T01:00:00.000Z"),
+        agent("reversed", "2026-09-19T02:00:00.000Z", "2026-09-19T01:00:00.000Z"),
+        agent("later", "2026-09-10T00:00:00.000Z", "2026-09-11T00:00:00.000Z"),
+        agent("earlier", "2026-09-01T00:00:00.000Z", "2026-09-02T00:00:00.000Z"),
+      ],
+      { now: NOW },
+    );
+    assert.equal(result.longest?.agentId, "earlier");
+    assert.equal(result.sampleSize, 2);
+  });
+
+  it("filters by normalized provider", () => {
+    const result = pickLongestAgentLifetime(
+      [
+        agent("claude-agent", "2026-09-01T00:00:00.000Z", "2026-09-02T00:00:00.000Z", "claude-code"),
+        agent("codex-agent", "2026-09-01T00:00:00.000Z", "2026-09-18T00:00:00.000Z", "codex"),
+      ],
+      { provider: "claude", now: NOW },
+    );
+    assert.equal(result.longest?.agentId, "claude-agent");
+    assert.equal(result.sampleSize, 1);
+    assert.equal(pickLongestAgentLifetime([], { provider: "codex" }).longest, null);
+  });
+});
+
+describe("aggregateAgentCreations (051)", () => {
+  const agent = (provider: string, createdAt: string) => ({ provider, createdAt });
+
+  it("buckets by local day and normalized provider, highest count first", () => {
+    const days = aggregateAgentCreations([
+      agent("claude-code", "2026-09-19T01:00:00.000Z"),
+      agent("claude", "2026-09-19T02:00:00.000Z"),
+      agent("codex", "2026-09-19T03:00:00.000Z"),
+      agent("codex", "2026-09-20T03:00:00.000Z"),
+    ]);
+    const first = days[0]!;
+    assert.equal(first.date, "2026-09-19");
+    assert.equal(first.total, 3);
+    assert.deepEqual(first.providers, [
+      { provider: "claude", label: "Claude", count: 2 },
+      { provider: "codex", label: "Codex", count: 1 },
+    ]);
+    assert.deepEqual(days[1]?.providers, [{ provider: "codex", label: "Codex", count: 1 }]);
+  });
+
+  it("honours provider, from and to filters and skips invalid timestamps", () => {
+    const rows = [
+      agent("codex", "2026-09-19T03:00:00.000Z"),
+      agent("claude", "2026-09-19T04:00:00.000Z"),
+      agent("codex", "2026-08-01T03:00:00.000Z"),
+      agent("codex", "not-a-date"),
+    ];
+    assert.deepEqual(
+      aggregateAgentCreations(rows, { provider: "CODEX" }).map((day) => [day.date, day.total]),
+      [
+        ["2026-08-01", 1],
+        ["2026-09-19", 1],
+      ],
+    );
+    assert.deepEqual(
+      aggregateAgentCreations(rows, { from: "2026-09-01T00:00:00.000Z" }).map((day) => day.date),
+      ["2026-09-19"],
+    );
+    assert.deepEqual(
+      aggregateAgentCreations(rows, { to: "2026-09-01T00:00:00.000Z" }).map((day) => day.date),
+      ["2026-08-01"],
+    );
   });
 });

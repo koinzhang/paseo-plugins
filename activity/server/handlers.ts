@@ -5,6 +5,7 @@ import { homedir } from "node:os";
 import { basename, dirname, resolve, sep } from "node:path";
 import { realpathSync, statSync } from "node:fs";
 import {
+  aggregateAgentCreations,
   aggregateAgents,
   aggregateByProvider,
   aggregateMcpByTool,
@@ -14,7 +15,10 @@ import {
   isFileRead,
   isFileWrite,
   isShellCall,
+  pickLongestAgentLifetime,
   usageActivityByDayRpc,
+  usageAgentCreationsRpc,
+  usageAgentLifetimeRpc,
   usageAgentsRpc,
   usageAgentUnarchiveRpc,
   usageByProviderRpc,
@@ -252,6 +256,31 @@ export function createAgentsHandler(store: UsageStore) {
       to: input.to,
     });
     return { items: aggregateAgents(rows, agents, messages) };
+  };
+}
+
+/** Longest created→archived agent from the registry alone (049) — no tool-call join. */
+export function createAgentLifetimeHandler(store: UsageStore) {
+  return async (
+    input: RpcInput<typeof usageAgentLifetimeRpc>,
+  ): Promise<RpcOutput<typeof usageAgentLifetimeRpc>> => {
+    return pickLongestAgentLifetime(store.selectAgents({ provider: input.provider }), {
+      provider: input.provider,
+    });
+  };
+}
+
+/** Daily agent creations with a per-provider breakdown (051) — registry only. */
+export function createAgentCreationsHandler(store: UsageStore) {
+  return async (
+    input: RpcInput<typeof usageAgentCreationsRpc>,
+  ): Promise<RpcOutput<typeof usageAgentCreationsRpc>> => {
+    const agents = store.selectAgents({
+      provider: input.provider,
+      from: input.from,
+      to: input.to,
+    });
+    return { days: aggregateAgentCreations(agents, input) };
   };
 }
 

@@ -12,7 +12,7 @@
 | **Agent** | Agent workspace tab · Composer pills · CC `Agent Activity` | `client/panel.tsx` + `pill.tsx` + `attention-pill.tsx`（040） | 本 agent 工具；同仓其它会话 attention 捷径 | 无（全程） |
 
 ```text
-Global Activity     → 跨 workspace · 习惯 / provider 对比 · 热力图 / Insights / Models
+Global Activity     → 跨 workspace · 习惯 / provider 对比 · KPI（Agents / Longest agent / Workspaces / Top provider / Top model / Longest streak，050）· 热力图 · Agent creations 直方图（固定 30 天，按 provider 堆叠，051）· Insights / Models
 Workspace Activity  → 单 workspace · Agents 运营（排序筛选归档）· KPI · Terminals（host SDK：列表 / 预览 / 关闭）· Top skills/MCP
 Agent Activity      → 单 agent · 工具明细（Skills / MCP）· Pill 快捷入口
 ```
@@ -55,6 +55,8 @@ server/          handlers · store · ingest · background-sync · hooks
 | `usage.mcp-by-tool` | ✓ | ✓ | ✓ | 三层 |
 | `usage.by-provider` | — | ✓ | ✓ | Global |
 | `usage.agents` | — | ✓ | ✓ | Workspace |
+| `usage.agent-lifetime` | — | — | —（全时段） | Global（最长寿命，provider 过滤；051 起含活跃 agent） |
+| `usage.agent-creations` | — | — | ✓ | Global（Agent creations 直方图，按 provider 堆叠；051） |
 | `usage.host-info` | — | — | — | Workspace（cwd `~` 折叠） |
 | `usage.activity-by-day` | — | ✓ | ✓ | Global |
 | `usage.list` / `usage.export` | ✓ | — | ✓ | 无 UI（契约保留） |
@@ -74,7 +76,7 @@ server/          handlers · store · ingest · background-sync · hooks
 | Hook | 写入 |
 |---|---|
 | `agent.created` / `agent.archived` / `agent.turn_ended` | agents +（turn）tool_calls / user_messages |
-| background-sync | 静默历史补扫（008）；`agents.list` 须翻页取全 |
+| background-sync | 静默历史补扫（008）；`agents.list` 须翻页取全；目录同步带 `includeArchived` 补归档元数据（049），归档 entry 不扫 timeline |
 
 ## 5. 已知边界与债
 
@@ -87,5 +89,6 @@ server/          handlers · store · ingest · background-sync · hooks
 | Spec 编号 `027` 重复 | drop-header 与 agent-activity-title | 索引可读性 |
 | 0.8 目录 observation 单 slot | 历史约束，当前不再兼容 | 038 |
 | 0.9 独立 API observation | 每实例自持订阅，按引用计数释放；共享连接不共享监听器 | 047 |
+| project 记录已删除的 agent 不可见 | daemon `collectFetchAgentsEntries` 解析不到 placement 就丢弃（本机 45/498）；插件不读宿主磁盘，由 `usage.agent-lifetime.sampleSize` 暴露基数 | 049 |
 
 演进与任务拆解见 [`specs/README.md`](../specs/README.md)；本文件描述稳定架构，细节以编号目录 `spec.md` / `plan.md` 为准。

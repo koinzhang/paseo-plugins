@@ -1,4 +1,111 @@
-import { Text, View } from "react-native";
+import { useState } from "react";
+import { Text, View, type TextStyle } from "react-native";
+import { fitFontSize } from "./fit-text.ts";
+
+/** Hidden measuring box wide enough to never clamp the text (051). */
+const MEASURE_WIDTH = 1000;
+
+/**
+ * Single-line text that shrinks instead of wrapping (051). KPI tiles are
+ * ~130px wide, so 18px values like "Cursor · 61%" used to wrap onto two lines
+ * and push the labels out of line. The hidden copy measures the intrinsic width
+ * at `base` (an unconstrained box, since a constrained one reports the clamped
+ * width), then the visible text is scaled to fit. `numberOfLines={1}` stays as
+ * the hard guard: a bad measurement can only ellipsize, never wrap.
+ */
+function FitText({ text, available, base, min, lineHeight, color, weight, tabular }: {
+  text: string;
+  available: number;
+  base: number;
+  min?: number;
+  lineHeight: number;
+  color: string;
+  weight?: "500";
+  tabular?: boolean;
+}) {
+  // The hidden copy renders at `fontSize` and reports its width; the fit is
+  // derived from that single measurement, so a tile resize re-fits without
+  // needing a new measurement.
+  const [measured, setMeasured] = useState({ size: base, width: 0 });
+  const fontSize = fitFontSize(measured, available, { base, min });
+  const style: TextStyle = {
+    color,
+    fontSize,
+    lineHeight,
+    fontWeight: weight,
+    fontVariant: tabular ? ["tabular-nums"] : undefined,
+  };
+  return (
+    <>
+      <View
+        pointerEvents="none"
+        style={{ position: "absolute", left: 0, top: 0, width: 0, height: 0, overflow: "hidden" }}
+      >
+        <View style={{ position: "absolute", left: 0, top: 0, width: MEASURE_WIDTH, flexDirection: "row", opacity: 0 }}>
+          <Text
+            numberOfLines={1}
+            onLayout={(event) =>
+              setMeasured({ size: fontSize, width: event.nativeEvent.layout.width })
+            }
+            style={{ ...style, flexShrink: 0 }}
+          >
+            {text}
+          </Text>
+        </View>
+      </View>
+      <Text numberOfLines={1} style={style}>
+        {text}
+      </Text>
+    </>
+  );
+}
+
+function StatTile({ item, colors, dense, compact, bordered }: {
+  item: { label: string; value: string };
+  colors: { border: string; foreground: string; foregroundMuted: string };
+  dense: boolean;
+  compact: boolean;
+  bordered: boolean;
+}) {
+  const [width, setWidth] = useState(0);
+  const padding = dense ? 8 : 12;
+  const available = Math.max(0, width - padding * 2);
+  return (
+    <View
+      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+      style={{
+        position: "relative",
+        flexGrow: 1,
+        flexBasis: dense ? 84 : compact ? 100 : 120,
+        minWidth: 0,
+        alignItems: "center",
+        paddingHorizontal: padding,
+        paddingVertical: dense ? 2 : 4,
+        gap: dense ? 4 : 6,
+        borderLeftWidth: bordered ? 1 : 0,
+        borderLeftColor: colors.border,
+      }}
+    >
+      <FitText
+        text={item.value}
+        available={available}
+        base={18}
+        lineHeight={22}
+        color={colors.foreground}
+        weight="500"
+        tabular
+      />
+      <FitText
+        text={item.label}
+        available={available}
+        base={12}
+        min={10}
+        lineHeight={16}
+        color={colors.foregroundMuted}
+      />
+    </View>
+  );
+}
 
 export function UsageStats({ items, colors, compact, dense }: {
   items: ReadonlyArray<{ label: string; value: string }>;
@@ -10,10 +117,14 @@ export function UsageStats({ items, colors, compact, dense }: {
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderColor: colors.border, borderRadius: 20, paddingVertical: dense ? 6 : compact ? 8 : 18, rowGap: dense ? 10 : 16 }}>
       {items.map((item, index) => (
-        <View key={item.label} style={{ flexGrow: 1, flexBasis: dense ? 84 : compact ? 100 : 120, minWidth: 0, alignItems: "center", paddingHorizontal: dense ? 8 : 12, paddingVertical: dense ? 2 : 4, gap: dense ? 4 : 6, borderLeftWidth: index === 0 || compact ? 0 : 1, borderLeftColor: colors.border }}>
-          <Text style={{ color: colors.foreground, fontSize: 18, fontWeight: "500", fontVariant: ["tabular-nums"] }}>{item.value}</Text>
-          <Text style={{ color: colors.foregroundMuted, fontSize: 12 }}>{item.label}</Text>
-        </View>
+        <StatTile
+          key={item.label}
+          item={item}
+          colors={colors}
+          dense={dense === true}
+          compact={compact}
+          bordered={index > 0 && !compact}
+        />
       ))}
     </View>
   );

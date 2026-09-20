@@ -3,6 +3,8 @@ import { homedir } from "node:os";
 import type { PluginServerContext } from "@getpaseo/plugin/server";
 import {
   createActivityByDayHandler,
+  createAgentCreationsHandler,
+  createAgentLifetimeHandler,
   createAgentsHandler,
   createByProviderHandler,
   createExportHandler,
@@ -19,6 +21,8 @@ import { resolveAgentModel } from "./server/resolve-model.ts";
 import { createUsageStore } from "./server/store.ts";
 import {
   usageActivityByDayRpc,
+  usageAgentCreationsRpc,
+  usageAgentLifetimeRpc,
   usageAgentsRpc,
   usageAgentUnarchiveRpc,
   usageByProviderRpc,
@@ -66,6 +70,14 @@ export default function contribute(server: PluginServerContext) {
   server.handle(usageActivityByDayRpc, (input, context) => {
     void background.request(context.paseo);
     return createActivityByDayHandler(store)(input);
+  });
+  server.handle(usageAgentLifetimeRpc, (input, context) => {
+    void background.request(context.paseo);
+    return createAgentLifetimeHandler(store)(input);
+  });
+  server.handle(usageAgentCreationsRpc, (input, context) => {
+    void background.request(context.paseo);
+    return createAgentCreationsHandler(store)(input);
   });
   server.handle(usageExportRpc, createExportHandler(store));
   server.handle(usageHostInfoRpc, () => ({ homeDir: homedir() }));

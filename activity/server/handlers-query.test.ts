@@ -6,6 +6,8 @@ import { test } from "node:test";
 import type { PluginHandlerContext } from "@getpaseo/plugin/server";
 import {
   createActivityByDayHandler,
+  createAgentCreationsHandler,
+  createAgentLifetimeHandler,
   createAgentsHandler,
   createByProviderHandler,
   createSkillsByNameHandler,
@@ -117,6 +119,83 @@ test("usage.agents filters by workspace and merges the registry", async () => {
     assert.equal(result.items[0]?.archivedAt, null);
     assert.equal(result.items[0]?.updatedAt, "2026-09-19T10:00:00.000Z");
     assert.equal(result.items[1]?.archivedAt, "2026-09-19T11:00:00.000Z");
+  } finally {
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("usage.agent-lifetime reads spans from the registry, active agents included", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "fast-lifetime-"));
+  const store = createUsageStore({ dir, driver: "sqlite" });
+  const registryRow = (
+    agentId: string,
+    provider: string,
+    createdAt: string,
+    archivedAt: string | null,
+  ) => ({
+    agentId,
+    workspaceId: "w1",
+    parentAgentId: null,
+    provider,
+    title: agentId,
+    createdAt,
+    archivedAt,
+    updatedAt: archivedAt ?? createdAt,
+  });
+  try {
+    store.upsertAgents([
+      registryRow("codex-old", "codex", "2026-09-07T03:34:09.656Z", "2026-09-18T17:18:18.001Z"),
+      registryRow("claude-long", "claude", "2026-09-08T03:09:29.070Z", "2026-09-19T17:18:17.939Z"),
+      registryRow("active", "claude", "2026-09-01T00:00:00.000Z", null),
+    ]);
+    const all = await createAgentLifetimeHandler(store)({});
+    // `active` spans created→now, which is wider than either archived span.
+    assert.equal(all.longest?.agentId, "active");
+    assert.equal(all.longest?.archivedAt, null);
+    assert.equal(all.sampleSize, 3);
+
+    const codexOnly = await createAgentLifetimeHandler(store)({ provider: "codex" });
+    assert.equal(codexOnly.longest?.agentId, "codex-old");
+    assert.equal(codexOnly.sampleSize, 1);
+  } finally {
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("usage.agent-creations buckets registry rows by day and provider", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "fast-creations-"));
+  const store = createUsageStore({ dir, driver: "sqlite" });
+  try {
+    store.upsertAgents(
+      [
+        ["a1", "claude-code", "2026-09-19T01:00:00.000Z"],
+        ["a2", "claude", "2026-09-19T02:00:00.000Z"],
+        ["a3", "codex", "2026-09-19T03:00:00.000Z"],
+        ["a4", "codex", "2026-08-01T03:00:00.000Z"],
+      ].map(([agentId, provider, createdAt]) => ({
+        agentId: agentId!,
+        workspaceId: "w1",
+        parentAgentId: null,
+        provider: provider!,
+        title: agentId!,
+        createdAt: createdAt!,
+        archivedAt: null,
+        updatedAt: createdAt!,
+      })),
+    );
+    const all = await createAgentCreationsHandler(store)({ from: "2026-09-01T00:00:00.000Z" });
+    assert.deepEqual(
+      all.days.map((day) => [day.date, day.total, day.providers.map((item) => `${item.provider}:${item.count}`)]),
+      [["2026-09-19", 3, ["claude:2", "codex:1"]]],
+    );
+
+    const codexOnly = await createAgentCreationsHandler(store)({ provider: "codex" });
+    assert.deepEqual(codexOnly.days.map((day) => [day.date, day.total]), [
+      ["2026-08-01", 1],
+      ["2026-09-19", 1],
+    ]);
   } finally {
     store.close();
     rmSync(dir, { recursive: true, force: true });

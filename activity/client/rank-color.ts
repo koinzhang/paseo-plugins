@@ -54,12 +54,16 @@ function hslToHex(hue: number, saturation: number, lightness: number): string {
 
 const GOLDEN_ANGLE = 137.508;
 
-export function mcpServerColor(server: string, accent: string): string {
+/**
+ * Stable per-entity colour derived from the theme accent hue (MCP servers,
+ * providers): same key → same colour, spread by golden angle.
+ */
+export function entityColor(key: string, accent: string): string {
   const rgb = parseHex(accent);
   if (!rgb) return accent;
   let hash = 0;
-  for (let i = 0; i < server.length; i += 1) {
-    hash = (hash * 31 + server.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < key.length; i += 1) {
+    hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
   }
   const [baseHue, baseSaturation, baseLightness] = rgbToHsl(rgb);
   const hue = (baseHue + hash * GOLDEN_ANGLE) % 360;

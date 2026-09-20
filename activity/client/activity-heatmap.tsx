@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import type { ActivityDay } from "../shared/usage.ts";
 import { activityLevel, buildActivityCalendar, type HeatmapMode } from "../shared/activity.ts";
 import { useAppLanguage } from "./use-app-language.ts";
+import { ACTIVITY_MIX_STEPS, mixColor } from "./color-mix.ts";
 export { computeStreaks, type HeatmapMode } from "../shared/activity.ts";
 
 type ThemeColors = {
@@ -11,24 +12,6 @@ type ThemeColors = {
 };
 
 type HoveredMonth = { year: number; month: number };
-
-// Derive the activity palette from the active theme.
-function mix(base: string, accent: string, amount: number): string {
-  const parse = (value: string): number[] | null => {
-    const hex = value.replace("#", "").trim();
-    const expanded = hex.length === 3 || hex.length === 4
-      ? hex.split("").map((c) => c + c).join("")
-      : hex;
-    // Use first 6 digits only — ignore trailing alpha on 8-digit hex.
-    const rgb = expanded.slice(0, 6);
-    if (!/^[0-9a-fA-F]{6}$/.test(rgb)) return null;
-    return [0, 2, 4].map((i) => parseInt(rgb.slice(i, i + 2), 16));
-  };
-  const a = parse(base);
-  const b = parse(accent);
-  if (!a || !b) return base;
-  return `rgb(${a.map((v, i) => Math.round(v + (b[i]! - v) * amount)).join(",")})`;
-}
 
 function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
   return `${count.toLocaleString()} ${count === 1 ? singular : pluralForm}`;
@@ -67,7 +50,7 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
       : 0;
   const gridWidth = weeks.length > 0 ? weeks.length * (cellSize + gap) - gap : 0;
   const needsScroll = gridWidth > width + 0.5;
-  const palette = [colors.surface2, ...[0.22, 0.43, 0.68, 1].map(n => mix(colors.surface2, colors.accent, n))];
+  const palette = [colors.surface2, ...ACTIVITY_MIX_STEPS.map(n => mixColor(colors.surface2, colors.accent, n))];
   const activeKey = hovered ?? selected;
   const activeIndex = weeks.flat().findIndex(cell => cell.key === activeKey);
   const active = activeIndex >= 0 ? weeks.flat()[activeIndex] : undefined;
@@ -123,7 +106,7 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
                     hidden
                       ? base
                       : monthFocus && inMonth
-                        ? mix(base, colors.accent, 0.04)
+                        ? mixColor(base, colors.accent, 0.04)
                         : base;
                   const opacity = hidden
                     ? 0
