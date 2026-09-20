@@ -34,9 +34,9 @@ export type HeatmapMode = "daily" | "weekly" | "cumulative";
 
 export function buildActivityCalendar(days: readonly ActivityDay[], mode: HeatmapMode, _from?: string, today = new Date(), locale = "en") {
   const end = startOfLocalDay(today);
-  // Always fixed 52-week year window (ChatGPT-style). Range chips filter RPC data only —
-  // short windows must not shrink the grid (021). `_from` kept for call-site compatibility.
-  const start = addDays(startOfWeekSunday(end), -7 * 51);
+  // A complete 52 × 7 rolling window ending today, with no future padding (048).
+  // Range chips filter RPC data only (021). `_from` kept for call-site compatibility.
+  const start = addDays(end, -(52 * 7 - 1));
   const first = start;
   const daily = new Map(days.map(day => [day.date, day]));
   const weekly = new Map<string, ActivityDay>();
@@ -87,7 +87,7 @@ export function buildActivityCalendar(days: readonly ActivityDay[], mode: Heatma
       messages += raw?.messages ?? 0;
       const value =
         mode === "weekly"
-          ? weekly.get(toDayKey(cursor))
+          ? weekly.get(toDayKey(startOfWeekSunday(date)))
           : mode === "cumulative"
             ? { skills, mcp, agents, messages, total: skills + mcp + agents + messages }
             : raw;

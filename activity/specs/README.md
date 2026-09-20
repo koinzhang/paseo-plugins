@@ -73,6 +73,8 @@
 | [046-host-archive-optimistic](./046-host-archive-optimistic/) | 已由 047 替代 | 使用明确 archivedAt 实时更新 Active/Archived |
 | [047-beta2-observation-remediation](./047-beta2-observation-remediation/) | 已实现，页面验收待完成 | 独立目录订阅、明确生命周期/归档、清理与 SDK 契约测试 |
 
+| [048-heatmap-rolling-rectangle](./048-heatmap-rolling-rectangle/) | 已实现 | 热力图固定 364 天完整矩形，今天始终在右下角 |
+
 ## 约定
 
 每个编号目录通常含：

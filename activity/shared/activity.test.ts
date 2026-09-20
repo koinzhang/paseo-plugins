@@ -63,17 +63,50 @@ describe("activity calendar", () => {
     assert.equal(weeklyCell?.agents, 1);
     assert.equal(weeklyCell?.messages, 3);
   });
-  it("includes the current week across DST and marks future padding cells", () => {
+  it("keeps complete rolling windows across day, month, year, leap day and DST boundaries", () => {
     const previous = process.env.TZ;
     process.env.TZ = "America/New_York";
     try {
-      const result = buildActivityCalendar([], "daily", new Date(2026, 2, 1).toISOString(), new Date(2026, 2, 15));
-      assert.equal(result.weeks.length, 52);
-      assert.equal(result.weeks[51]?.[0]?.key, "2026-03-15");
-      assert.equal(result.weeks[51]?.[1]?.future, true);
+      for (const [year, month, day] of [
+        [2026, 8, 19], [2026, 8, 20], [2026, 8, 21], // Saturday → Sunday → Monday
+        [2026, 8, 30], [2026, 9, 1],
+        [2026, 11, 31], [2027, 0, 1],
+        [2024, 1, 29], [2024, 2, 1],
+        [2026, 2, 8], [2026, 2, 9], [2026, 10, 1], [2026, 10, 2],
+      ]) {
+        const end = new Date(year!, month!, day!);
+        for (const mode of ["daily", "weekly", "cumulative"] as const) {
+          const result = buildActivityCalendar(days, mode, undefined, end);
+          const cells = result.weeks.flat();
+          assert.equal(result.weeks.length, 52);
+          assert.ok(result.weeks.every(week => week.length === 7));
+          assert.equal(new Set(cells.map(cell => cell.key)).size, 364);
+          assert.ok(cells.every(cell => !cell.future && !cell.excluded));
+          const expected = new Date(end);
+          for (let i = cells.length - 1; i >= 0; i--) {
+            const key = `${expected.getFullYear()}-${String(expected.getMonth() + 1).padStart(2, "0")}-${String(expected.getDate()).padStart(2, "0")}`;
+            assert.equal(cells[i]?.key, key);
+            expected.setDate(expected.getDate() - 1);
+          }
+        }
+      }
     } finally {
       if (previous === undefined) delete process.env.TZ; else process.env.TZ = previous;
     }
+  });
+  it("keeps natural-week totals when Sunday falls inside a visual column", () => {
+    const result = buildActivityCalendar(days, "weekly", from, today);
+    const last = result.weeks[51]!;
+    assert.equal(last[0]?.key, "2026-03-04");
+    assert.equal(last.find(cell => cell.key === "2026-03-07")?.agents, 2);
+    assert.equal(last.find(cell => cell.key === "2026-03-08")?.agents, 1);
+    assert.equal(last[6]?.messages, 3);
+  });
+  it("carries history before the rolling window into cumulative totals", () => {
+    const history = [{ date: "2020-01-01", skills: 1, mcp: 2, agents: 3, messages: 4, total: 10 }, ...days];
+    const cells = buildActivityCalendar(history, "cumulative", undefined, today).weeks.flat();
+    assert.equal(cells[0]?.total, 10);
+    assert.equal(cells[363]?.total, 28);
   });
   it("renders empty windows and bounded intensity", () => {
     const result = buildActivityCalendar([], "daily", undefined, today);
