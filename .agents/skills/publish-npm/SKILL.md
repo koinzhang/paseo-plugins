@@ -13,7 +13,7 @@ Canonical human doc: [CONTRIBUTING.md § Publishing to npm](../../../CONTRIBUTIN
 ## Rules
 
 - Publish only through a **published GitHub Release**, not by push-to-`main` alone.
-- Tag shape: `{plugin-id}-v{semver}` (Activity: `activity-v0.3.0`).
+- Tag shape: `{plugin-id}-v{semver}` (Activity: `activity-v0.4.0`).
 - Tag semver **must** equal that plugin's `package.json` `version`.
 - Do not force-republish an existing npm version; bump again if needed.
 - Do not create a release unless the user asked to publish/release (version bump on `main` can land without a tag).

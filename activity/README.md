@@ -37,7 +37,7 @@ Everything lives on the daemon machine in `~/.paseo/plugin-data/activity/` (SQLi
 
 ## Install
 
-Requires Paseo >= 0.8.0.
+Requires Paseo >= 0.8.0. **0.4.0** is the last release that supports Paseo 0.8.0; later versions will require Paseo >= 0.9.0.
 
 From Git (Paseo 0.8 and later):
 
@@ -45,10 +45,11 @@ From Git (Paseo 0.8 and later):
 paseo plugin add koinzhang/paseo-plugins --path activity
 ```
 
-From npm (Paseo 0.9 and later; this is the source paseo.cafe hands to Paseo 0.9+):
+From npm (Paseo 0.9 and later; this is the source paseo.cafe hands to Paseo 0.9+). Pin `0.4.0` on Paseo 0.8:
 
 ```bash
 paseo plugin install npm:@koinzhang/paseo-plugin-activity
+# Paseo 0.8: npm:@koinzhang/paseo-plugin-activity@0.4.0
 ```
 
 After source changes, reload and check status:
@@ -78,7 +79,7 @@ This plugin is spec-driven: read [specs/README.md](./specs/README.md) before cod
 
 ## Publish
 
-Release history: [CHANGELOG.md](./CHANGELOG.md) (current **0.3.0**). npm releases go through a GitHub Release tag `activity-vX.Y.Z` (not push-to-`main` alone). Steps: [CONTRIBUTING.md § Publishing to npm](../CONTRIBUTING.md#publishing-to-npm).
+Release history: [CHANGELOG.md](./CHANGELOG.md) (current **0.4.0**). npm releases go through a GitHub Release tag `activity-vX.Y.Z` (not push-to-`main` alone). Steps: [CONTRIBUTING.md § Publishing to npm](../CONTRIBUTING.md#publishing-to-npm).
 
 ## License
 

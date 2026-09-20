@@ -29,14 +29,14 @@ Data lives in `~/.paseo/plugin-data/activity/` (`usage.db`). Timeline / `agents.
 
 ## Install
 
-Requires Paseo >= 0.8.0.
+Requires Paseo >= 0.8.0. Activity **0.4.0** is the last release that supports Paseo 0.8.0; later versions will require Paseo >= 0.9.0.
 
 ```bash
 paseo plugin add koinzhang/paseo-plugins --path activity
 paseo plugin ls                # confirm running
 ```
 
-From npm (Paseo 0.9+): `paseo plugin install npm:@koinzhang/paseo-plugin-activity`.
+From npm (Paseo 0.9+): `paseo plugin install npm:@koinzhang/paseo-plugin-activity`. On Paseo 0.8, pin `@0.4.0`.
 
 For a local checkout (development), install the directory instead:
 

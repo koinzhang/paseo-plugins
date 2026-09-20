@@ -29,14 +29,14 @@ Paseo 插件 monorepo。所有插件独立目录、独立 `paseo-plugin.json`，
 
 ## 安装
 
-需要 Paseo >= 0.8.0。
+需要 Paseo >= 0.8.0。Activity **0.4.0** 是最后支持 Paseo 0.8.0 的版本；之后的版本将要求 Paseo >= 0.9.0。
 
 ```bash
 paseo plugin add koinzhang/paseo-plugins --path activity
 paseo plugin ls                # 确认 running
 ```
 
-npm（Paseo 0.9+）：`paseo plugin install npm:@koinzhang/paseo-plugin-activity`。
+npm（Paseo 0.9+）：`paseo plugin install npm:@koinzhang/paseo-plugin-activity`。Paseo 0.8 请钉住 `@0.4.0`。
 
 本地 checkout（开发）改为安装目录：
 
