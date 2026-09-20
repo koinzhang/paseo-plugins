@@ -1,7 +1,15 @@
-import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
-
+/**
+ * Structural timeline entry shape for user-message previews.
+ *
+ * Do not import `@getpaseo/protocol/*` from client/: Paseo compiles plugins
+ * without installing that package, and type-only imports still fail the
+ * `paseo-plugin-client-runtime-boundary` build (see server/host-types.ts).
+ */
 export type TimelineTailEntry = {
-  item: AgentTimelineItem;
+  item: {
+    type: string;
+    text?: string | null;
+  };
   seqStart?: number;
   timestamp?: string;
 };
