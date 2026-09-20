@@ -236,7 +236,8 @@ export function buildAgentCreationBuckets(
 
 /**
  * Providers across the whole window, ranked by total creations (051). Drives
- * the stable stack order, colour assignment and tooltip rows.
+ * the stable stack order and colour assignment; tooltip rows use
+ * `stackCreationProviders` so zero-count series are omitted (056).
  */
 export function rankCreationProviders(
   buckets: readonly CreationBucket[],

@@ -3,7 +3,7 @@
 - 状态：已实现（页面像素验收待用户在应用内确认）
 - 日期：2026-09-20
 - 依赖：049（寿命 RPC / 直方图）、050（固定 30 天窗口、KPI 排布）、005（注册表）、016（provider 归一）
-- 修订：049 §4.2 / §4.3 / §5、050 §4.1 第 2 格 / §4.3 / §5 的对应条目以本目录为准
+- 修订：049 §4.2 / §4.3 / §5、050 §4.1 第 2 格 / §4.3 / §5 的对应条目以本目录为准；直方图日柱外观经 [053](../053-kpi-and-bar-polish/)（段圆角）再经 [055](../055-creations-day-gradient/)（整块软渐变）修订；浮层行经 [056](../056-creations-tooltip-nonzero/) 只列当日非零 provider
 
 ## 1. 背景
 
@@ -17,7 +17,7 @@
 |---|---|
 | G1 | 新增 `usage.agent-creations`：按本地日返回创建数 + **当日 provider 明细**（只读注册表，不带 tool_calls / messages） |
 | G2 | 直方图每根柱按 provider 堆叠，颜色按 provider 稳定派生（同一 provider 跨日同色） |
-| G3 | 悬浮 / 聚焦 / 点击柱显示浮层：窗口内**所有** provider 的行（当日为 0 也列出）+ 当日日期（对齐参考图） |
+| G3 | 悬浮 / 聚焦 / 点击柱显示浮层：当日有创建的 provider 行 + 当日日期（**056**：当日为 0 的系列不再列出） |
 | G4 | 最长寿命纳入**仍活跃**的 agent（创建→现在），KPI 值追加 `· active` 标记 |
 | G5 | 分桶收敛为固定 30 根日柱：删除日 / 周 / 月粒度切换（050 已固定窗口，粒度分支成为死代码） |
 | G6 | `mcpServerColor` → `entityColor`：MCP 排名图标与 provider 堆叠共用同一套稳定派生色 |
@@ -44,10 +44,10 @@
 
 - 窗口：`fixedWindowFrom(30)` → 本地今天往前 29 天 00:00 起，恒 30 根日柱（含今天）
 - 分桶：`buildAgentCreationBuckets(days, { from, today })` 零填充 `[from, today]`；越界日丢弃；`count>0` 的切片才保留
-- 堆叠顺序与配色：`rankCreationProviders(buckets)` 给出窗口内 provider 排名（总量降序，同值按 id 升序），驱动配色与浮层行序；`stackCreationProviders` 按同一排名为每根柱生成自顶而下的段序——**窗口总量最大的系列贴底**，当日无创建的系列省略；配色优先级（`creationProviderColors`）：① 有品牌色的 provider 固定用品牌色（含榜首）② 榜首无品牌色时用主题 `accent` ③ 其余用 chart palette
-- 段圆角：**仅最上方一段**取 3px 上圆角，其余段与所有底角为直角（053 修订；051 原为每段 3px 全圆角，接缝出现缺口）
-- 柱高：每段 `max(2, round(count / 窗口峰值 * 图高))`；当日 0 创建显示 2px 的 `surface2` 底槽（无圆角）
-- 浮层：`hovered ?? selected`（悬浮 / 聚焦 / 点击切换），绝对定位于柱区上方 6px，水平按柱中心夹紧在图宽内；内容为窗口内所有 provider 的 `label: count` 行（当日为 0 显示 0）+ 底部日期；`accessibilityLiveRegion="polite"`
+- 堆叠顺序与配色：`rankCreationProviders(buckets)` 给出窗口内 provider 排名（总量降序，同值按 id 升序），驱动配色与浮层行序；`stackCreationProviders` 按同一排名为每根柱生成自顶而下的色序——**窗口总量最大的系列贴底**，当日无创建的系列省略；配色优先级（`creationProviderColors`）：① 有品牌色的 provider 固定用品牌色（含榜首）② 榜首无品牌色时用主题 `accent` ③ 其余用 chart palette
+- **055 修订**：日柱改为**单块**填充——多 provider 用 `to bottom` 软渐变（色序同上、停点按当日 count 加权），单 provider 纯色；整柱顶角 3px、底角直角（取代 051 硬堆叠段与 053 段圆角规则）
+- 柱高：`max(2, round(当日总量 / 窗口峰值 * 图高))`（055；原按段累加）；当日 0 创建显示 2px 的 `surface2` 底槽（无圆角）
+- 浮层：`hovered ?? selected`（悬浮 / 聚焦 / 点击切换），绝对定位于柱区上方 6px，水平按柱中心夹紧在图宽内；内容为当日有创建的 provider 的 `label: count` 行（**056**：与 `stackCreationProviders` 同序，省略当日 0）+ 底部日期；空槽日可仅显示日期；`accessibilityLiveRegion="polite"`
 - 标题：`Agents`；窗口内为 0 时显示 `No agents created in the last 30 days`
 - 每根柱有无障碍标签：`<日期>: N agents — <provider> <count>, …`
 

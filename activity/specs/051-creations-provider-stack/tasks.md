@@ -23,7 +23,7 @@
 - [x] T3.1 `mcpServerColor` → `entityColor`（rank-color.ts + Global rank 列表 + 测试）
   - 验证：`client/rank-color.test.ts`（4 例）
 - [x] T3.2 `AgentCreations` 重写：provider 堆叠柱 + 浮层卡片 + 轴标签
-  - 验收：同一 provider 跨日同色；当日 0 创建显示底槽；浮层列出窗口内全部 provider（含 0）与日期；悬浮 / 聚焦 / 点击切换；每柱有无障碍标签
+  - 验收：同一 provider 跨日同色；当日 0 创建显示底槽；浮层列出当日有创建的 provider 与日期（056 起省略 0）；悬浮 / 聚焦 / 点击切换；每柱有无障碍标签
   - 验证：typecheck + 实机数据链路（见 T4.2）
 - [x] T3.3 Global 面接线：`histogramQuery` 改用 `usage.agent-creations`；KPI 传 `{ durationMs, active }`
   - 验收：queryKey 仍不含 range chips；`archivedAt == null` → `active`

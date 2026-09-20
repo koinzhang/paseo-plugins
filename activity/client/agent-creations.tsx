@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, View, type ViewStyle } from "react-native";
 import {
   buildAgentCreationBuckets,
   rankCreationProviders,
@@ -8,6 +8,7 @@ import {
   type CreationProviderSlice,
 } from "../shared/activity.ts";
 import type { AgentCreationDay } from "../shared/usage.ts";
+import { creationDayFill } from "./color-mix.ts";
 import { chartColorScheme, creationProviderColors } from "./rank-color.ts";
 import { fixedWindowFrom } from "./range.ts";
 
@@ -35,10 +36,10 @@ function agentCountText(count: number): string {
 }
 
 /**
- * Agent creations per local day over a fixed window (051): the last
- * `windowDays` days ending today, independent of the range chips. Bars stack by
- * window-ranked provider (largest series at the bottom); hovering a bar shows a
- * provider breakdown card with the date.
+ * Agent creations per local day over a fixed window (051 / 055): the last
+ * `windowDays` days ending today, independent of the range chips. Each day is
+ * one bar filled with a soft provider-colour gradient (055); hovering shows a
+ * provider breakdown card (nonzero that day only, 056) with the date.
  */
 export function AgentCreations({ days, windowDays, colors, compact, locale }: {
   days: readonly AgentCreationDay[];
@@ -80,9 +81,9 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
     colors.accent,
     scheme,
   );
-  const countByProvider = new Map(
-    (active?.providers ?? []).map((item) => [item.provider, item.count]),
-  );
+  const tooltipProviders = active
+    ? stackCreationProviders(providers, active.providers)
+    : [];
   const first = buckets[0];
 
   return (
@@ -120,19 +121,16 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
                   {bucket.providers.length === 0 ? (
                     <View style={{ height: 2, backgroundColor: colors.surface2 }} />
                   ) : (
-                    stackCreationProviders(providers, bucket.providers).map((slice, index) => (
-                      <View
-                        key={slice.provider}
-                        style={{
-                          height: max > 0 ? Math.max(2, Math.round((slice.count / max) * chartHeight)) : 2,
-                          // Only the topmost segment is rounded (051): rounded
-                          // joints would notch every stack boundary.
-                          borderTopLeftRadius: index === 0 ? 3 : 0,
-                          borderTopRightRadius: index === 0 ? 3 : 0,
-                          backgroundColor: colorByProvider.get(slice.provider) ?? colors.accent,
-                        }}
-                      />
-                    ))
+                    <View
+                      style={{
+                        height: max > 0 ? Math.max(2, Math.round((bucket.count / max) * chartHeight)) : 2,
+                        ...dayBarStyle(
+                          stackCreationProviders(providers, bucket.providers),
+                          (provider) => colorByProvider.get(provider) ?? colors.accent,
+                          colors.accent,
+                        ),
+                      }}
+                    />
                   )}
                 </Pressable>
               ))}
@@ -160,7 +158,7 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
                   gap: 4,
                 }}
               >
-                {providers.map((item) => (
+                {tooltipProviders.map((item) => (
                   <View key={item.provider} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <View
                       style={{
@@ -171,7 +169,7 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
                       }}
                     />
                     <Text style={{ color: colors.foreground, fontSize: 13 }}>
-                      {item.label}: {countByProvider.get(item.provider) ?? 0}
+                      {item.label}: {item.count}
                     </Text>
                   </View>
                 ))}
@@ -204,4 +202,22 @@ function providerBreakdown(
   if (stacked.length === 0) return "";
   // Top→bottom to match the painted stack.
   return ` — ${stacked.map((slice) => `${slice.label} ${slice.count}`).join(", ")}`;
+}
+
+/** View fill for a day bar: solid or soft gradient (055). */
+function dayBarStyle(
+  slices: readonly CreationProviderSlice[],
+  colorOf: (provider: string) => string,
+  fallback: string,
+): ViewStyle {
+  const fill = creationDayFill(slices, colorOf, fallback);
+  const radius = { borderTopLeftRadius: 3, borderTopRightRadius: 3 } as const;
+  if (fill.type === "empty") return {};
+  if (fill.type === "solid") return { backgroundColor: fill.color, ...radius };
+  // Set both names: Electron / RN Web often ignore the experimental key.
+  return {
+    backgroundImage: fill.image,
+    experimental_backgroundImage: fill.image,
+    ...radius,
+  } as ViewStyle;
 }
