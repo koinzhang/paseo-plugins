@@ -29,13 +29,26 @@ Paseo 插件仓库。当前包含插件 **Activity**（`activity/`）：本地�
 
 ```bash
 npm run typecheck                 # 提交/安装前必跑
-paseo plugin install .            # 安装（id = activity）
+paseo plugin install "$PWD"       # 安装（id = activity）；必须绝对路径，daemon 按自身 cwd 解析相对路径
 paseo plugin reload activity      # 源码改动后重载
 paseo plugin logs activity        # 查看子进程日志
 paseo plugin ls                   # 确认 running
 ```
 
 改完 `client/` / `server/` / `shared/` / 入口 / `paseo-plugin.json` 后**主动** `paseo plugin reload activity`，不必等用户再说「重载」。
+
+### 与 npm 正式版并存（dev 调试）
+
+**不要**改 `paseo-plugin.json` 的 `id` 来区分 dev / 正式版；用安装时的 `--id` 覆盖运行时 ID：
+
+```bash
+paseo plugin install "$PWD" --id activity-dev   # dev 实例；发布仍用 manifest 的 activity
+paseo plugin reload activity-dev
+```
+
+- 同 ID 重复安装会被拒（`Plugin ID "activity" is already configured; choose another ID with --id`），不会覆盖已有安装
+- 数据目录由 `shared/plugin-id.ts` 的 `PLUGIN_ID` 硬编码，SDK 不向插件暴露 runtime id：dev 实例仍读写 `~/.paseo/plugin-data/activity/`，与 npm 版共库；两者同时启用会出现两个 Activity 入口
+- 要完全隔离数据只能跑第二个 daemon（独立配置目录）
 
 ## 版本控制（jj）
 
