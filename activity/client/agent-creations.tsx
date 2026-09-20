@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, Text, View, type ViewStyle } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import {
   buildAgentCreationBuckets,
   rankCreationProviders,
@@ -8,7 +8,7 @@ import {
   type CreationProviderSlice,
 } from "../shared/activity.ts";
 import type { AgentCreationDay } from "../shared/usage.ts";
-import { creationDayFill } from "./color-mix.ts";
+import { creationBarColor } from "./color-mix.ts";
 import { chartColorScheme, creationProviderColors } from "./rank-color.ts";
 import { fixedWindowFrom } from "./range.ts";
 
@@ -36,10 +36,10 @@ function agentCountText(count: number): string {
 }
 
 /**
- * Agent creations per local day over a fixed window (051 / 055): the last
+ * Agent creations per local day over a fixed window (051 / 057): the last
  * `windowDays` days ending today, independent of the range chips. Each day is
- * one bar filled with a soft provider-colour gradient (055); hovering shows a
- * provider breakdown card (nonzero that day only, 056) with the date.
+ * one accent-intensity bar (057); hovering shows a provider breakdown card
+ * (nonzero that day only, 056) with brand-coloured chips and the date.
  */
 export function AgentCreations({ days, windowDays, colors, compact, locale }: {
   days: readonly AgentCreationDay[];
@@ -123,11 +123,14 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
                     <View
                       style={{
                         height: max > 0 ? Math.max(2, Math.round((bucket.count / max) * chartHeight)) : 2,
-                        ...dayBarStyle(
-                          stackCreationProviders(providers, bucket.providers),
-                          (provider) => colorByProvider.get(provider) ?? colors.accent,
+                        backgroundColor: creationBarColor(
+                          bucket.count,
+                          max,
+                          colors.surface2,
                           colors.accent,
                         ),
+                        borderTopLeftRadius: 3,
+                        borderTopRightRadius: 3,
                       }}
                     />
                   )}
@@ -201,22 +204,4 @@ function providerBreakdown(
   if (stacked.length === 0) return "";
   // Top→bottom to match the painted stack.
   return ` — ${stacked.map((slice) => `${slice.label} ${slice.count}`).join(", ")}`;
-}
-
-/** View fill for a day bar: solid or soft gradient (055). */
-function dayBarStyle(
-  slices: readonly CreationProviderSlice[],
-  colorOf: (provider: string) => string,
-  fallback: string,
-): ViewStyle {
-  const fill = creationDayFill(slices, colorOf, fallback);
-  const radius = { borderTopLeftRadius: 3, borderTopRightRadius: 3 } as const;
-  if (fill.type === "empty") return {};
-  if (fill.type === "solid") return { backgroundColor: fill.color, ...radius };
-  // Set both names: Electron / RN Web often ignore the experimental key.
-  return {
-    backgroundImage: fill.image,
-    experimental_backgroundImage: fill.image,
-    ...radius,
-  } as ViewStyle;
 }

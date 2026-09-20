@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Chart palette: light / dark colour sets swapped (bright fills on light UI, deep fills on dark UI).
 - Agent creations colours: branded providers keep brand accents; unbranded catalog providers and any future ACP id fall back to the soft chart palette (no theme `accent` for the window leader).
 - Agent creations hover card lists only providers with creations that day (no `: 0` rows); empty days still show the date alone.
+- Agent creations day bars use the same theme-accent intensity steps as the Activity heatmap; provider brand colours remain only on the hover card chips.
 
 ### Fixed
 

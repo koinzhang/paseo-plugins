@@ -3,7 +3,7 @@
 - 状态：已实现（页面像素验收待用户在应用内确认）
 - 日期：2026-09-20
 - 依赖：049（寿命 RPC / 直方图）、050（固定 30 天窗口、KPI 排布）、005（注册表）、016（provider 归一）
-- 修订：049 §4.2 / §4.3 / §5、050 §4.1 第 2 格 / §4.3 / §5 的对应条目以本目录为准；直方图日柱外观经 [053](../053-kpi-and-bar-polish/)（段圆角）再经 [055](../055-creations-day-gradient/)（整块软渐变）修订；浮层行经 [056](../056-creations-tooltip-nonzero/) 只列当日非零 provider
+- 修订：049 §4.2 / §4.3 / §5、050 §4.1 第 2 格 / §4.3 / §5 的对应条目以本目录为准；直方图日柱外观经 [053](../053-kpi-and-bar-polish/)（段圆角）→ [055](../055-creations-day-gradient/)（整块）→ [057](../057-creations-accent-bars/)（accent 强度色，柱上不再用 provider 色）；浮层行经 [056](../056-creations-tooltip-nonzero/) 只列当日非零 provider，浮层色块仍用品牌 / palette
 
 ## 1. 背景
 
