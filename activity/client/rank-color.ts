@@ -131,6 +131,8 @@ const PROVIDER_BRAND: Record<string, Record<ChartColorScheme, string>> = {
   omp: { light: "#9a90f5", dark: "#7f73f2" },
   // GitHub Copilot
   copilot: { light: "#5fed83", dark: "#077124" },
+  // CodeBuddy purple — dark is a step deeper than light
+  codebuddy: { light: "#6c4dff", dark: "#5a3fd9" },
 };
 
 /** Normalized id → palette slot (aliases that normalize together share a slot). */
@@ -203,8 +205,8 @@ function paletteColor(slot: number, scheme: ChartColorScheme): string {
 
 /**
  * Stable colour for a provider id: brand accents for Claude / Codex / Cursor /
- * OpenCode / Pi / Oh My Pi / Copilot; otherwise the soft chart palette
- * (known slot or hash).
+ * OpenCode / Pi / Oh My Pi / Copilot / CodeBuddy; otherwise the soft chart
+ * palette (known slot or hash).
  */
 export function providerColor(provider: string, scheme: ChartColorScheme): string {
   const brand = brandColor(provider, scheme);

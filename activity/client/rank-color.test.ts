@@ -78,6 +78,9 @@ test("providerColor uses brand accents for Claude / Codex / Cursor / OpenCode / 
   assert.equal(providerColor("omp", "dark"), "#7f73f2");
   assert.equal(providerColor("copilot", "light"), "#5fed83");
   assert.equal(providerColor("copilot", "dark"), "#077124");
+  assert.equal(providerColor("codebuddy", "light"), "#6c4dff");
+  assert.equal(providerColor("codebuddy", "dark"), "#5a3fd9");
+  assert.equal(providerColor("codebuddy-code", "light"), providerColor("codebuddy", "light"));
   assert.notEqual(providerColor("omp", "light"), providerColor("pi", "light"));
   assert.notEqual(providerColor("claude", "light"), providerColor("claude", "dark"));
 });
