@@ -20,7 +20,7 @@ Agent Activity      → 单 agent · 工具明细（Skills / MCP）· Pill 快�
 分工原则：
 
 - Global = 习惯与 provider 对比（热力图、Insights、Models）
-- Workspace = **竖向 Agents 运营页**（列表、搜索、筛选、归档、显示偏好）+ 本仓 KPI + 打开中的 Terminals（032，host SDK 直连：列表 / 预览 / 关闭，不进本地库）+ Agents 行实时 attention（033–036：pending permission 徽标、status 色、running spinner；041：子 agent 数量角标，running 优先；043：`useAgent` 近实时 Closed / attention 字段，目录 `agent_update` 加速，15s 轮询保证完整与 permissionCount，038 不抢宿主 observation slot）；**不做**热力图 / provider·model 拆分 / 时间窗（024 / 027）
+- Workspace = **竖向 Agents 运营页**（列表、搜索、筛选、归档、显示偏好）+ 本仓 KPI + 打开中的 Terminals（032，host SDK 直连：列表 / 预览 / 关闭，不进本地库）+ Agents 行实时 attention（033–036：pending permission 徽标、status 色、running spinner；041：子 agent 数量角标，running 优先；043：`useAgent` 近实时 Closed / attention 字段；目录推送寄生宿主 observation，15s 轮询保证完整与 permissionCount，044 不在 client.paseo 再挂 observation）；**不做**热力图 / provider·model 拆分 / 时间窗（024 / 027）
 - Agent = 当前会话工具明细 + pill；Messages 计入 KPI（031），Models 仍仅全局（015）；UI 时间统一 `FormattedTime`（039）
 
 产品定位已超出「纯统计」：Workspace 面把 activity 数据接到 agent 管理上。对外说明见 [`README.md`](../README.md)。
@@ -34,7 +34,7 @@ server/          handlers · store · ingest · background-sync · hooks
 ~/.paseo/.../    SQLite：tool_calls · user_messages · agents
 ```
 
-**查询面以本地库为准**；Paseo timeline / `agents.list` 只作采集与回填 / 状态 enrichment，不在 UI 路径全量现算。Workspace Agents 行的 attention / lifecycle：目录 `paseo.agents.subscribe`（`agent_update`）增量更新状态缓存作加速，15s 轮询保证完整（035，038 修正：不调用 `list({ subscribe })`；按 placement `projectId` 过滤）。本地用量刷新（037，038 修正）：Agent / pill 订 `timeline` 真实 turn 终态事件；Workspace 仅为离开 `running`/`initializing` 的启发式提示；均 300ms + 2s settle，轮询兜底。Global 与 Terminals 仍靠轮询。Terminals 不经本地库，走 host `terminals.*`（032）。
+**查询面以本地库为准**；Paseo timeline / `agents.list` 只作采集与回填 / 状态 enrichment，不在 UI 路径全量现算。Workspace Agents 行的 attention / lifecycle 来自按 PaseoApi 实例独立拥有的目录 observation（047）；同实例共享、不同 surface 隔离，初始/重连全分页补全，15s 轮询兜底。status 与 archivedAt 只取明确字段，useAgent 空值与目录 remove 不推断 Closed/Archived。宿主 archivedAt 覆盖本地查询行，防止慢 RPC 覆盖新归档状态。本地用量刷新（037）：Agent / pill 订 `timeline` 真实 turn 终态事件（含 `subscription_restored`）；Workspace 仅为离开 `running`/`initializing` 的启发式提示；均 300ms + 2s settle，轮询兜底。Global 与 Terminals 仍靠轮询。Terminals 不经本地库，走 host `terminals.*`（032）。
 
 ### 正交事件维
 
@@ -85,6 +85,7 @@ server/          handlers · store · ingest · background-sync · hooks
 | `usage.list` / `export` 无 workspaceId、无 UI | 契约稳定；非查询主路径 | 022 |
 | Pill 幽灵层 | 宿主缺陷，插件不绕行 | 013 |
 | Spec 编号 `027` 重复 | drop-header 与 agent-activity-title | 索引可读性 |
-| 0.8 目录 observation 单 slot | 不调用 `agents.list({ subscribe })`；推送仅加速 | 038 |
+| 0.8 目录 observation 单 slot | 历史约束，当前不再兼容 | 038 |
+| 0.9 独立 API observation | 每实例自持订阅，按引用计数释放；共享连接不共享监听器 | 047 |
 
 演进与任务拆解见 [`specs/README.md`](../specs/README.md)；本文件描述稳定架构，细节以编号目录 `spec.md` / `plan.md` 为准。

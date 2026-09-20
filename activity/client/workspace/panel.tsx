@@ -37,7 +37,7 @@ import { useAppLanguage } from "../use-app-language.ts";
 import { useWorkspaceActivityRefresh } from "../use-agent-turn-end.ts";
 import { UsageStats } from "../usage-stats.tsx";
 import { AgentsSection } from "./agents-section.tsx";
-import { WorkspaceAgentLiveStatusSync } from "./agent-live-status-sync.tsx";
+import { reconcileHostArchive } from "./host-archive-sync.ts";
 import {
   AGENT_HEADER_HEIGHT,
   GROUP_OPTIONS,
@@ -122,8 +122,14 @@ export function WorkspaceActivityPanel({
   const mcpRpc = useRpc(usageMcpByToolRpc);
   const hostInfoRpc = useRpc(usageHostInfoRpc);
 
-  const agentsQueryKey = ["activity", "workspace-agents", workspaceId] as const;
-  const terminalsQueryKey = ["activity", "workspace-terminals", workspaceId] as const;
+  const agentsQueryKey = useMemo(
+    () => ["activity", "workspace-agents", workspaceId] as const,
+    [workspaceId],
+  );
+  const terminalsQueryKey = useMemo(
+    () => ["activity", "workspace-terminals", workspaceId] as const,
+    [workspaceId],
+  );
 
   const summary = useQuery({
     refetchInterval: 15_000,
@@ -183,10 +189,9 @@ export function WorkspaceActivityPanel({
     });
   });
 
-  const agentItems = agents.data?.items ?? [];
-  const liveStatusAgentIds = useMemo(
-    () => agentItems.map((item) => item.agentId),
-    [agentItems],
+  const agentItems = useMemo(
+    () => reconcileHostArchive(agents.data?.items ?? [], statuses.data),
+    [agents.data, statuses.data],
   );
   const visibleAgentItems = useMemo(() => {
     const byId = statuses.data;
@@ -839,10 +844,6 @@ export function WorkspaceActivityPanel({
 
           {showAgents ? (
             <>
-              <WorkspaceAgentLiveStatusSync
-                agentIds={liveStatusAgentIds}
-                workspaceId={workspaceId}
-              />
               <AgentsSection
               theme={theme}
               styles={styles}

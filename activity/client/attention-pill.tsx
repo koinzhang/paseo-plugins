@@ -18,18 +18,12 @@ import {
   publishAttentionStatuses,
   useAttentionStatuses,
 } from "./attention-status-store.ts";
-import { watchPillDirectory } from "./pill-directory.ts";
-import {
-  applyAgentStatusUpdate,
-  loadWorkspaceAgentStatuses,
-  type HostAgentUpdate,
-} from "./workspace/list-host-agents.ts";
+import { watchAgentDirectory } from "./agent-directory.ts";
+import { agentStatusInfo } from "./workspace/list-host-agents.ts";
 import type { AgentStatusInfo } from "./workspace/constants.ts";
 
 const TITLE = "Needs attention";
 const PILL_ID = "attention";
-/** Completeness backup only — live path is agents.subscribe → store → icon. */
-const SYNC_MS = 15_000;
 
 type PillEntry = {
   registration?: PluginButtonRegistration;
@@ -45,25 +39,9 @@ function attentionSignature(
   return items.map((i) => `${i.agentId}:${i.kind}:${i.permissionCount}`).join("|");
 }
 
-/**
- * Composer pill for other same-workspace agents needing attention.
- *
- * Live updates: `agents.subscribe` → in-memory store → pill visibility + icon tint.
- * 15s poll is completeness only. Icon reads the same store (not a separate 15s query).
- */
+/** Entry-owned directory drives pill registrations and attention, with 15s reconciliation. */
 export function contributeAttentionPills(client: PluginClientContext): () => void {
   const pills = new Map<string, PillEntry>();
-  const inflight = new Map<string, Promise<void>>();
-  let disposed = false;
-  let timer: ReturnType<typeof setTimeout> | undefined;
-
-  function setWorkspacePillsDisabled(workspaceId: string, disabled: boolean) {
-    for (const entry of pills.values()) {
-      if (entry.workspaceId !== workspaceId) continue;
-      entry.registration?.update({ disabled });
-    }
-  }
-
   function applyPill(
     agentId: string,
     entry: PillEntry,
@@ -101,43 +79,6 @@ export function contributeAttentionPills(client: PluginClientContext): () => voi
       if (entry.workspaceId !== workspaceId) continue;
       applyPill(agentId, entry, statuses);
     }
-  }
-
-  function syncWorkspace(workspaceId: string): Promise<void> {
-    const existing = inflight.get(workspaceId);
-    if (existing) return existing;
-    const firstLoad = getAttentionStatuses(workspaceId) == null;
-    // Only block clicks on the cold first fetch — background polls stay interactive.
-    if (firstLoad) setWorkspacePillsDisabled(workspaceId, true);
-    const run = (async () => {
-      try {
-        const statuses = await loadWorkspaceAgentStatuses(client.paseo, workspaceId, null);
-        if (disposed) return;
-        applyWorkspace(workspaceId, statuses);
-      } catch (error) {
-        if (!disposed) console.error("[activity] attention pill sync failed", workspaceId, error);
-      } finally {
-        inflight.delete(workspaceId);
-        if (!disposed && firstLoad) setWorkspacePillsDisabled(workspaceId, false);
-      }
-    })();
-    inflight.set(workspaceId, run);
-    return run;
-  }
-
-  function syncAllWorkspaces() {
-    const ids = new Set<string>();
-    for (const entry of pills.values()) ids.add(entry.workspaceId);
-    for (const workspaceId of ids) void syncWorkspace(workspaceId);
-  }
-
-  function scheduleSync() {
-    clearTimeout(timer);
-    if (disposed) return;
-    timer = setTimeout(() => {
-      syncAllWorkspaces();
-      scheduleSync();
-    }, SYNC_MS);
   }
 
   function createPillIcon(agentId: string) {
@@ -189,7 +130,6 @@ export function contributeAttentionPills(client: PluginClientContext): () => voi
     pills.set(agentId, entry);
     const cached = getAttentionStatuses(workspaceId);
     if (cached) applyPill(agentId, entry, cached);
-    else void syncWorkspace(workspaceId);
   }
 
   function removePill(agentId: string) {
@@ -197,53 +137,25 @@ export function contributeAttentionPills(client: PluginClientContext): () => voi
     pills.delete(agentId);
   }
 
-  function onHostUpdate(update: HostAgentUpdate) {
-    if (disposed) return;
-    if (update.kind === "remove") {
-      for (const workspaceId of [...new Set(
-        [...pills.values()].map((entry) => entry.workspaceId),
-      )]) {
-        const map = getAttentionStatuses(workspaceId);
-        if (!map || !(update.agentId in map)) continue;
-        const next = { ...map };
-        delete next[update.agentId];
-        applyWorkspace(workspaceId, next);
-      }
-      return;
+  const stopDirectory = watchAgentDirectory(client.paseo.agents, (snapshot) => {
+    const workspaces = new Map<string, Record<string, AgentStatusInfo>>();
+    for (const [id, entry] of pills) {
+      const agent = snapshot.get(id);
+      if (!agent || agent.archivedAt || agent.workspaceId !== entry.workspaceId) removePill(id);
+      workspaces.set(entry.workspaceId, {});
     }
-    const workspaceId = update.agent.workspaceId;
-    if (!workspaceId) return;
-    const map = getAttentionStatuses(workspaceId);
-    if (!map) {
-      // Apply the push immediately so icon/visibility update without waiting for full poll.
-      const next: Record<string, AgentStatusInfo> = {};
-      applyAgentStatusUpdate(next, workspaceId, update);
-      applyWorkspace(workspaceId, next);
-      void syncWorkspace(workspaceId);
-      return;
+    for (const agent of snapshot.values()) {
+      if (agent.archivedAt || !agent.workspaceId) continue;
+      const statuses = workspaces.get(agent.workspaceId) ?? {};
+      statuses[agent.id] = agentStatusInfo(agent);
+      workspaces.set(agent.workspaceId, statuses);
+      addPill(agent.id, agent.workspaceId);
     }
-    const next = { ...map };
-    applyAgentStatusUpdate(next, workspaceId, update);
-    applyWorkspace(workspaceId, next);
-  }
-
-  const unsubscribeDir = watchPillDirectory(client.paseo.agents, (agent) => {
-    const { id, workspaceId } = agent;
-    if (!workspaceId) return;
-    addPill(id, workspaceId);
-  }, removePill);
-
-  const unsubscribePush = client.paseo.agents.subscribe((update) => {
-    onHostUpdate(update as HostAgentUpdate);
+    for (const [workspaceId, statuses] of workspaces) applyWorkspace(workspaceId, statuses);
   });
 
-  scheduleSync();
-
   return () => {
-    disposed = true;
-    clearTimeout(timer);
-    unsubscribeDir();
-    unsubscribePush();
+    stopDirectory();
     pills.forEach((entry) => entry.registration?.remove());
     pills.clear();
     clearAttentionStatuses();

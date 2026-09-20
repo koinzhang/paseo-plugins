@@ -13,6 +13,8 @@ export type AgentLifecycleFilter = "idle" | "running" | "error" | "closed";
 export type MenuFlyout = "sort" | "group" | "show" | "status" | "lifecycle";
 
 export type AgentStatusInfo = {
+  /** Explicit host archive state; absent means unknown. */
+  archivedAt?: string | null;
   rank: number;
   updatedAt: string | null;
   status: string | null;

@@ -26,7 +26,7 @@ Ingests every agent's Paseo timeline into a local SQLite database. Queries read 
 ## Where it shows up
 
 - **Sidebar Activity** — global view by provider (heatmap, KPIs, insights, most used)
-- **Explorer → Activity** — workspace agents as a management list (search / sort / group / status / lifecycle / archive), live attention (permission badge, status colors, running spinner; directory push + 15s poll), open Terminals (list / preview / close), plus workspace KPIs and top skills / MCP (toggle hidden when only one kind has data); usage queries get a best-effort refresh hint when agents leave running
+- **Explorer → Activity** — workspace agents as a management list (search / sort / group / status / lifecycle / archive), live attention (permission badge, status colors, running spinner; API-owned directory observation + explicit lifecycle/archive fields + 15s reconciliation), open Terminals (list / preview / close), plus workspace KPIs and top skills / MCP (toggle hidden when only one kind has data); usage queries get a best-effort refresh hint when agents leave running
 - **Agent workspace panel** — per-agent tool detail (dense KPI including messages / Skills / MCP toggle / SKILL.md); refreshes on timeline turn terminal events
 - **Composer pills** — Activity: current agent's skill / MCP summary (hidden when empty); **Needs attention**: other same-workspace agents with finished / permission / error (hidden when none; click opens shared list)
 - **Command Center** — Activity · Workspace Activity · Agent Activity
@@ -37,7 +37,7 @@ Everything lives on the daemon machine in `~/.paseo/plugin-data/activity/` (SQLi
 
 ## Install
 
-Requires Paseo >= 0.8.0. **0.4.0** is the last release that supports Paseo 0.8.0; later versions will require Paseo >= 0.9.0.
+Requires Paseo **>= 0.9.0-beta.2** (current package targets **0.9.0-beta.2**). **0.4.0** is the last release that supports Paseo 0.8.0.
 
 From Git (Paseo 0.8 and later):
 

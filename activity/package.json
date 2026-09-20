@@ -1,6 +1,6 @@
 {
   "name": "@koinzhang/paseo-plugin-activity",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Local usage analytics and workspace agent ops for Paseo: tools, agents, messages, models, Explorer fleet list, and terminals.",
   "license": "MIT",
   "type": "module",
@@ -22,10 +22,10 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test server/background-sync.test.ts server/handlers-query.test.ts client/attention-agents.test.ts client/latest-user-message.test.ts client/pill-data-cache.test.ts client/pill-directory.test.ts client/hidden-pill-recheck.test.ts client/workspace/list-host-agents.test.ts client/workspace/status-cache.test.ts client/workspace/constants.test.ts client/workspace/filters.test.ts client/rank-color.test.ts client/provider-filter.test.ts client/workspace/terminal-preview.test.ts shared/activity.test.ts shared/insights.test.ts shared/classify.test.ts shared/usage.test.ts shared/format.test.ts shared/agent-title-search.test.ts shared/list-agent-pages.test.ts shared/agent-page-size.test.ts server/store.test.ts server/ingest.test.ts server/skill-path.test.ts server/mcp-servers.test.ts server/agents.test.ts server/migrate-data.test.ts server/messages.test.ts server/resolve-model.test.ts"
+    "test": "node --experimental-strip-types --test server/background-sync.test.ts server/handlers-query.test.ts client/attention-agents.test.ts client/latest-user-message.test.ts client/pill-data-cache.test.ts client/hidden-pill-recheck.test.ts client/workspace/list-host-agents.test.ts client/agent-directory.test.ts client/workspace/constants.test.ts client/workspace/filters.test.ts client/workspace/host-archive-sync.test.ts client/rank-color.test.ts client/provider-filter.test.ts client/workspace/terminal-preview.test.ts shared/activity.test.ts shared/insights.test.ts shared/classify.test.ts shared/usage.test.ts shared/format.test.ts shared/agent-title-search.test.ts shared/list-agent-pages.test.ts shared/agent-page-size.test.ts server/store.test.ts server/ingest.test.ts server/skill-path.test.ts server/mcp-servers.test.ts server/agents.test.ts server/migrate-data.test.ts server/messages.test.ts server/resolve-model.test.ts"
   },
   "devDependencies": {
-    "@getpaseo/plugin": "0.8.0",
+    "@getpaseo/plugin": "0.9.0-beta.2",
     "@tanstack/react-query": "^5.90.11",
     "@types/node": "^24.13.5",
     "@types/react": "~19.2.0",

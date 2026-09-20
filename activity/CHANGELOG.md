@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-20
+
+Requires Paseo **>= 0.9.0-beta.2**.
+
+### Changed
+
+- Pin the plugin SDK to `0.9.0-beta.2` and use independent, API-owned directory observations, shared within each entry/surface API.
+- Reconcile all pages on bootstrap/reconnect, replay concurrent updates, retain 15s polling, and release observations after the last consumer unmounts.
+- Handle timeline subscription restoration/errors and use SDK cleanup with release error handling.
+
+### Fixed
+
+- Restore real-time workspace and attention updates: beta.2 API listeners do not receive the app's directory observation.
+- Read lifecycle and archive state from explicit directory fields. Missing host UI snapshots, directory removals, and Closed no longer synthesize an archive or permanently lock lifecycle state.
+- Reflect host archive/unarchive immediately in workspace rows, preserving usage metrics even if an older RPC finishes later.
+- Remove the host-cache-to-query effect loop that caused React maximum update depth errors; retain stable workspace query keys.
+
 ## [0.4.0] - 2026-09-20
 
 Last release that supports Paseo **0.8.0**. Later versions require Paseo **>= 0.9.0**.

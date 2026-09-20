@@ -1,47 +1,23 @@
-import {
-  usePaseo,
-  useWorkspace,
-} from "@getpaseo/plugin/client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { usePaseo } from "@getpaseo/plugin/client";
+import { useEffect, useState } from "react";
+import { watchAgentDirectory } from "./agent-directory.ts";
+import { agentStatusInfo } from "./workspace/list-host-agents.ts";
 import type { AgentStatusInfo } from "./workspace/constants.ts";
-import { loadWorkspaceAgentStatuses } from "./workspace/list-host-agents.ts";
-import { updateWorkspaceStatusCache } from "./workspace/status-cache.ts";
 
-export function workspaceAgentStatusQueryKey(
-  workspaceId: string,
-  projectId: string | null | undefined,
-) {
-  return ["activity", "workspace-agent-status", workspaceId, projectId ?? null] as const;
-}
-
-/**
- * Shared host agent status map for a workspace (Explorer + attention pill).
- * 15s poll owns completeness; subscribe accelerates without list({ subscribe }).
- */
+/** Directory snapshots are authoritative; host UI cache absence is not a lifecycle event. */
 export function useWorkspaceAgentStatuses(workspaceId: string) {
   const paseo = usePaseo();
-  const queryClient = useQueryClient();
-  const projectId = useWorkspace(workspaceId, (workspace) => workspace.projectId);
-  const queryKey = useMemo(
-    () => workspaceAgentStatusQueryKey(workspaceId, projectId),
-    [workspaceId, projectId],
-  );
-
-  const query = useQuery({
-    refetchInterval: 15_000,
-    retry: false,
-    queryKey,
-    queryFn: () => loadWorkspaceAgentStatuses(paseo, workspaceId, projectId),
-  });
-
-  useEffect(
-    () =>
-      paseo.agents.subscribe((update) => {
-        updateWorkspaceStatusCache(queryClient, queryKey, workspaceId, update);
-      }),
-    [paseo, queryClient, workspaceId, queryKey],
-  );
-
-  return query as typeof query & { data: Record<string, AgentStatusInfo> | undefined };
+  const [state, setState] = useState<{
+    paseo: typeof paseo;
+    workspaceId: string;
+    data: Record<string, AgentStatusInfo>;
+  }>();
+  useEffect(() => watchAgentDirectory(paseo.agents, (snapshot) => {
+    const data: Record<string, AgentStatusInfo> = {};
+    for (const agent of snapshot.values()) {
+      if (agent.workspaceId === workspaceId) data[agent.id] = agentStatusInfo(agent);
+    }
+    setState({ paseo, workspaceId, data });
+  }), [paseo, workspaceId]);
+  return { data: state?.paseo === paseo && state.workspaceId === workspaceId ? state.data : undefined };
 }

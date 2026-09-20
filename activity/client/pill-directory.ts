@@ -1,79 +1,31 @@
-import type { PluginClientContext } from "@getpaseo/plugin/client";
-import { listAllAgentPages } from "../shared/list-agent-pages.ts";
+import { watchAgentDirectory, type AgentsApi, type DirectoryAgent } from "./agent-directory.ts";
 
-type AgentsApi = PluginClientContext["paseo"]["agents"];
-type Update = Parameters<Parameters<AgentsApi["subscribe"]>[0]>[0];
-type Agent = Extract<Update, { kind: "upsert" }>["agent"];
-
-/** 0.8 has one shared directory slot. Plain paged reads own our fallback, never that slot. */
+/** Pill registrations follow the owned directory; archived agents have no composer pill. */
 export function watchPillDirectory(
   agents: AgentsApi,
-  onAgent: (agent: Agent) => void,
+  onAgent: (agent: DirectoryAgent) => void,
   onRemove: (agentId: string) => void,
   intervalMs = 15_000,
-  onPolled?: (agent: Agent) => void,
+  onPolled?: (agent: DirectoryAgent) => void,
 ): () => void {
-  let disposed = false;
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  let pending: Update[] | null = null;
-  let known = new Set<string>();
   const versions = new Map<string, string>();
-  function publish(agent: Agent) {
-    const version = JSON.stringify([agent.workspaceId, agent.status, agent.updatedAt,
-      agent.lastUserMessageAt, agent.activeTurn?.turnId]);
-    if (versions.get(agent.id) === version) return;
-    versions.set(agent.id, version);
-    onAgent(agent);
-  }
-  function remove(id: string) {
-    versions.delete(id);
-    onRemove(id);
-  }
-  function apply(update: Update) {
-    if (update.kind === "remove") {
-      known.delete(update.agentId);
-      remove(update.agentId);
-    } else {
-      known.add(update.agent.id);
-      publish(update.agent);
-    }
-  }
-  // Opportunistic acceleration only; correctness does not depend on host observation.
-  const unsubscribe = agents.subscribe((update) => {
-    if (disposed) return;
-    pending?.push(update);
-    apply(update);
-  });
-  async function sync() {
-    pending = [];
-    try {
-      const entries = await listAllAgentPages((cursor) => agents.list({
-        page: { limit: 200, ...(cursor ? { cursor } : {}) },
-      }));
-      if (disposed) return;
-      const snapshot = new Map(entries.map(({ agent }) => [agent.id, agent]));
-      // Pushes received during pagination are newer than its snapshot.
-      for (const update of pending) {
-        if (update.kind === "remove") snapshot.delete(update.agentId);
-        else snapshot.set(update.agent.id, update.agent);
+  return watchAgentDirectory(agents, (snapshot, update) => {
+    for (const id of versions.keys()) {
+      const agent = snapshot.get(id);
+      if (!agent || agent.archivedAt) {
+        versions.delete(id);
+        onRemove(id);
       }
-      for (const id of known) if (!snapshot.has(id)) remove(id);
-      known = new Set(snapshot.keys());
-      for (const agent of snapshot.values()) {
-        publish(agent);
-        onPolled?.(agent);
-      }
-    } catch (error) {
-      if (!disposed) console.error("[activity] could not sync composer pills", error);
-    } finally {
-      pending = null;
-      if (!disposed) timer = setTimeout(() => void sync(), intervalMs);
     }
-  }
-  void sync();
-  return () => {
-    disposed = true;
-    unsubscribe();
-    clearTimeout(timer);
-  };
+    for (const agent of snapshot.values()) {
+      if (agent.archivedAt) continue;
+      const version = JSON.stringify([agent.workspaceId, agent.status, agent.updatedAt,
+        agent.lastUserMessageAt, agent.activeTurn?.turnId]);
+      if (versions.get(agent.id) !== version) {
+        versions.set(agent.id, version);
+        onAgent(agent);
+      }
+      if (!update) onPolled?.(agent);
+    }
+  }, intervalMs);
 }

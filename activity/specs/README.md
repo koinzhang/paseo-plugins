@@ -68,6 +68,10 @@
 | [041-agent-subagent-badge](./041-agent-subagent-badge/) | 已实现（待真机） | Explorer Agents 图标右下角：子 agent 数量；running loading 优先 |
 | [042-show-prompt](./042-show-prompt/) | 已实现（待真机） | Show → Prompt：行 meta 展示最新用户消息预览 |
 | [043-live-closed-status](./043-live-closed-status/) | 已实现（待真机） | Explorer：useAgent 近实时 Closed；remove 不丢 lifecycle |
+| [044-paseo-0.9-adaptation](./044-paseo-0.9-adaptation/) | 已实现 | 适配 Paseo 0.9 SDK / timeline；目录契约由 047 修正 |
+| [045-closed-against-stale-details](./045-closed-against-stale-details/) | 已由 047 替代 | Closed 使用明确目录状态，不再从宿主缓存推断 |
+| [046-host-archive-optimistic](./046-host-archive-optimistic/) | 已由 047 替代 | 使用明确 archivedAt 实时更新 Active/Archived |
+| [047-beta2-observation-remediation](./047-beta2-observation-remediation/) | 已实现，页面验收待完成 | 独立目录订阅、明确生命周期/归档、清理与 SDK 契约测试 |
 
 ## 约定
 

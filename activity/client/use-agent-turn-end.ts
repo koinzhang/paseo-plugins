@@ -1,5 +1,6 @@
 import { usePaseo } from "@getpaseo/plugin/client";
 import { useEffect, useRef } from "react";
+import { watchAgentDirectory } from "./agent-directory.ts";
 
 const TURN_END_DEBOUNCE_MS = 300;
 const INGEST_SETTLE_MS = 2_000;
@@ -36,10 +37,26 @@ function useActivityRefresh(scope: AgentTurnEndScope, onTurnEnd: () => void): vo
     };
     const unsubscribe = agentId != null
       ? paseo.agents.ref(agentId).timeline.subscribe(({ event }) => {
-          if (["turn_completed", "turn_failed", "turn_canceled", "replacement"].includes(event.type)) schedule();
+          if (event.type === "subscription_restored") {
+            // Live-only after reconnect; refresh in case a turn ended while offline.
+            schedule();
+            return;
+          }
+          if (event.type === "error") {
+            console.error(
+              "[activity] timeline observation stopped; polling remains active",
+              "error" in event ? event.error : event,
+            );
+            return;
+          }
+          if (["turn_completed", "turn_failed", "turn_canceled", "replacement"].includes(event.type)) {
+            schedule();
+          }
         })
-      : paseo.agents.subscribe((update) => {
+      : watchAgentDirectory(paseo.agents, (_snapshot, update) => {
           // Workspace-wide hint only. The 15s query poll owns completeness.
+          // The surface owns its API observation, independently of the entry.
+          if (!update) { schedule(); return; }
           if (update.kind === "remove") {
             schedule();
             return;
