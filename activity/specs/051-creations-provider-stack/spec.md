@@ -44,7 +44,7 @@
 
 - 窗口：`fixedWindowFrom(30)` → 本地今天往前 29 天 00:00 起，恒 30 根日柱（含今天）
 - 分桶：`buildAgentCreationBuckets(days, { from, today })` 零填充 `[from, today]`；越界日丢弃；`count>0` 的切片才保留
-- 堆叠顺序与配色：`rankCreationProviders(buckets)` 给出窗口内 provider 排名（总量降序，同值按 id 升序），驱动配色与浮层行序；`stackCreationProviders` 按同一排名为每根柱生成自顶而下的色序——**窗口总量最大的系列贴底**，当日无创建的系列省略；配色优先级（`creationProviderColors`）：① 有品牌色的 provider 固定用品牌色（含榜首）② 榜首无品牌色时用主题 `accent` ③ 其余用 chart palette
+- 堆叠顺序与配色：`rankCreationProviders(buckets)` 给出窗口内 provider 排名（总量降序，同值按 id 升序），驱动配色与浮层行序；`stackCreationProviders` 按同一排名为每根柱生成自顶而下的色序——**窗口总量最大的系列贴底**，当日无创建的系列省略；配色优先级（`creationProviderColors`）：① 有品牌色的 provider 固定用品牌色（含榜首）② 其余（含无品牌 catalog / 未来 ACP）一律用 soft `CHART_PALETTE`（已知 id 占槽，未知 id 哈希入槽；**不再**用主题 `accent` 顶榜首）
 - **055 修订**：日柱改为**单块**填充——多 provider 用 `to bottom` 软渐变（色序同上、停点按当日 count 加权），单 provider 纯色；整柱顶角 3px、底角直角（取代 051 硬堆叠段与 053 段圆角规则）
 - 柱高：`max(2, round(当日总量 / 窗口峰值 * 图高))`（055；原按段累加）；当日 0 创建显示 2px 的 `surface2` 底槽（无圆角）
 - 浮层：`hovered ?? selected`（悬浮 / 聚焦 / 点击切换），绝对定位于柱区上方 6px，水平按柱中心夹紧在图宽内；内容为当日有创建的 provider 的 `label: count` 行（**056**：与 `stackCreationProviders` 同序，省略当日 0）+ 底部日期；空槽日可仅显示日期；`accessibilityLiveRegion="polite"`
@@ -68,7 +68,7 @@
 | `buildAgentCreationBuckets(days, { from, today })` | `shared/activity.ts`（纯函数） |
 | `rankCreationProviders(buckets)` | `shared/activity.ts`（纯函数） |
 | `stackCreationProviders(ranked, dayProviders)` | `shared/activity.ts`（纯函数；柱内顶→底段序） |
-| `creationProviderColors(rankedIds, accent, scheme)` | `client/rank-color.ts`（榜首 accent，其余色板） |
+| `creationProviderColors(rankedIds, scheme)` | `client/rank-color.ts`（品牌色或 soft CHART_PALETTE） |
 | `entityColor(key, accent)` | `client/rank-color.ts` |
 | `createAgentCreationsHandler(store)` | `server/handlers.ts` |
 

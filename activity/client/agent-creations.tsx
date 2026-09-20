@@ -78,7 +78,6 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
   const scheme = chartColorScheme(colors.surface0);
   const colorByProvider = creationProviderColors(
     providers.map((item) => item.provider),
-    colors.accent,
     scheme,
   );
   const tooltipProviders = active

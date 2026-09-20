@@ -113,16 +113,17 @@ const PRIORITY_PROVIDERS = [
 ] as const;
 
 /**
- * Official-ish brand accents for the most common providers. Always preferred
- * over theme accent and the soft chart palette when present.
+ * Official-ish brand accents for providers with a known chromatic identity.
+ * Always preferred over the soft chart palette when present. Providers without
+ * an entry (and any future ACP id Paseo adds) fall through to CHART_PALETTE.
  */
 const PROVIDER_BRAND: Record<string, Record<ChartColorScheme, string>> = {
   // Anthropic coral — dark is a step deeper than light
   claude: { light: "#d97757", dark: "#c46845" },
   // Codex brand blue
   codex: { light: "#4d9eef", dark: "#0169cc" },
-  // Cursor orange — dark is a step deeper than light
-  cursor: { light: "#f54e00", dark: "#b83900" },
+  // Cursor orange — light softened vs neon brand #f54e00 for chart fills
+  cursor: { light: "#d94816", dark: "#b83900" },
   // OpenCode blue — dark is a step deeper than light
   opencode: { light: "#74a2ec", dark: "#5a86d4" },
   // Pi
@@ -133,6 +134,35 @@ const PROVIDER_BRAND: Record<string, Record<ChartColorScheme, string>> = {
   copilot: { light: "#5fed83", dark: "#077124" },
   // CodeBuddy purple — dark is a step deeper than light
   codebuddy: { light: "#6c4dff", dark: "#5a3fd9" },
+
+  // --- High-confidence ACP / catalog brands ---
+  cline: { light: "#9663F1", dark: "#7b51c6" },
+  kiro: { light: "#9046FF", dark: "#7639d1" },
+  kilo: { light: "#F8F676", dark: "#cbca61" },
+  "factory-droid": { light: "#EF6F2E", dark: "#c45b26" },
+  "mistral-vibe": { light: "#FA520F", dark: "#cd430c" },
+  "qwen-code": { light: "#615CED", dark: "#504bc2" },
+  traecli: { light: "#32F08C", dark: "#29c573" },
+  poolside: { light: "#4137FF", dark: "#352dd1" },
+  minimax: { light: "#FF6452", dark: "#d15243" },
+  "minimax-code": { light: "#FF6452", dark: "#d15243" },
+  junie: { light: "#47E054", dark: "#3ab845" },
+  kimi: { light: "#007CFF", dark: "#0066d1" },
+  gemini: { light: "#8E75B2", dark: "#746092" },
+  "cortex-code": { light: "#29B5E8", dark: "#2294be" },
+  deepagents: { light: "#7FC8FF", dark: "#68a4d1" },
+  "glm-acp-agent": { light: "#3859FF", dark: "#2e49d1" },
+  "amp-acp": { light: "#F34E3F", dark: "#c74034" },
+  hermes: { light: "#0000F2", dark: "#0000c6" },
+  qoder: { light: "#8B5CF6", dark: "#724bca" },
+  auggie: { light: "#1AA049", dark: "#15833c" },
+  gjc: { light: "#FF6A3D", dark: "#d15732" },
+  dirac: { light: "#F59E0B", dark: "#c98209" },
+  devin: { light: "#31B388", dark: "#289370" },
+
+  // --- Medium-confidence (favicon / weak site sample) ---
+  codewhale: { light: "#4070C0", dark: "#345c9d" },
+  nova: { light: "#222F3E", dark: "#1c2733" },
 };
 
 /** Normalized id → palette slot (aliases that normalize together share a slot). */
@@ -204,9 +234,10 @@ function paletteColor(slot: number, scheme: ChartColorScheme): string {
 }
 
 /**
- * Stable colour for a provider id: brand accents for Claude / Codex / Cursor /
- * OpenCode / Pi / Oh My Pi / Copilot / CodeBuddy; otherwise the soft chart
- * palette (known slot or hash).
+ * Stable colour for a provider id:
+ * 1. `PROVIDER_BRAND` when present
+ * 2. else soft `CHART_PALETTE` — known ids get a reserved slot; unknown /
+ *    future ACP ids hash into the same palette (no theme accent, no invented brands)
  */
 export function providerColor(provider: string, scheme: ChartColorScheme): string {
   const brand = brandColor(provider, scheme);
@@ -223,25 +254,15 @@ export function brandColor(provider: string, scheme: ChartColorScheme): string |
 }
 
 /**
- * Histogram stack colours:
- * 1. Providers with a brand accent always keep that colour (incl. the leader).
- * 2. If the window leader has no brand colour, it uses theme `accent`.
- * 3. Everyone else uses the soft chart palette.
+ * Histogram stack colours: branded providers keep brand accents; everything
+ * else (unbranded catalog + future ACP ids) uses soft `CHART_PALETTE`.
  */
 export function creationProviderColors(
   rankedProviders: readonly string[],
-  accent: string,
   scheme: ChartColorScheme,
 ): Map<string, string> {
   const colors = new Map<string, string>();
   for (const provider of rankedProviders) {
-    const brand = brandColor(provider, scheme);
-    if (brand) colors.set(provider, brand);
-  }
-  const leader = rankedProviders[0];
-  if (leader != null && !colors.has(leader)) colors.set(leader, accent);
-  for (const provider of rankedProviders) {
-    if (colors.has(provider)) continue;
     colors.set(provider, providerColor(provider, scheme));
   }
   return colors;

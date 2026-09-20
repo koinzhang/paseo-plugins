@@ -7,7 +7,7 @@ import {
 
 const colorOf = (provider: string) =>
   ({
-    cursor: "#f54e00",
+    cursor: "#d94816",
     opencode: "#88a0ff",
     codex: "#5b9fd4",
     claude: "#d97757",
@@ -55,7 +55,7 @@ describe("creationDayFill (055)", () => {
   it("uses solid fill for a single provider", () => {
     assert.deepEqual(
       creationDayFill([{ provider: "cursor", count: 3 }], colorOf, "#accent"),
-      { type: "solid", color: "#f54e00" },
+      { type: "solid", color: "#d94816" },
     );
   });
 
@@ -71,7 +71,7 @@ describe("creationDayFill (055)", () => {
     );
     assert.deepEqual(fill, {
       type: "gradient",
-      image: "linear-gradient(to bottom, #5b9fd4, #f54e00)",
+      image: "linear-gradient(to bottom, #5b9fd4, #d94816)",
     });
   });
 
@@ -84,6 +84,6 @@ describe("creationDayFill (055)", () => {
       colorOf,
       "#accent",
     );
-    assert.deepEqual(fill, { type: "solid", color: "#f54e00" });
+    assert.deepEqual(fill, { type: "solid", color: "#d94816" });
   });
 });

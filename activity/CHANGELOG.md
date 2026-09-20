@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Agent creations stacked segments follow window-wide provider rank (largest series at the bottom on every bar), not each day's local count order.
 - Agent creations header no longer shows `N agents · last 30 days` (title is `Agents` only).
 - Chart palette: light / dark colour sets swapped (bright fills on light UI, deep fills on dark UI).
-- Agent creations colours: branded providers (Claude / Codex / Cursor / OpenCode / Pi) always keep brand accents; theme `accent` only when the window leader has no brand colour; other providers use the soft chart palette.
+- Agent creations colours: branded providers keep brand accents; unbranded catalog providers and any future ACP id fall back to the soft chart palette (no theme `accent` for the window leader).
 - Agent creations hover card lists only providers with creations that day (no `: 0` rows); empty days still show the date alone.
 
 ### Fixed
