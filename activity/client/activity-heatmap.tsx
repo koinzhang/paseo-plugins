@@ -13,6 +13,10 @@ type ThemeColors = {
 
 type HoveredMonth = { year: number; month: number };
 
+// Month-axis labels and the mode tabs share one size: both are secondary labels under
+// the section title, so a separate 13 / 15 scale made the tabs outrank the axis.
+const LABEL_FONT_SIZE = 12;
+
 function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
   return `${count.toLocaleString()} ${count === 1 ? singular : pluralForm}`;
 }
@@ -78,7 +82,7 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
         <View style={{ flexDirection: "row", gap: compact ? 14 : 20 }}>
           {modeOptions.map(option => (
             <Pressable key={option.id} accessibilityRole="tab" accessibilityState={{ selected: mode === option.id }} onPress={() => onModeChange(option.id)} style={{ paddingVertical: 6 }}>
-              <Text style={{ color: mode === option.id ? colors.foreground : colors.foregroundMuted, fontSize: compact ? 13 : 15 }}>{option.label}</Text>
+              <Text style={{ color: mode === option.id ? colors.foreground : colors.foregroundMuted, fontSize: LABEL_FONT_SIZE }}>{option.label}</Text>
             </Pressable>
           ))}
         </View>
@@ -151,7 +155,7 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
                     numberOfLines={1}
                     style={{
                       color: activeMonth ? colors.foreground : colors.foregroundMuted,
-                      fontSize: 12,
+                      fontSize: LABEL_FONT_SIZE,
                     }}
                   >
                     {item.label}
