@@ -2,6 +2,7 @@ import { createBackgroundSync } from "./server/background-sync.ts";
 import { homedir } from "node:os";
 import type { PluginServerContext } from "@getpaseo/plugin/server";
 import {
+  createActivityByHourHandler,
   createActivityByDayHandler,
   createAgentCreationsHandler,
   createAgentLifetimeHandler,
@@ -20,6 +21,7 @@ import { ingestTimeline, ingestUserMessages } from "./server/ingest.ts";
 import { resolveAgentModel } from "./server/resolve-model.ts";
 import { createUsageStore } from "./server/store.ts";
 import {
+  usageActivityByHourRpc,
   usageActivityByDayRpc,
   usageAgentCreationsRpc,
   usageAgentLifetimeRpc,
@@ -70,6 +72,10 @@ export default function contribute(server: PluginServerContext) {
   server.handle(usageActivityByDayRpc, (input, context) => {
     void background.request(context.paseo);
     return createActivityByDayHandler(store)(input);
+  });
+  server.handle(usageActivityByHourRpc, (input, context) => {
+    void background.request(context.paseo);
+    return createActivityByHourHandler(store)(input);
   });
   server.handle(usageAgentLifetimeRpc, (input, context) => {
     void background.request(context.paseo);

@@ -12,6 +12,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import {
+  usageActivityByHourRpc,
   providerLabel,
   usageActivityByDayRpc,
   usageAgentCreationsRpc,
@@ -26,6 +27,7 @@ import {
   type HeatmapMode,
 } from "./activity-heatmap.tsx";
 import { AgentCreations } from "./agent-creations.tsx";
+import { HourlyActivityTimeline } from "./hourly-activity-timeline.tsx";
 
 import { UsageStats } from "./usage-stats.tsx";
 import { chartColorScheme, entityColor } from "./rank-color.ts";
@@ -40,6 +42,7 @@ const LIST_LIMIT = ACTIVITY_LIST_LIMIT;
 
 /** Fixed width of the creations histogram, independent of the range chips (050). */
 const CREATIONS_WINDOW_DAYS = 30;
+const HOURLY_WINDOW_HOURS = 7 * 24;
 
 /** Zeroed provider row when the chip exists all-time but the time window has no rows. */
 function emptyProviderUsage(provider: string, label?: string): ProviderUsageItem {
@@ -225,6 +228,7 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
   const padding = layout.compact ? 16 : 20;
   const byProvider = useRpc(usageByProviderRpc);
   const activityByDay = useRpc(usageActivityByDayRpc);
+  const activityByHour = useRpc(usageActivityByHourRpc);
   const agentLifetime = useRpc(usageAgentLifetimeRpc);
   const agentCreations = useRpc(usageAgentCreationsRpc);
 
@@ -279,6 +283,19 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
     queryFn: () =>
       agentCreations({
         from: fixedWindowFrom(CREATIONS_WINDOW_DAYS),
+        provider: providerFilter === "all" ? undefined : providerFilter,
+      }),
+    placeholderData: keepPreviousData,
+  });
+
+  const hourlyQuery = useQuery({
+    refetchInterval: 15_000,
+    retry: false,
+    // Independent fixed window (059): range chips do not affect the hourly stream.
+    queryKey: ["activity", "activity-by-hour", "last168", providerFilter],
+    queryFn: () =>
+      activityByHour({
+        hours: HOURLY_WINDOW_HOURS,
         provider: providerFilter === "all" ? undefined : providerFilter,
       }),
     placeholderData: keepPreviousData,
@@ -625,8 +642,9 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
   // Keep prior results visible while refetching; spinner only on cold start.
   const loading =
     (!query.data && query.isLoading) ||
-    (!activityQuery.data && activityQuery.isLoading);
-  const error = query.error ?? activityQuery.error;
+    (!activityQuery.data && activityQuery.isLoading) ||
+    (!hourlyQuery.data && hourlyQuery.isLoading);
+  const error = query.error ?? activityQuery.error ?? hourlyQuery.error;
   const showContent = filteredProviders.length > 0;
 
   return (
@@ -689,6 +707,16 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
           colors={theme.colors}
           compact={layout.compact}
           locale={locale}
+        />
+      ) : null}
+
+      {showContent ? (
+        <HourlyActivityTimeline
+          hours={hourlyQuery.data?.hours ?? []}
+          colors={theme.colors}
+          compact={layout.compact}
+          locale={locale}
+          resetKey={providerFilter}
         />
       ) : null}
 

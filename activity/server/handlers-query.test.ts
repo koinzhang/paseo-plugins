@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import type { PluginHandlerContext } from "@getpaseo/plugin/server";
 import {
+  createActivityByHourHandler,
   createActivityByDayHandler,
   createAgentCreationsHandler,
   createAgentLifetimeHandler,
@@ -62,6 +63,15 @@ test("by-provider and activity-by-day read the local store only", async () => {
     const activity = await createActivityByDayHandler(store)({});
     assert.equal(activity.days[0]?.skills, 1);
     assert.equal(activity.days[0]?.agents, 1);
+    const hourly = await createActivityByHourHandler(
+      store,
+      () => new Date("2026-09-19T12:30:00.000Z"),
+    )({ hours: 2 });
+    assert.equal(hourly.hours.length, 2);
+    assert.equal(hourly.hours[0]?.start, "2026-09-19T11:00:00.000Z");
+    assert.equal(hourly.hours[0]?.total, 0);
+    assert.equal(hourly.hours[1]?.skills, 1);
+    assert.equal(hourly.hours[1]?.agents, 1);
   } finally {
     store.close();
     rmSync(dir, { recursive: true, force: true });

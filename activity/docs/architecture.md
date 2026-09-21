@@ -12,7 +12,7 @@
 | **Agent** | Agent workspace tab · Composer pills · CC `Agent Activity` | `client/panel.tsx` + `pill.tsx` + `attention-pill.tsx`（040） | 本 agent 工具；同仓其它会话 attention 捷径 | 无（全程） |
 
 ```text
-Global Activity     → 跨 workspace · 习惯 / provider 对比 · KPI（Agents / Longest agent / Top provider / Top model / Peak weekday / Longest streak，050/054）· 热力图 · Agent creations 直方图（固定 30 天，日柱按当日 provider 软渐变，051/055）· Insights / Models
+Global Activity     → 跨 workspace · 习惯 / provider 对比 · KPI（Agents / Longest agent / Top provider / Top model / Peak weekday / Longest streak，050/054）· 热力图 · Agent creations 直方图（固定 30 天）· 最近 168 小时活动时间线（059）· Insights / Models
 Workspace Activity  → 单 workspace · Agents 运营（排序筛选归档）· KPI · Terminals（host SDK：列表 / 预览 / 关闭）· Top skills/MCP
 Agent Activity      → 单 agent · 工具明细（Skills / MCP）· Pill 快捷入口
 ```
@@ -59,6 +59,7 @@ server/          handlers · store · ingest · background-sync · hooks
 | `usage.agent-creations` | — | — | ✓ | Global（Agent creations 直方图，日柱 provider 软渐变；051/055） |
 | `usage.host-info` | — | — | — | Workspace（cwd `~` 折叠） |
 | `usage.activity-by-day` | — | ✓ | ✓ | Global |
+| `usage.activity-by-hour` | — | — | 固定 168h | Global（059；provider 过滤，range chips 不参与） |
 | `usage.list` / `usage.export` | ✓ | — | ✓ | 无 UI（契约保留） |
 
 ## 3. 注册入口（`index.client.tsx`）

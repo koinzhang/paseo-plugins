@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  aggregateActivityByHour,
   aggregateActivityByDay,
   aggregateAgentCreations,
   aggregateAgents,
@@ -812,6 +813,86 @@ describe("aggregateActivityByDay", () => {
     assert.equal(days[1]?.mcp, 0);
     assert.equal(days[1]?.agents, 1);
     assert.equal(days[1]?.total, 1);
+  });
+});
+
+describe("aggregateActivityByHour (059)", () => {
+  it("zero-fills consecutive absolute hours and aggregates all activity kinds", () => {
+    const hours = aggregateActivityByHour(
+      [
+        row({
+          callId: "s1",
+          provider: "codex",
+          category: "skill",
+          confidence: "exact",
+          ts: "2026-09-21T09:15:00.000Z",
+        }),
+        row({
+          callId: "s-low",
+          provider: "codex",
+          category: "skill",
+          confidence: "low",
+          ts: "2026-09-21T09:20:00.000Z",
+        }),
+        row({
+          callId: "m1",
+          provider: "codex",
+          category: "mcp",
+          ts: "2026-09-21T11:59:59.000Z",
+        }),
+      ],
+      {
+        start: new Date("2026-09-21T09:00:00.000Z"),
+        hours: 4,
+        provider: "codex",
+        agents: [{ provider: "codex", createdAt: "2026-09-21T10:01:00.000Z" }],
+        messages: [{
+          provider: "codex",
+          ts: null,
+          ingestedAt: "2026-09-21T10:30:00.000Z",
+        }],
+      },
+    );
+
+    assert.equal(hours.length, 4);
+    assert.deepEqual(hours.map((hour) => hour.start), [
+      "2026-09-21T09:00:00.000Z",
+      "2026-09-21T10:00:00.000Z",
+      "2026-09-21T11:00:00.000Z",
+      "2026-09-21T12:00:00.000Z",
+    ]);
+    assert.deepEqual(hours.map((hour) => hour.total), [1, 2, 1, 0]);
+    assert.equal(hours[0]?.skills, 1);
+    assert.equal(hours[1]?.agents, 1);
+    assert.equal(hours[1]?.messages, 1);
+    assert.equal(hours[2]?.mcp, 1);
+    assert.equal(new Set(hours.map((hour) => hour.key)).size, 4);
+  });
+
+  it("filters every activity kind by normalized provider and ignores out-of-window rows", () => {
+    const hours = aggregateActivityByHour(
+      [
+        row({ callId: "1", provider: "codex/gpt-5.4", category: "mcp", ts: "2026-09-21T09:00:00.000Z" }),
+        row({ callId: "2", provider: "claude", category: "mcp", ts: "2026-09-21T09:00:00.000Z" }),
+        row({ callId: "3", provider: "codex", category: "mcp", ts: "2026-09-21T08:59:59.000Z" }),
+      ],
+      {
+        start: new Date("2026-09-21T09:00:00.000Z"),
+        hours: 1,
+        provider: "codex",
+        agents: [{ provider: "claude", createdAt: "2026-09-21T09:10:00.000Z" }],
+        messages: [{ provider: "codex", ts: "invalid", ingestedAt: "2026-09-21T09:20:00.000Z" }],
+      },
+    );
+    assert.deepEqual(hours[0], {
+      key: String(Date.parse("2026-09-21T09:00:00.000Z")),
+      start: "2026-09-21T09:00:00.000Z",
+      skills: 0,
+      mcp: 1,
+      agents: 0,
+      messages: 0,
+      total: 1,
+    });
   });
 });
 

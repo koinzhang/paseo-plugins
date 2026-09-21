@@ -8,6 +8,7 @@ import {
   aggregateAgentCreations,
   aggregateAgents,
   aggregateByProvider,
+  aggregateActivityByHour,
   aggregateMcpByTool,
   aggregateShellTop,
   aggregateSkillsByName,
@@ -17,6 +18,7 @@ import {
   isShellCall,
   pickLongestAgentLifetime,
   usageActivityByDayRpc,
+  usageActivityByHourRpc,
   usageAgentCreationsRpc,
   usageAgentLifetimeRpc,
   usageAgentsRpc,
@@ -338,6 +340,33 @@ export function createActivityByDayHandler(store: UsageStore) {
         provider: input.provider,
         agents,
         messages: store.selectUserMessages(input),
+      }),
+    };
+  };
+}
+
+export function createActivityByHourHandler(
+  store: UsageStore,
+  now: () => Date = () => new Date(),
+) {
+  return async (
+    input: RpcInput<typeof usageActivityByHourRpc>,
+  ): Promise<RpcOutput<typeof usageActivityByHourRpc>> => {
+    const end = now();
+    const endMs = end.getTime();
+    const currentHourMs = Math.floor(endMs / (60 * 60 * 1000)) * 60 * 60 * 1000;
+    const start = new Date(currentHourMs - (input.hours - 1) * 60 * 60 * 1000);
+    const filter = {
+      from: start.toISOString(),
+      to: end.toISOString(),
+    };
+    return {
+      hours: aggregateActivityByHour(store.select(filter), {
+        start,
+        hours: input.hours,
+        provider: input.provider,
+        agents: store.selectAgents({ ...filter, provider: input.provider }),
+        messages: store.selectUserMessages(filter),
       }),
     };
   };

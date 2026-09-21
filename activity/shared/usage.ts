@@ -1107,6 +1107,19 @@ export const ActivityDaySchema = z.object({
 });
 export type ActivityDay = z.infer<typeof ActivityDaySchema>;
 
+export const ActivityHourSchema = z.object({
+  /** Epoch milliseconds for the absolute hour start; unique across DST fallback. */
+  key: z.string(),
+  /** ISO timestamp for formatting in the client locale. */
+  start: z.string(),
+  skills: z.number().int().nonnegative(),
+  mcp: z.number().int().nonnegative(),
+  agents: z.number().int().nonnegative(),
+  messages: z.number().int().nonnegative(),
+  total: z.number().int().nonnegative(),
+});
+export type ActivityHour = z.infer<typeof ActivityHourSchema>;
+
 export const usageActivityByDayRpc = defineRpc({
   name: "usage.activity-by-day",
   input: z.object({
@@ -1118,6 +1131,18 @@ export const usageActivityByDayRpc = defineRpc({
   }),
   output: z.object({
     days: z.array(ActivityDaySchema),
+  }),
+});
+
+export const usageActivityByHourRpc = defineRpc({
+  name: "usage.activity-by-hour",
+  input: z.object({
+    hours: z.number().int().positive().max(168),
+    /** Normalized provider id; omit / empty = all providers. */
+    provider: z.string().optional(),
+  }),
+  output: z.object({
+    hours: z.array(ActivityHourSchema),
   }),
 });
 
@@ -1197,5 +1222,78 @@ export function aggregateActivityByDay(
       total: counts.skills + counts.mcp + counts.agents + counts.messages,
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+const HOUR_MS = 60 * 60 * 1000;
+
+/**
+ * Zero-filled consecutive absolute-hour buckets. Epoch keys preserve both
+ * repeated local-clock hours during DST fallback.
+ */
+export function aggregateActivityByHour(
+  rows: ReadonlyArray<{
+    provider: string;
+    category: string;
+    confidence: string | null;
+    ts: string | null;
+    ingestedAt: string;
+  }>,
+  opts: {
+    start: Date;
+    hours: number;
+    provider?: string;
+    agents?: ReadonlyArray<{ provider: string; createdAt: string }>;
+    messages?: ReadonlyArray<{ provider: string; ts: string | null; ingestedAt: string }>;
+  },
+): ActivityHour[] {
+  const hours = Math.max(0, Math.trunc(opts.hours));
+  const startMs = Math.floor(opts.start.getTime() / HOUR_MS) * HOUR_MS;
+  if (!Number.isFinite(startMs) || hours === 0) return [];
+  const providerFilter = opts.provider?.trim() ? normalizeProvider(opts.provider) : undefined;
+  const buckets: ActivityHour[] = Array.from({ length: hours }, (_, index) => {
+    const at = startMs + index * HOUR_MS;
+    return {
+      key: String(at),
+      start: new Date(at).toISOString(),
+      skills: 0,
+      mcp: 0,
+      agents: 0,
+      messages: 0,
+      total: 0,
+    };
+  });
+
+  const bucketAt = (iso: string): ActivityHour | undefined => {
+    const at = Date.parse(iso);
+    if (!Number.isFinite(at)) return undefined;
+    const index = Math.floor((at - startMs) / HOUR_MS);
+    return index >= 0 && index < buckets.length ? buckets[index] : undefined;
+  };
+  const accepts = (provider: string) =>
+    !providerFilter || normalizeProvider(provider) === providerFilter;
+
+  for (const row of rows) {
+    if (!accepts(row.provider)) continue;
+    if (row.category !== "skill" && row.category !== "mcp") continue;
+    if (row.category === "skill" && row.confidence === "low") continue;
+    const bucket = bucketAt(row.ts ?? row.ingestedAt);
+    if (!bucket) continue;
+    if (row.category === "skill") bucket.skills += 1;
+    else bucket.mcp += 1;
+  }
+  for (const agent of opts.agents ?? []) {
+    if (!accepts(agent.provider)) continue;
+    const bucket = bucketAt(agent.createdAt);
+    if (bucket) bucket.agents += 1;
+  }
+  for (const message of opts.messages ?? []) {
+    if (!accepts(message.provider)) continue;
+    const bucket = bucketAt(message.ts ?? message.ingestedAt);
+    if (bucket) bucket.messages += 1;
+  }
+  for (const bucket of buckets) {
+    bucket.total = bucket.skills + bucket.mcp + bucket.agents + bucket.messages;
+  }
+  return buckets;
 }
 

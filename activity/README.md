@@ -6,7 +6,7 @@ It still answers “how am I using Paseo” (tools, messages, models, habits). W
 
 | Scope | Role |
 |---|---|
-| **Global** | Cross-workspace habits: heatmap, provider filter, insights, most-used skills / MCP / models |
+| **Global** | Cross-workspace habits: heatmap, rolling 168-hour activity timeline, provider filter, insights, most-used skills / MCP / models |
 | **Workspace** | Per-workspace agent fleet: ranked list + display prefs + archive; live status (permission / finished / error / running); open Terminals; shell / file / messages KPIs; times via shared `FormattedTime` |
 | **Agent** | Current session: dense tool KPIs, Skills / MCP header toggle, SKILL.md reader, composer Activity pill; **Needs attention** pill jumps to other same-workspace finished/permission/error sessions |
 
