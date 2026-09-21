@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import type { ActivityDay } from "../shared/usage.ts";
 import { activityLevel, buildActivityCalendar, type HeatmapMode } from "../shared/activity.ts";
 import { useAppLanguage } from "./use-app-language.ts";
+import { useMeasuredWidth } from "./measured-width.ts";
 import { ACTIVITY_MIX_STEPS, mixColor } from "./color-mix.ts";
 export { computeStreaks, type HeatmapMode } from "../shared/activity.ts";
 
@@ -33,7 +34,7 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
   modeOptions: ReadonlyArray<{ id: HeatmapMode; label: string }>;
 }) {
   const locale = useAppLanguage();
-  const [width, setWidth] = useState(0);
+  const [width, widthRef, onWidthLayout] = useMeasuredWidth("global:heatmap");
   const [gridTop, setGridTop] = useState(0);
   const [scrollX, setScrollX] = useState(0);
   const [tooltipSize, setTooltipSize] = useState({ width: 220, height: 28 });
@@ -76,7 +77,11 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
   const modeLabel = mode === "weekly" ? "Week containing" : mode === "cumulative" ? "Through" : "";
   const monthFocus = hoveredMonth != null;
   return (
-    <View style={{ gap: compact ? 10 : 12 }} onLayout={event => setWidth(event.nativeEvent.layout.width)}>
+    <View
+      ref={widthRef}
+      style={{ gap: compact ? 10 : 12 }}
+      onLayout={onWidthLayout}
+    >
       <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <Text style={{ color: colors.foreground, fontSize: compact ? 13 : 15, fontWeight: "500" }}>Activity</Text>
         <View style={{ flexDirection: "row", gap: compact ? 14 : 20 }}>

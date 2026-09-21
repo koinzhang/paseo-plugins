@@ -41,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Switching back to Activity no longer re-lays out the heatmap or the 168-hour timeline. A hidden page reports width 0 to `onLayout` (and a hidden app window runs no rendering updates at all, so `onLayout` never fires), which collapsed the grid to nothing until the next measurement. Both sections now ignore zero widths, remember the last real width across remounts, and re-measure synchronously from the DOM node on mount, resize, and `visibilitychange`.
 - Global Activity section rhythm: the heatmap month row no longer reserves a fixed 24px band, the 168-hour timeline's inner gap matches the other chart sections, and the insights / rank-list titles share the same 10 / 12 title gap. Sections now read as one evenly spaced stack (container gap 24 / 32 unchanged; list row density untouched).
 - Longest-agent metric was understated: agents archived before the plugin could observe them had no `archived_at`, so the tile only ever saw live-hook archives.
 

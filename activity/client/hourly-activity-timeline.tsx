@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PanResponder, Pressable, ScrollView, Text, View } from "react-native";
 import type { ActivityHour } from "../shared/usage.ts";
+import { useMeasuredWidth } from "./measured-width.ts";
 import { mixColor } from "./color-mix.ts";
 
 type ThemeColors = {
@@ -118,7 +119,7 @@ export function HourlyActivityTimeline({
   const maxOffsetRef = useRef(0);
   const dragOriginRef = useRef(0);
   const pinnedRight = useRef(true);
-  const [width, setWidth] = useState(0);
+  const [width, widthRef, onWidthLayout] = useMeasuredWidth("global:timeline");
   const [hovered, setHovered] = useState<string | null>(null);
 
   const topHeight = compact ? 44 : 58;
@@ -283,8 +284,9 @@ export function HourlyActivityTimeline({
 
   return (
     <View
+      ref={widthRef}
       style={{ gap: compact ? 10 : 12 }}
-      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+      onLayout={onWidthLayout}
     >
       <View
         style={{

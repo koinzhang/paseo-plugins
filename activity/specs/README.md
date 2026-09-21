@@ -87,6 +87,7 @@
 | [059-hourly-activity-timeline](./059-hourly-activity-timeline/) | 已实现，页面验收待完成 | 最近 168 小时活动时间线；发散折线面积图（轴上 messages / 轴下 agents）、一屏 24 小时、按住拖拽平移、独立于 range chips |
 | [060-global-section-spacing](./060-global-section-spacing/) | 已实现，页面验收待完成 | Global 各 section 间距节奏统一：热力图尾部留白、Timeline 内部 gap、insights / 排行标题 10 / 12 |
 | [061-heatmap-tab-font-size](./061-heatmap-tab-font-size/) | 已实现，页面验收待完成 | 热力图 Daily / Weekly / Cumulative 与横轴月份标签同字号（`LABEL_FONT_SIZE` 12） |
+| [062-measured-width-cache](./062-measured-width-cache/) | 已实现，页面验收待完成 | 测量宽度：0 宽不上报、同步测 DOM、监听 resize / visibilitychange；隐藏窗口与切页面不再重排 |
 
 ## 约定
 
