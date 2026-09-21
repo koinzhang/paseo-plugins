@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { PanResponder, Pressable, ScrollView, Text, View } from "react-native";
 import type { ActivityHour } from "../shared/usage.ts";
 import { mixColor } from "./color-mix.ts";
 
@@ -113,7 +113,10 @@ export function HourlyActivityTimeline({
   resetKey: string;
 }) {
   const scrollRef = useRef<ScrollView>(null);
-  /** Tracked in a ref so dragging the scrollbar never triggers a re-render. */
+  /** Scroll state lives in refs so panning never triggers a re-render. */
+  const offsetRef = useRef(0);
+  const maxOffsetRef = useRef(0);
+  const dragOriginRef = useRef(0);
   const pinnedRight = useRef(true);
   const [width, setWidth] = useState(0);
   const [hovered, setHovered] = useState<string | null>(null);
@@ -126,6 +129,35 @@ export function HourlyActivityTimeline({
   const slot = width > 0 ? width / VISIBLE_HOURS : 0;
   const contentWidth = slot > 0 ? gaps * slot : 0;
   const maxOffset = Math.max(0, contentWidth - width);
+  maxOffsetRef.current = maxOffset;
+
+  /**
+   * Press-and-drag panning: the host's mouse users have no horizontal wheel and
+   * the scrollbar is hidden. Claimed only once the gesture is clearly
+   * horizontal, so hover and click on an hour still reach the hotspots.
+   */
+  const pan = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_event, gesture) =>
+          Math.abs(gesture.dx) > 3 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
+        onPanResponderGrant: () => {
+          dragOriginRef.current = offsetRef.current;
+        },
+        onPanResponderMove: (_event, gesture) => {
+          const target = Math.max(
+            0,
+            Math.min(maxOffsetRef.current, dragOriginRef.current - gesture.dx),
+          );
+          offsetRef.current = target;
+          scrollRef.current?.scrollTo({ x: target, animated: false });
+        },
+        onPanResponderRelease: () => {
+          pinnedRight.current = offsetRef.current >= maxOffsetRef.current - 2;
+        },
+      }),
+    [],
+  );
 
   useEffect(() => {
     pinnedRight.current = true;
@@ -216,7 +248,16 @@ export function HourlyActivityTimeline({
   const hotspots = useMemo(
     () => (
       <View
-        style={{ position: "absolute", left: 0, top: 0, width: contentWidth, height: plotHeight }}
+        // Clipped: the edge hotspots overhang by half a slot, and that overhang
+        // would otherwise widen the scroll content past the last hour.
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: contentWidth,
+          height: plotHeight,
+          overflow: "hidden",
+        }}
       >
         {hours.map((hour, index) => (
           <Pressable
@@ -257,7 +298,7 @@ export function HourlyActivityTimeline({
         }}
       >
         <Text style={{ color: colors.foreground, fontSize: compact ? 13 : 15, fontWeight: "500" }}>
-          Hourly activity
+          Timeline
         </Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
           <Text style={{ color: colors.accent, fontSize: 12 }}>▲ messages</Text>
@@ -276,10 +317,12 @@ export function HourlyActivityTimeline({
           ref={scrollRef}
           horizontal
           nestedScrollEnabled
-          showsHorizontalScrollIndicator
+          showsHorizontalScrollIndicator={false}
           scrollEventThrottle={16}
+          {...pan.panHandlers}
           onScroll={(event) => {
-            pinnedRight.current = event.nativeEvent.contentOffset.x >= maxOffset - 2;
+            offsetRef.current = event.nativeEvent.contentOffset.x;
+            pinnedRight.current = offsetRef.current >= maxOffset - 2;
           }}
           // Fires on mount and on every resize; keeps Now on screen unless the
           // user has scrolled into history.
