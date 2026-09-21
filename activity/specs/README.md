@@ -88,6 +88,7 @@
 | [060-global-section-spacing](./060-global-section-spacing/) | 已实现，页面验收待完成 | Global 各 section 间距节奏统一：热力图尾部留白、Timeline 内部 gap、insights / 排行标题 10 / 12 |
 | [061-heatmap-tab-font-size](./061-heatmap-tab-font-size/) | 已实现，页面验收待完成 | 热力图 Daily / Weekly / Cumulative 与横轴月份标签同字号（`LABEL_FONT_SIZE` 12） |
 | [062-measured-width-cache](./062-measured-width-cache/) | 已实现，页面验收待完成 | 测量宽度：0 宽不上报、同步测 DOM、监听 resize / visibilitychange；隐藏窗口与切页面不再重排 |
+| [063-workspace-skill-timeline](./063-workspace-skill-timeline/) | 已实现，页面验收待完成 | Workspace Skills / MCP 新增逐次调用时间线，共用持久化视图 |
 
 ## 约定
 

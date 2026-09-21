@@ -105,6 +105,47 @@ export const usageSkillsByNameRpc = defineRpc({
   }),
 });
 
+export const RecentSkillCallItemSchema = z.object({
+  agentId: z.string(),
+  agentTitle: z.string().nullable(),
+  callId: z.string(),
+  skillName: z.string(),
+  calledAt: z.string(),
+});
+export type RecentSkillCallItem = z.infer<typeof RecentSkillCallItemSchema>;
+
+export const usageRecentSkillCallsRpc = defineRpc({
+  name: "usage.recent-skill-calls",
+  input: z.object({
+    workspaceId: z.string().min(1),
+    limit: z.number().int().positive().max(100).optional(),
+  }),
+  output: z.object({
+    items: z.array(RecentSkillCallItemSchema),
+  }),
+});
+
+export const RecentMcpCallItemSchema = z.object({
+  agentId: z.string(),
+  agentTitle: z.string().nullable(),
+  callId: z.string(),
+  server: z.string(),
+  tool: z.string(),
+  calledAt: z.string(),
+});
+export type RecentMcpCallItem = z.infer<typeof RecentMcpCallItemSchema>;
+
+export const usageRecentMcpCallsRpc = defineRpc({
+  name: "usage.recent-mcp-calls",
+  input: z.object({
+    workspaceId: z.string().min(1),
+    limit: z.number().int().positive().max(100).optional(),
+  }),
+  output: z.object({
+    items: z.array(RecentMcpCallItemSchema),
+  }),
+});
+
 export const usageMcpByToolRpc = defineRpc({
   name: "usage.mcp-by-tool",
   input: z.object({

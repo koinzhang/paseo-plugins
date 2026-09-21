@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Workspace Activity Skills and MCP can switch from call-count rankings to newest-first timelines; each call shows its agent title and time, and both sections share one host-scoped persisted view choice.
+- `usage.recent-skill-calls` RPC returns recent exact / inferred skill calls for a workspace with agent titles.
+- `usage.recent-mcp-calls` RPC returns recent MCP calls for a workspace with agent titles.
 - Global Activity **Agent creations** histogram: a fixed 30-local-day window of daily bars stacked by provider, with per-provider colours and a hover / focus / click card listing every provider's count for that day plus the date.
 - `usage.agent-creations` RPC: daily creation counts with per-provider slices, read from the agent registry alone (no tool-call or message joins).
 - `usage.agent-lifetime` now includes still-active agents (`createdAt → now`, marked `· active` in the KPI) instead of archived agents only.

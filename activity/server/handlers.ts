@@ -28,6 +28,8 @@ import {
   usageListRpc,
   usageMcpByToolRpc,
   usageReadSkillRpc,
+  usageRecentMcpCallsRpc,
+  usageRecentSkillCallsRpc,
   usageSkillsByNameRpc,
   usageSummaryRpc,
 } from "../shared/usage.ts";
@@ -193,6 +195,63 @@ export function createSkillsByNameHandler(store: UsageStore) {
     });
     const roots = await skillRootsForQuery(context.paseo, input.agentId, homeDir);
     const items = finalizeSkillPaths(aggregateSkillsByName(rows), roots, homeDir);
+    return { items };
+  };
+}
+
+export function createRecentSkillCallsHandler(store: UsageStore) {
+  return async (
+    input: RpcInput<typeof usageRecentSkillCallsRpc>,
+  ): Promise<RpcOutput<typeof usageRecentSkillCallsRpc>> => {
+    const titles = new Map(
+      store
+        .selectAgents({ workspaceId: input.workspaceId })
+        .map((agent) => [agent.agentId, agent.title?.trim() || null] as const),
+    );
+    const items = store
+      .select({ workspaceId: input.workspaceId, category: "skill" })
+      .filter((row) => row.confidence !== "low" && row.skillName?.trim())
+      .sort((a, b) => {
+        const byTime = (b.ts ?? b.ingestedAt).localeCompare(a.ts ?? a.ingestedAt);
+        return byTime || b.callId.localeCompare(a.callId);
+      })
+      .slice(0, input.limit ?? 8)
+      .map((row) => ({
+        agentId: row.agentId,
+        agentTitle: titles.get(row.agentId) ?? null,
+        callId: row.callId,
+        skillName: row.skillName!.trim(),
+        calledAt: row.ts ?? row.ingestedAt,
+      }));
+    return { items };
+  };
+}
+
+export function createRecentMcpCallsHandler(store: UsageStore) {
+  return async (
+    input: RpcInput<typeof usageRecentMcpCallsRpc>,
+  ): Promise<RpcOutput<typeof usageRecentMcpCallsRpc>> => {
+    const titles = new Map(
+      store
+        .selectAgents({ workspaceId: input.workspaceId })
+        .map((agent) => [agent.agentId, agent.title?.trim() || null] as const),
+    );
+    const items = store
+      .select({ workspaceId: input.workspaceId, category: "mcp" })
+      .filter((row) => row.mcpServer?.trim() && row.mcpTool?.trim())
+      .sort((a, b) => {
+        const byTime = (b.ts ?? b.ingestedAt).localeCompare(a.ts ?? a.ingestedAt);
+        return byTime || b.callId.localeCompare(a.callId);
+      })
+      .slice(0, input.limit ?? 8)
+      .map((row) => ({
+        agentId: row.agentId,
+        agentTitle: titles.get(row.agentId) ?? null,
+        callId: row.callId,
+        server: row.mcpServer!.trim(),
+        tool: row.mcpTool!.trim(),
+        calledAt: row.ts ?? row.ingestedAt,
+      }));
     return { items };
   };
 }

@@ -11,6 +11,8 @@ import {
   createAgentLifetimeHandler,
   createAgentsHandler,
   createByProviderHandler,
+  createRecentMcpCallsHandler,
+  createRecentSkillCallsHandler,
   createSkillsByNameHandler,
 } from "./handlers.ts";
 import { createUsageStore, type ToolCallRow } from "./store.ts";
@@ -129,6 +131,140 @@ test("usage.agents filters by workspace and merges the registry", async () => {
     assert.equal(result.items[0]?.archivedAt, null);
     assert.equal(result.items[0]?.updatedAt, "2026-09-19T10:00:00.000Z");
     assert.equal(result.items[1]?.archivedAt, "2026-09-19T11:00:00.000Z");
+  } finally {
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("recent skill calls returns newest workspace calls with agent titles", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "recent-skills-"));
+  const store = createUsageStore({ dir, driver: "sqlite" });
+  try {
+    store.upsertMany([
+      row({ agentId: "a1", callId: "older", skillName: "review", ts: "2026-09-19T10:00:00.000Z" }),
+      row({ agentId: "a2", callId: "newer", skillName: "paseo", ts: "2026-09-19T12:00:00.000Z" }),
+      row({
+        agentId: "a1",
+        callId: "low",
+        skillName: "reference-only",
+        confidence: "low",
+        ts: "2026-09-19T13:00:00.000Z",
+      }),
+      row({
+        agentId: "other",
+        callId: "other-workspace",
+        workspaceId: "w2",
+        ts: "2026-09-19T14:00:00.000Z",
+      }),
+    ]);
+    store.upsertAgents([
+      {
+        agentId: "a1",
+        workspaceId: "w1",
+        parentAgentId: null,
+        provider: "codex",
+        title: "Alpha",
+        createdAt: "2026-09-19T09:00:00.000Z",
+        archivedAt: null,
+        updatedAt: "2026-09-19T10:00:00.000Z",
+      },
+      {
+        agentId: "a2",
+        workspaceId: "w1",
+        parentAgentId: null,
+        provider: "codex",
+        title: null,
+        createdAt: "2026-09-19T09:00:00.000Z",
+        archivedAt: null,
+        updatedAt: "2026-09-19T12:00:00.000Z",
+      },
+    ]);
+
+    const result = await createRecentSkillCallsHandler(store)({
+      workspaceId: "w1",
+      limit: 2,
+    });
+    assert.deepEqual(
+      result.items.map((item) => [
+        item.callId,
+        item.skillName,
+        item.agentTitle,
+        item.calledAt,
+      ]),
+      [
+        ["newer", "paseo", null, "2026-09-19T12:00:00.000Z"],
+        ["older", "review", "Alpha", "2026-09-19T10:00:00.000Z"],
+      ],
+    );
+  } finally {
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("recent MCP calls returns newest workspace calls with agent titles", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "recent-mcp-"));
+  const store = createUsageStore({ dir, driver: "sqlite" });
+  try {
+    store.upsertMany([
+      row({
+        agentId: "a1",
+        callId: "older",
+        category: "mcp",
+        skillName: null,
+        mcpServer: "github",
+        mcpTool: "search",
+        ts: "2026-09-19T10:00:00.000Z",
+      }),
+      row({
+        agentId: "a2",
+        callId: "newer",
+        category: "mcp",
+        skillName: null,
+        mcpServer: "paseo",
+        mcpTool: "list_agents",
+        ts: "2026-09-19T12:00:00.000Z",
+      }),
+      row({
+        agentId: "other",
+        callId: "other-workspace",
+        workspaceId: "w2",
+        category: "mcp",
+        skillName: null,
+        mcpServer: "other",
+        mcpTool: "tool",
+        ts: "2026-09-19T14:00:00.000Z",
+      }),
+    ]);
+    store.upsertAgents([
+      {
+        agentId: "a1",
+        workspaceId: "w1",
+        parentAgentId: null,
+        provider: "codex",
+        title: "Alpha",
+        createdAt: "2026-09-19T09:00:00.000Z",
+        archivedAt: null,
+        updatedAt: "2026-09-19T10:00:00.000Z",
+      },
+    ]);
+
+    const result = await createRecentMcpCallsHandler(store)({
+      workspaceId: "w1",
+      limit: 2,
+    });
+    assert.deepEqual(
+      result.items.map((item) => [
+        item.callId,
+        `${item.server}.${item.tool}`,
+        item.agentTitle,
+      ]),
+      [
+        ["newer", "paseo.list_agents", null],
+        ["older", "github.search", "Alpha"],
+      ],
+    );
   } finally {
     store.close();
     rmSync(dir, { recursive: true, force: true });

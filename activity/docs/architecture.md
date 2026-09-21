@@ -52,6 +52,8 @@ server/          handlers · store · ingest · background-sync · hooks
 |---|---|---|---|---|
 | `usage.summary` | ✓ | ✓ | ✓ | Agent / Workspace |
 | `usage.skills-by-name` | ✓ | ✓ | ✓ | 三层 |
+| `usage.recent-skill-calls` | — | 必填 | — | Workspace Skills 时间线 |
+| `usage.recent-mcp-calls` | — | 必填 | — | Workspace MCP 时间线 |
 | `usage.mcp-by-tool` | ✓ | ✓ | ✓ | 三层 |
 | `usage.by-provider` | — | ✓ | ✓ | Global |
 | `usage.agents` | — | ✓ | ✓ | Workspace |

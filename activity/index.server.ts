@@ -12,6 +12,8 @@ import {
   createListHandler,
   createMcpByToolHandler,
   createReadSkillHandler,
+  createRecentMcpCallsHandler,
+  createRecentSkillCallsHandler,
   createSkillsByNameHandler,
   createSummaryHandler,
   createUnarchiveAgentHandler,
@@ -33,6 +35,8 @@ import {
   usageListRpc,
   usageMcpByToolRpc,
   usageReadSkillRpc,
+  usageRecentMcpCallsRpc,
+  usageRecentSkillCallsRpc,
   usageSkillsByNameRpc,
   usageSummaryRpc,
 } from "./shared/usage.ts";
@@ -55,6 +59,14 @@ export default function contribute(server: PluginServerContext) {
   server.handle(usageSkillsByNameRpc, (input, context) => {
     void background.request(context.paseo);
     return createSkillsByNameHandler(store)(input, context);
+  });
+  server.handle(usageRecentSkillCallsRpc, (input, context) => {
+    void background.request(context.paseo);
+    return createRecentSkillCallsHandler(store)(input);
+  });
+  server.handle(usageRecentMcpCallsRpc, (input, context) => {
+    void background.request(context.paseo);
+    return createRecentMcpCallsHandler(store)(input);
   });
   server.handle(usageMcpByToolRpc, (input, context) => {
     void background.request(context.paseo);

@@ -30,6 +30,8 @@ import {
   usageAgentsRpc,
   usageHostInfoRpc,
   usageMcpByToolRpc,
+  usageRecentMcpCallsRpc,
+  usageRecentSkillCallsRpc,
   usageSkillsByNameRpc,
   usageSummaryRpc,
 } from "../../shared/usage.ts";
@@ -94,6 +96,7 @@ export function WorkspaceActivityPanel({
     () => new Set(displayValues.lifecycle),
     [displayValues.lifecycle],
   );
+  const rankView = displayValues.rankView;
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuFlyout, setMenuFlyout] = useState<MenuFlyout | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<{ top: number; right: number } | null>(null);
@@ -119,7 +122,9 @@ export function WorkspaceActivityPanel({
   const agentsRpc = useRpc(usageAgentsRpc);
   const unarchiveAgentRpc = useRpc(usageAgentUnarchiveRpc);
   const skillsRpc = useRpc(usageSkillsByNameRpc);
+  const recentSkillCallsRpc = useRpc(usageRecentSkillCallsRpc);
   const mcpRpc = useRpc(usageMcpByToolRpc);
+  const recentMcpCallsRpc = useRpc(usageRecentMcpCallsRpc);
   const hostInfoRpc = useRpc(usageHostInfoRpc);
 
   const agentsQueryKey = useMemo(
@@ -152,11 +157,25 @@ export function WorkspaceActivityPanel({
     queryFn: () => skillsRpc({ workspaceId }),
   });
 
+  const recentSkillCalls = useQuery({
+    refetchInterval: 15_000,
+    retry: false,
+    queryKey: ["activity", "workspace-recent-skills", workspaceId],
+    queryFn: () => recentSkillCallsRpc({ workspaceId, limit: ACTIVITY_LIST_LIMIT }),
+  });
+
   const mcp = useQuery({
     refetchInterval: 15_000,
     retry: false,
     queryKey: ["activity", "workspace-mcp", workspaceId],
     queryFn: () => mcpRpc({ workspaceId }),
+  });
+
+  const recentMcpCalls = useQuery({
+    refetchInterval: 15_000,
+    retry: false,
+    queryKey: ["activity", "workspace-recent-mcp", workspaceId],
+    queryFn: () => recentMcpCallsRpc({ workspaceId, limit: ACTIVITY_LIST_LIMIT }),
   });
 
   const paseo = usePaseo();
@@ -185,7 +204,13 @@ export function WorkspaceActivityPanel({
       queryKey: ["activity", "workspace-skills", workspaceId],
     });
     void queryClient.invalidateQueries({
+      queryKey: ["activity", "workspace-recent-skills", workspaceId],
+    });
+    void queryClient.invalidateQueries({
       queryKey: ["activity", "workspace-mcp", workspaceId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["activity", "workspace-recent-mcp", workspaceId],
     });
   });
 
@@ -243,11 +268,24 @@ export function WorkspaceActivityPanel({
     [mcp.data],
   );
   const skillItems = useMemo(() => allSkills.slice(0, ACTIVITY_LIST_LIMIT), [allSkills]);
+  const recentSkillItems = recentSkillCalls.data?.items ?? [];
   const mcpItems = useMemo(() => allMcp.slice(0, ACTIVITY_LIST_LIMIT), [allMcp]);
+  const recentMcpItems = recentMcpCalls.data?.items ?? [];
 
   const loading =
-    summary.isLoading || agents.isLoading || skills.isLoading || mcp.isLoading;
-  const error = summary.error ?? agents.error ?? skills.error ?? mcp.error;
+    summary.isLoading ||
+    agents.isLoading ||
+    skills.isLoading ||
+    recentSkillCalls.isLoading ||
+    mcp.isLoading ||
+    recentMcpCalls.isLoading;
+  const error =
+    summary.error ??
+    agents.error ??
+    skills.error ??
+    recentSkillCalls.error ??
+    mcp.error ??
+    recentMcpCalls.error;
 
   const kpi = [
     { label: "Shell calls", value: (summary.data?.shellCalls ?? 0).toLocaleString() },
@@ -374,6 +412,33 @@ export function WorkspaceActivityPanel({
         alignItems: "center" as const,
         gap: 12,
         paddingVertical: 6,
+      },
+      timelineMarker: {
+        width: 18,
+        alignSelf: "stretch" as const,
+        alignItems: "center" as const,
+        justifyContent: "center" as const,
+      },
+      timelineLineTop: {
+        position: "absolute" as const,
+        top: -7,
+        bottom: "50%" as const,
+        width: 1,
+        backgroundColor: theme.colors.border,
+      },
+      timelineLineBottom: {
+        position: "absolute" as const,
+        top: "50%" as const,
+        bottom: -7,
+        width: 1,
+        backgroundColor: theme.colors.border,
+      },
+      timelineDot: {
+        zIndex: 1,
+        width: 7,
+        height: 7,
+        borderRadius: 3.5,
+        backgroundColor: theme.colors.accent,
       },
       agentListRow: {
         flexDirection: "row" as const,
@@ -892,9 +957,18 @@ export function WorkspaceActivityPanel({
               onToggleKind={() =>
                 setRankKind((prev) => (prev === "skills" ? "mcp" : "skills"))
               }
+              rankView={rankView}
+              onToggleRankView={() =>
+                persistDisplay({
+                  ...displayValues,
+                  rankView: rankView === "ranked" ? "timeline" : "ranked",
+                })
+              }
               showToggle={showRankToggle}
               skillItems={skillItems}
+              recentSkillCalls={recentSkillItems}
               mcpItems={mcpItems}
+              recentMcpCalls={recentMcpItems}
               mutedColor={theme.colors.foregroundMuted}
               styles={styles}
             />
