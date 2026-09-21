@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Agent creations colours: branded providers keep brand accents; unbranded catalog providers and any future ACP id fall back to the soft chart palette (no theme `accent` for the window leader).
 - Agent creations hover card lists only providers with creations that day (no `: 0` rows); empty days still show the date alone.
 - Agent creations day bars use the same theme-accent intensity steps as the Activity heatmap; provider brand colours remain only on the hover card chips.
+- Activity heatmap rows are weekdays again (row 1 Sunday … row 7 Saturday) and each column is one Sunday-start calendar week, matching GitHub / Codex contribution graphs. The window is still 52 columns × 7 rows ending with the current week; days after today in the last column stay blank.
 
 ### Fixed
 

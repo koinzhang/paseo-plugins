@@ -70,7 +70,7 @@ describe("activity calendar", () => {
     assert.equal(weeklyCell?.agents, 1);
     assert.equal(weeklyCell?.messages, 3);
   });
-  it("keeps complete rolling windows across day, month, year, leap day and DST boundaries", () => {
+  it("aligns rows to weekdays across day, month, year, leap day and DST boundaries (058)", () => {
     const previous = process.env.TZ;
     process.env.TZ = "America/New_York";
     try {
@@ -82,17 +82,28 @@ describe("activity calendar", () => {
         [2026, 2, 8], [2026, 2, 9], [2026, 10, 1], [2026, 10, 2],
       ]) {
         const end = new Date(year!, month!, day!);
+        const label = `${year}-${month! + 1}-${day}`;
         for (const mode of ["daily", "weekly", "cumulative"] as const) {
           const result = buildActivityCalendar(days, mode, undefined, end);
           const cells = result.weeks.flat();
-          assert.equal(result.weeks.length, 52);
-          assert.ok(result.weeks.every(week => week.length === 7));
-          assert.equal(new Set(cells.map(cell => cell.key)).size, 364);
-          assert.ok(cells.every(cell => !cell.future && !cell.excluded));
+          assert.equal(result.weeks.length, 52, label);
+          assert.ok(result.weeks.every(week => week.length === 7), label);
+          assert.equal(new Set(cells.map(cell => cell.key)).size, 364, label);
+          assert.ok(cells.every(cell => !cell.excluded), label);
+          // Row index === weekday, Sunday first.
+          for (const week of result.weeks) {
+            week.forEach((cell, row) => {
+              const [y, m, d] = cell.key.split("-").map(Number);
+              assert.equal(new Date(y!, m! - 1, d!).getDay(), row, `${label} ${cell.key}`);
+            });
+          }
+          // Visible days are contiguous and end on today; the rest of the last column is future.
+          const visible = cells.filter(cell => !cell.future);
+          assert.equal(visible.length, cells.length - (6 - end.getDay()), label);
           const expected = new Date(end);
-          for (let i = cells.length - 1; i >= 0; i--) {
+          for (let i = visible.length - 1; i >= 0; i--) {
             const key = `${expected.getFullYear()}-${String(expected.getMonth() + 1).padStart(2, "0")}-${String(expected.getDate()).padStart(2, "0")}`;
-            assert.equal(cells[i]?.key, key);
+            assert.equal(visible[i]?.key, key, label);
             expected.setDate(expected.getDate() - 1);
           }
         }
@@ -101,19 +112,22 @@ describe("activity calendar", () => {
       if (previous === undefined) delete process.env.TZ; else process.env.TZ = previous;
     }
   });
-  it("keeps natural-week totals when Sunday falls inside a visual column", () => {
+  it("starts the last column on the Sunday of the current week (058)", () => {
     const result = buildActivityCalendar(days, "weekly", from, today);
     const last = result.weeks[51]!;
-    assert.equal(last[0]?.key, "2026-03-04");
-    assert.equal(last.find(cell => cell.key === "2026-03-07")?.agents, 2);
-    assert.equal(last.find(cell => cell.key === "2026-03-08")?.agents, 1);
-    assert.equal(last[6]?.messages, 3);
+    assert.equal(last[0]?.key, "2026-03-08"); // Sunday of the week containing 2026-03-10
+    assert.equal(last[2]?.key, "2026-03-10"); // today, Tuesday
+    assert.ok(last.slice(3).every(cell => cell.future));
+    assert.equal(last[0]?.agents, 1); // natural-week total for 2026-03-08
+    assert.equal(last[0]?.messages, 3);
+    assert.equal(result.weeks[50]?.find(cell => cell.key === "2026-03-07")?.agents, 2);
   });
-  it("carries history before the rolling window into cumulative totals", () => {
+  it("carries history before the window into cumulative totals", () => {
     const history = [{ date: "2020-01-01", skills: 1, mcp: 2, agents: 3, messages: 4, total: 10 }, ...days];
     const cells = buildActivityCalendar(history, "cumulative", undefined, today).weeks.flat();
     assert.equal(cells[0]?.total, 10);
-    assert.equal(cells[363]?.total, 28);
+    assert.equal(cells[51 * 7 + 2]?.key, "2026-03-10");
+    assert.equal(cells[51 * 7 + 2]?.total, 28);
   });
   it("renders empty windows and bounded intensity", () => {
     const result = buildActivityCalendar([], "daily", undefined, today);

@@ -73,7 +73,7 @@
 | [046-host-archive-optimistic](./046-host-archive-optimistic/) | 已由 047 替代 | 使用明确 archivedAt 实时更新 Active/Archived |
 | [047-beta2-observation-remediation](./047-beta2-observation-remediation/) | 已实现，页面验收待完成 | 独立目录订阅、明确生命周期/归档、清理与 SDK 契约测试 |
 
-| [048-heatmap-rolling-rectangle](./048-heatmap-rolling-rectangle/) | 已实现 | 热力图固定 364 天完整矩形，今天始终在右下角 |
+| [048-heatmap-rolling-rectangle](./048-heatmap-rolling-rectangle/) | 已由 058 替代 | 热力图固定 364 天完整矩形，今天始终在右下角 |
 | [049-agent-lifetime-creations](./049-agent-lifetime-creations/) | 已实现（050 / 051 修订） | 归档 agent 元数据补扫（`includeArchived`）；最长寿命 RPC；每日创建直方图 |
 | [050-kpi-insights-reorg](./050-kpi-insights-reorg/) | 已实现（051 修订直方图与最长寿命口径） | Global KPI 优先 Top / Longest（6 格）；Insights 固定 8 行；直方图固定 30 天窗口 |
 | [051-creations-provider-stack](./051-creations-provider-stack/) | 已实现，页面验收待完成 | 创建直方图按 provider 堆叠 + 浮层明细（`usage.agent-creations`）；最长寿命含活跃 agent |
@@ -83,6 +83,7 @@
 | [055-creations-day-gradient](./055-creations-day-gradient/) | 已实现（柱色由 057 取代） | 创建直方图日柱改为整块填充（原 provider 软渐变；形状保留） |
 | [056-creations-tooltip-nonzero](./056-creations-tooltip-nonzero/) | 已实现 | 创建直方图浮层只列当日有创建的 provider（省略 count 0） |
 | [057-creations-accent-bars](./057-creations-accent-bars/) | 已实现，页面验收待完成 | 创建直方图日柱改用主题 accent 强度色（与热力图同色系）；浮层保留 provider 品牌色 |
+| [058-heatmap-weekday-rows](./058-heatmap-weekday-rows/) | 已实现，页面验收待完成 | 热力图行 = weekday（周日起）、列 = 自然周（Codex 样式）；修订 048 |
 
 ## 约定
 

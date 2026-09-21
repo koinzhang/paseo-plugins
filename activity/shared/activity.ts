@@ -34,9 +34,11 @@ export type HeatmapMode = "daily" | "weekly" | "cumulative";
 
 export function buildActivityCalendar(days: readonly ActivityDay[], mode: HeatmapMode, _from?: string, today = new Date(), locale = "en") {
   const end = startOfLocalDay(today);
-  // A complete 52 × 7 rolling window ending today, with no future padding (048).
+  // 52 natural weeks (Sunday-start) ending with the week containing today (058):
+  // rows are weekdays (Sunday → Saturday), columns are calendar weeks. Days after
+  // today in the last column stay hidden.
   // Range chips filter RPC data only (021). `_from` kept for call-site compatibility.
-  const start = addDays(end, -(52 * 7 - 1));
+  const start = addDays(startOfWeekSunday(end), -(51 * 7));
   const first = start;
   const daily = new Map(days.map(day => [day.date, day]));
   const weekly = new Map<string, ActivityDay>();
