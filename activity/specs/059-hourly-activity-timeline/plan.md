@@ -18,8 +18,11 @@
 
 - 新建 `HourlyActivityTimeline`，内部 `AreaSeries` 负责一条填充折线
 - 步长 `onLayout 宽度 / 24`：一屏 24 小时，内容宽 167 × slot，横向 `ScrollView`
-- 鼠标兜底靠常驻水平滚动条；`onScroll` 只写 `pinnedRight` ref（不触发 render），
-  它决定 15 秒轮询后是否重新吸附到 Now
+- 鼠标兜底靠 `PanResponder` 拖拽：`onMoveShouldSetPanResponder` 只在横向手势时
+  接管，move 里 `scrollTo({ animated: false })`；偏移与上限只存 ref，不触发 render
+- `onScroll` 同样只写 ref，`pinnedRight` 决定 15 秒轮询后是否重新吸附到 Now
+- hover 热区容器加 `overflow: hidden`：首尾热区溢出半格会撑大滚动内容宽度，
+  导致滚到底时右端比上方直方图短半格
 - 两处 `useMemo` 冻结元素标识：hover 改状态时不重建约 330 个 skew 段和 168 个热区
 - 无 SVG：每段用 `overflow: hidden` 格子裁剪一块 `skewY` 平行四边形，
   顶边 = 折线段，主体 = 面积；`borderTopWidth` 乘 `hypot(1, tan)` 保持线宽恒定

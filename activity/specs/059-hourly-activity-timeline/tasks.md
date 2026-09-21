@@ -8,8 +8,10 @@
   - 验证：一屏 24 小时、现在在最右；hover / focus / 点击拆四类
 - [x] T6 改为发散折线面积图（messages 在轴上、agents 在轴下）
   - 验证：`skewY` 梯形段无 SVG 渲染；线宽随斜率补偿；`npm run typecheck` 通过
-- [x] T7 鼠标可用的滚动：24 小时视窗 + 常驻水平滚动条（无翻页按钮）
-  - 验证：`onScroll` 只写 ref；贴右状态下轮询不抢回滚动位置
+- [x] T7 鼠标可用的滚动：24 小时视窗 + 按住拖拽平移（隐藏滚动条、无翻页按钮）
+  - 验证：`PanResponder` 仅横向手势接管；偏移只落 ref；贴右时轮询不抢回位置
+- [x] T8 右端对齐上方直方图
+  - 验证：截图实测差 15.5 CSS px ≈ 半格；热区容器 `overflow: hidden` 后消除
 - [x] T4 README 索引与 CHANGELOG
   - 验证：059 索引、architecture RPC 表和 Unreleased 条目
 - [x] T5 完整验证与重载
