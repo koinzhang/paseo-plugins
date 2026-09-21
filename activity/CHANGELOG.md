@@ -5,12 +5,9 @@ All notable changes to `@koinzhang/paseo-plugin-activity` are documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.6.0] - 2026-09-22
 
-### Changed
-
-- Workspace Activity Skills / MCP default to the newest-call timeline; an explicitly saved ranked view is kept.
-- **Temporary:** target Paseo **0.8.0** again (`requirements.paseo >=0.8.0`, SDK `0.8.0`, host-slot-safe directory subscribe) so this checkout can run on 0.8 devices. Revert before publishing another 0.9+ release.
+Requires Paseo **>= 0.9.0-beta.2**.
 
 ### Added
 
@@ -24,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Workspace Activity Skills / MCP default to the newest-call timeline; an explicitly saved ranked view is kept.
 - Global KPI reordered to lead with Top / Longest: Agents, Longest agent, Top provider, Top model, Peak weekday, Longest streak; Insights fixed at 8 rows.
 - Agent creations histogram ignores the range chips (always the last 30 local days) and no longer depends on `usage.activity-by-day`.
 - `mcpServerColor` renamed to `entityColor`; the same accent-derived stable colour now covers MCP servers and providers.
@@ -157,7 +155,8 @@ Last release that supports Paseo **0.8.0**. Later versions require Paseo **>= 0.
 - Command Center entries: open panels and export a markdown usage report.
 - Plugin renamed from `tool-usage` to `activity`, migrating the old data directory automatically.
 
-[Unreleased]: https://github.com/koinzhang/paseo-plugins/compare/activity-v0.5.0...HEAD
+[Unreleased]: https://github.com/koinzhang/paseo-plugins/compare/activity-v0.6.0...HEAD
+[0.6.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/activity-v0.6.0
 [0.5.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/activity-v0.5.0
 [0.4.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/activity-v0.4.0
 [0.3.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/activity-v0.3.0
