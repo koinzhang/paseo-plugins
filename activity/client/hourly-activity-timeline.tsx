@@ -120,7 +120,6 @@ export function HourlyActivityTimeline({
   const pinnedRight = useRef(true);
   const [width, setWidth] = useState(0);
   const [hovered, setHovered] = useState<string | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
 
   const topHeight = compact ? 44 : 58;
   const bottomHeight = compact ? 22 : 30;
@@ -143,6 +142,8 @@ export function HourlyActivityTimeline({
           Math.abs(gesture.dx) > 3 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
         onPanResponderGrant: () => {
           dragOriginRef.current = offsetRef.current;
+          // A drag steals the pointer from the hotspots; drop the stale cursor.
+          setHovered(null);
         },
         onPanResponderMove: (_event, gesture) => {
           const target = Math.max(
@@ -162,7 +163,6 @@ export function HourlyActivityTimeline({
   useEffect(() => {
     pinnedRight.current = true;
     setHovered(null);
-    setSelected(null);
     scrollRef.current?.scrollToEnd({ animated: false });
   }, [resetKey]);
 
@@ -194,8 +194,7 @@ export function HourlyActivityTimeline({
     [hours, locale],
   );
 
-  const activeKey = hovered ?? selected;
-  const activeIndex = hours.findIndex((hour) => hour.key === activeKey);
+  const activeIndex = hours.findIndex((hour) => hour.key === hovered);
   const active = activeIndex >= 0 ? hours[activeIndex] : undefined;
   const readout = active
     ? `${hourRangeLabel(active.start, locale)} — ${active.agents} agents · ${active.messages} messages · ${active.skills} skills · ${active.mcp} MCP`
@@ -262,13 +261,12 @@ export function HourlyActivityTimeline({
         {hours.map((hour, index) => (
           <Pressable
             key={hour.key}
-            accessibilityRole="button"
+            focusable
             accessibilityLabel={`${hourRangeLabel(hour.start, locale)}: ${hour.agents} agents, ${hour.messages} messages, ${hour.skills} skills, ${hour.mcp} MCP`}
             onHoverIn={() => setHovered(hour.key)}
             onHoverOut={() => setHovered(null)}
             onFocus={() => setHovered(hour.key)}
             onBlur={() => setHovered(null)}
-            onPress={() => setSelected((previous) => (previous === hour.key ? null : hour.key))}
             style={{
               position: "absolute",
               left: Math.max(0, index * slot - slot / 2),

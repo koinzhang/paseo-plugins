@@ -5,7 +5,7 @@
 - [x] T2 小时桶聚合、RPC 与服务端 handler
   - 验证：`aggregateActivityByHour (059)` + `handlers-query` 定向测试通过
 - [x] T3 168 小时横向 UI，接入 Global surface
-  - 验证：一屏 24 小时、现在在最右；hover / focus / 点击拆四类
+  - 验证：一屏 24 小时、现在在最右；hover / focus 拆四类，移开即清除
 - [x] T6 改为发散折线面积图（messages 在轴上、agents 在轴下）
   - 验证：`skewY` 梯形段无 SVG 渲染；线宽随斜率补偿；`npm run typecheck` 通过
 - [x] T7 鼠标可用的滚动：24 小时视窗 + 按住拖拽平移（隐藏滚动条、无翻页按钮）

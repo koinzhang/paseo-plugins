@@ -27,7 +27,7 @@
 - 无 SVG：每段用 `overflow: hidden` 格子裁剪一块 `skewY` 平行四边形，
   顶边 = 折线段，主体 = 面积；`borderTopWidth` 乘 `hypot(1, tan)` 保持线宽恒定
 - messages 在轴上方、agents 在轴下方（容器 `scaleY(-1)` 镜像），各自归一
-- 168 个透明 `Pressable` 叠在图上负责 hover / focus / 点击，读数行给四类明细
+- 168 个透明 `Pressable` 叠在图上负责 hover / focus（无 onPress），读数行给四类明细
 - Global surface 使用独立 query，固定 `hours: 168`，放在 `AgentCreations` 后
 
 ## 4. 验证

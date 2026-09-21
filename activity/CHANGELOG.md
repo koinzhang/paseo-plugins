@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Agent creations hover card lists only providers with creations that day (no `: 0` rows); empty days still show the date alone.
 - Agent creations day bars use the same theme-accent intensity steps as the Activity heatmap; provider brand colours remain only on the hover card chips.
 - Activity heatmap rows are weekdays again (row 1 Sunday … row 7 Saturday) and each column is one Sunday-start calendar week, matching GitHub / Codex contribution graphs. The window is still 52 columns × 7 rows ending with the current week; days after today in the last column stay blank.
-- Global Activity adds a rolling 168-hour timeline below the Agents histogram: a diverging filled line chart with messages above the time axis and agents below it. The viewport shows 24 hours at a time and starts at the current hour; press and drag the chart to pan through the rest of the week (no scrollbar, and a click or hover on an hour still works). Empty hours keep their slot, and hover / focus / click reveals the local hour range with messages, agents, skill calls, and MCP calls; the window is independent of range chips.
+- Global Activity adds a rolling 168-hour timeline below the Agents histogram: a diverging filled line chart with messages above the time axis and agents below it. The viewport shows 24 hours at a time and starts at the current hour; press and drag the chart to pan through the rest of the week (no scrollbar). Empty hours keep their slot, and hovering or focusing an hour reveals its local range with agents, messages, skill calls, and MCP calls; the window is independent of range chips.
 
 ### Fixed
 
