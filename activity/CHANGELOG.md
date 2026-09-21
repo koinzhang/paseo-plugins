@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Global Activity section rhythm: the heatmap month row no longer reserves a fixed 24px band, the 168-hour timeline's inner gap matches the other chart sections, and the insights / rank-list titles share the same 10 / 12 title gap. Sections now read as one evenly spaced stack (container gap 24 / 32 unchanged; list row density untouched).
 - Longest-agent metric was understated: agents archived before the plugin could observe them had no `archived_at`, so the tile only ever saw live-hook archives.
 
 ## [0.5.0] - 2026-09-20

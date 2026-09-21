@@ -571,7 +571,8 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
         alignItems: "center" as const,
         justifyContent: "space-between" as const,
         gap: 8,
-        marginBottom: 10,
+        // + block gap 2 = 10 (compact) / 12 (regular), the chart sections' title gap.
+        marginBottom: layout.compact ? 8 : 10,
       },
       blockTitle: {
         color: theme.colors.foreground,
@@ -724,7 +725,7 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
         <View style={styles.columns}>
           <View style={styles.column}>
             <View style={styles.block}>
-              <Text style={[styles.blockTitle, { marginBottom: 10 }]}>Activity insights</Text>
+              <Text style={[styles.blockTitle, { marginBottom: layout.compact ? 8 : 10 }]}>Activity insights</Text>
               {insights.map((row) => (
                 <View key={row.label} style={styles.insightRow}>
                   <Text style={styles.insightLabel}>{row.label}</Text>

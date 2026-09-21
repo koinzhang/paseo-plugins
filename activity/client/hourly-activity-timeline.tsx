@@ -283,7 +283,7 @@ export function HourlyActivityTimeline({
 
   return (
     <View
-      style={{ gap: compact ? 8 : 10 }}
+      style={{ gap: compact ? 10 : 12 }}
       onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
     >
       <View

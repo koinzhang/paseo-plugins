@@ -85,6 +85,7 @@
 | [057-creations-accent-bars](./057-creations-accent-bars/) | 已实现，页面验收待完成 | 创建直方图日柱改用主题 accent 强度色（与热力图同色系）；浮层保留 provider 品牌色 |
 | [058-heatmap-weekday-rows](./058-heatmap-weekday-rows/) | 已实现，页面验收待完成 | 热力图行 = weekday（周日起）、列 = 自然周（Codex 样式）；修订 048 |
 | [059-hourly-activity-timeline](./059-hourly-activity-timeline/) | 已实现，页面验收待完成 | 最近 168 小时活动时间线；发散折线面积图（轴上 messages / 轴下 agents）、一屏 24 小时、按住拖拽平移、独立于 range chips |
+| [060-global-section-spacing](./060-global-section-spacing/) | 已实现，页面验收待完成 | Global 各 section 间距节奏统一：热力图尾部留白、Timeline 内部 gap、insights / 排行标题 10 / 12 |
 
 ## 约定
 

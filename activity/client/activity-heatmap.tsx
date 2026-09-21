@@ -91,7 +91,7 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
         onScroll={event => setScrollX(event.nativeEvent.contentOffset.x)}
         scrollEventThrottle={16}
       >
-        <View style={{ width: Math.max(0, axisWidth), paddingBottom: 4 }}>
+        <View style={{ width: Math.max(0, axisWidth) }}>
           <View style={{ flexDirection: "row", gap }}>
             {weeks.map((week, i) => (
               <View key={i} style={{ gap }}>
@@ -132,7 +132,7 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
               </View>
             ))}
           </View>
-          <View style={{ height: 24, marginTop: 10, flexDirection: "row", justifyContent: "space-between" }}>
+          <View style={{ marginTop: 10, flexDirection: "row", justifyContent: "space-between" }}>
             {months.map((item, i) => {
               const activeMonth =
                 hoveredMonth?.year === item.year && hoveredMonth.month === item.month;
