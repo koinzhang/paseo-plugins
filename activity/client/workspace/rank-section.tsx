@@ -116,7 +116,7 @@ export function RankSection({
             style={styles.titleAction}
           >
             <Icon
-              name={rankView === "ranked" ? "Clock" : "List"}
+              name={rankView === "ranked" ? "GitCommitVertical" : "LayoutList"}
               size={16}
               color={mutedColor}
             />
