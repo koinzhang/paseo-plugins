@@ -8,3 +8,5 @@
 - [x] T6 Skills 视图使用 host-scoped settings 持久化并迁移 v1 — 验证：settings default / migration tests
 - [x] T7 `usage.recent-mcp-calls` RPC、handler 与测试 — 验证：workspace / 排序 / title / limit
 - [x] T8 Skills / MCP 共用 `rankView`，settings v3 迁移 v2 选择 — 验证：typecheck / migration test
+- [x] T9 Skills / MCP 时间线节点按 agent 激活 / 归档状态着色 — 验证：host archive reconciliation tests / typecheck / reload
+- [x] T11 Skills / MCP 默认视图改为时间线 — 验证：settings default / v1 migration tests

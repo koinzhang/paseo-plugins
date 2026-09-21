@@ -5,9 +5,9 @@ import {
   migrateExplorerAgentDisplay,
 } from "./explorer-agent-display.ts";
 
-test("Explorer display settings default Skills and MCP to ranked", () => {
+test("Explorer display settings default Skills and MCP to timeline", () => {
   const values = explorerAgentDisplaySettings.schema.parse({});
-  assert.equal(values.rankView, "ranked");
+  assert.equal(values.rankView, "timeline");
 });
 
 test("Explorer display settings migrate v1 while preserving Agent filters", () => {
@@ -22,7 +22,7 @@ test("Explorer display settings migrate v1 while preserving Agent filters", () =
     1,
   );
   const values = explorerAgentDisplaySettings.schema.parse(migrated);
-  assert.equal(values.rankView, "ranked");
+  assert.equal(values.rankView, "timeline");
   assert.equal(values.sort, "name");
   assert.deepEqual(values.status, ["active", "archived"]);
 });
@@ -42,4 +42,20 @@ test("Explorer display settings preserve the v2 Skills view as the shared rank v
   const values = explorerAgentDisplaySettings.schema.parse(migrated);
   assert.equal(values.rankView, "timeline");
   assert.equal("skillView" in values, false);
+});
+
+test("Explorer display settings preserve an explicit v2 ranked Skills view", () => {
+  const migrated = migrateExplorerAgentDisplay(
+    {
+      sort: "updated",
+      group: "none",
+      show: [],
+      status: ["active"],
+      lifecycle: ["idle", "running", "error", "closed"],
+      skillView: "ranked",
+    },
+    2,
+  );
+  const values = explorerAgentDisplaySettings.schema.parse(migrated);
+  assert.equal(values.rankView, "ranked");
 });

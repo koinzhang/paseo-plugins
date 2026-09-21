@@ -9,11 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Workspace Activity Skills / MCP default to the newest-call timeline; an explicitly saved ranked view is kept.
 - **Temporary:** target Paseo **0.8.0** again (`requirements.paseo >=0.8.0`, SDK `0.8.0`, host-slot-safe directory subscribe) so this checkout can run on 0.8 devices. Revert before publishing another 0.9+ release.
 
 ### Added
 
-- Workspace Activity Skills and MCP can switch from call-count rankings to newest-first timelines; each call shows its agent title and time, and both sections share one host-scoped persisted view choice.
+- Workspace Activity Skills and MCP can switch from call-count rankings to newest-first timelines; each call shows its agent title and time, timeline nodes use accent for active agents and gray for archived agents, active-agent rows open their conversations, and both sections share one host-scoped persisted view choice.
 - `usage.recent-skill-calls` RPC returns recent exact / inferred skill calls for a workspace with agent titles.
 - `usage.recent-mcp-calls` RPC returns recent MCP calls for a workspace with agent titles.
 - Global Activity **Agent creations** histogram: a fixed 30-local-day window of daily bars stacked by provider, with per-provider colours and a hover / focus / click card listing every provider's count for that day plus the date.

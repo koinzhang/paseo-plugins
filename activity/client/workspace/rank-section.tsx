@@ -62,6 +62,10 @@ export function RankSection({
   recentSkillCalls,
   mcpItems,
   recentMcpCalls,
+  archivedAgentIds,
+  openAgent,
+  activeAgentColor,
+  archivedAgentColor,
   mutedColor,
   styles,
 }: {
@@ -74,6 +78,10 @@ export function RankSection({
   recentSkillCalls: ReadonlyArray<RecentSkillCallItem>;
   mcpItems: ReadonlyArray<McpByToolItem>;
   recentMcpCalls: ReadonlyArray<RecentMcpCallItem>;
+  archivedAgentIds: ReadonlySet<string>;
+  openAgent?: (input: { agentId: string }) => void;
+  activeAgentColor: string;
+  archivedAgentColor: string;
   mutedColor: string;
   styles: RankSectionStyles;
 }): ReactNode {
@@ -132,47 +140,91 @@ export function RankSection({
         ]}
       >
         {rankKind === "skills" && rankView === "timeline"
-          ? recentSkillCalls.map((item, index) => (
-              <View key={`${item.agentId}:${item.callId}`} style={styles.listRow}>
-                <View style={styles.timelineMarker}>
-                  {index > 0 ? <View style={styles.timelineLineTop} /> : null}
-                  <View style={styles.timelineDot} />
-                  {index < recentSkillCalls.length - 1 ? (
-                    <View style={styles.timelineLineBottom} />
-                  ) : null}
-                </View>
-                <View style={styles.listMain}>
-                  <Text style={styles.listTitle} numberOfLines={1}>
-                    {formatDisplayName(item.skillName)}
-                  </Text>
-                  <Text style={styles.listMeta} numberOfLines={1}>
-                    {item.agentTitle ?? item.agentId}
-                  </Text>
-                </View>
-                <FormattedTime iso={item.calledAt} style={styles.listMeta} />
-              </View>
-            ))
-          : rankKind === "mcp" && rankView === "timeline"
-            ? recentMcpCalls.map((item, index) => (
-                <View key={`${item.agentId}:${item.callId}`} style={styles.listRow}>
+          ? recentSkillCalls.map((item, index) => {
+              const canOpen = openAgent != null && !archivedAgentIds.has(item.agentId);
+              return (
+                <Pressable
+                  key={`${item.agentId}:${item.callId}`}
+                  accessibilityRole={canOpen ? "link" : undefined}
+                  accessibilityLabel={
+                    canOpen ? `Open conversation ${item.agentTitle ?? item.agentId}` : undefined
+                  }
+                  accessibilityState={{ disabled: !canOpen }}
+                  disabled={!canOpen}
+                  onPress={canOpen ? () => openAgent({ agentId: item.agentId }) : undefined}
+                  style={styles.listRow}
+                >
                   <View style={styles.timelineMarker}>
                     {index > 0 ? <View style={styles.timelineLineTop} /> : null}
-                    <View style={styles.timelineDot} />
-                    {index < recentMcpCalls.length - 1 ? (
+                    <View
+                      style={[
+                        styles.timelineDot,
+                        {
+                          backgroundColor: archivedAgentIds.has(item.agentId)
+                            ? archivedAgentColor
+                            : activeAgentColor,
+                        },
+                      ]}
+                    />
+                    {index < recentSkillCalls.length - 1 ? (
                       <View style={styles.timelineLineBottom} />
                     ) : null}
                   </View>
                   <View style={styles.listMain}>
                     <Text style={styles.listTitle} numberOfLines={1}>
-                      {formatDisplayName(`${item.server}.${item.tool}`)}
+                      {formatDisplayName(item.skillName)}
                     </Text>
                     <Text style={styles.listMeta} numberOfLines={1}>
                       {item.agentTitle ?? item.agentId}
                     </Text>
                   </View>
                   <FormattedTime iso={item.calledAt} style={styles.listMeta} />
-                </View>
-              ))
+                </Pressable>
+              );
+            })
+          : rankKind === "mcp" && rankView === "timeline"
+            ? recentMcpCalls.map((item, index) => {
+                const canOpen = openAgent != null && !archivedAgentIds.has(item.agentId);
+                return (
+                  <Pressable
+                    key={`${item.agentId}:${item.callId}`}
+                    accessibilityRole={canOpen ? "link" : undefined}
+                    accessibilityLabel={
+                      canOpen ? `Open conversation ${item.agentTitle ?? item.agentId}` : undefined
+                    }
+                    accessibilityState={{ disabled: !canOpen }}
+                    disabled={!canOpen}
+                    onPress={canOpen ? () => openAgent({ agentId: item.agentId }) : undefined}
+                    style={styles.listRow}
+                  >
+                    <View style={styles.timelineMarker}>
+                      {index > 0 ? <View style={styles.timelineLineTop} /> : null}
+                      <View
+                        style={[
+                          styles.timelineDot,
+                          {
+                            backgroundColor: archivedAgentIds.has(item.agentId)
+                              ? archivedAgentColor
+                              : activeAgentColor,
+                          },
+                        ]}
+                      />
+                      {index < recentMcpCalls.length - 1 ? (
+                        <View style={styles.timelineLineBottom} />
+                      ) : null}
+                    </View>
+                    <View style={styles.listMain}>
+                      <Text style={styles.listTitle} numberOfLines={1}>
+                        {formatDisplayName(`${item.server}.${item.tool}`)}
+                      </Text>
+                      <Text style={styles.listMeta} numberOfLines={1}>
+                        {item.agentTitle ?? item.agentId}
+                      </Text>
+                    </View>
+                    <FormattedTime iso={item.calledAt} style={styles.listMeta} />
+                  </Pressable>
+                );
+              })
           : rankKind === "skills"
             ? skillItems.map((item) => (
               <View key={item.skillName} style={styles.listRow}>

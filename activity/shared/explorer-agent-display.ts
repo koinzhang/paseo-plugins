@@ -11,7 +11,7 @@ export function migrateExplorerAgentDisplay(values: unknown, fromVersion: number
     const { skillView, ...rest } = values as Record<string, unknown>;
     return {
       ...rest,
-      rankView: skillView === "timeline" ? "timeline" : "ranked",
+      rankView: skillView === "ranked" ? "ranked" : "timeline",
     };
   }
   return values;
@@ -30,7 +30,7 @@ export const explorerAgentDisplaySettings = defineSettings({
     lifecycle: z
       .array(z.enum(["idle", "running", "error", "closed"]))
       .default(["idle", "running", "error", "closed"]),
-    rankView: z.enum(["ranked", "timeline"]).default("ranked"),
+    rankView: z.enum(["ranked", "timeline"]).default("timeline"),
   }),
   migrate: migrateExplorerAgentDisplay,
 });
@@ -45,5 +45,5 @@ export const EXPLORER_AGENT_DISPLAY_DEFAULTS: ExplorerAgentDisplayValues = {
   show: [],
   status: ["active"],
   lifecycle: ["idle", "running", "error", "closed"],
-  rankView: "ranked",
+  rankView: "timeline",
 };

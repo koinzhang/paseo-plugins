@@ -218,6 +218,15 @@ export function WorkspaceActivityPanel({
     () => reconcileHostArchive(agents.data?.items ?? [], statuses.data),
     [agents.data, statuses.data],
   );
+  const archivedAgentIds = useMemo(
+    () =>
+      new Set(
+        agentItems
+          .filter((item) => item.archivedAt != null)
+          .map((item) => item.agentId),
+      ),
+    [agentItems],
+  );
   const visibleAgentItems = useMemo(() => {
     const byId = statuses.data;
     const filtered = agentItems
@@ -438,7 +447,6 @@ export function WorkspaceActivityPanel({
         width: 7,
         height: 7,
         borderRadius: 3.5,
-        backgroundColor: theme.colors.accent,
       },
       agentListRow: {
         flexDirection: "row" as const,
@@ -969,6 +977,10 @@ export function WorkspaceActivityPanel({
               recentSkillCalls={recentSkillItems}
               mcpItems={mcpItems}
               recentMcpCalls={recentMcpItems}
+              archivedAgentIds={archivedAgentIds}
+              openAgent={openAgent}
+              activeAgentColor={theme.colors.accent}
+              archivedAgentColor={theme.colors.foregroundMuted}
               mutedColor={theme.colors.foregroundMuted}
               styles={styles}
             />
