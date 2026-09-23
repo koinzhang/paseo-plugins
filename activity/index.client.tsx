@@ -2,6 +2,7 @@ import type { PluginClientContext } from "@getpaseo/plugin/client";
 import { GlobalUsageSurface } from "./client/global-surface.tsx";
 import { UsagePanel } from "./client/panel.tsx";
 import { contributeAttentionPills } from "./client/attention-pill.tsx";
+import { contributeHeaderButtons } from "./client/header-button.ts";
 import { contributePills } from "./client/pill.tsx";
 import { WorkspaceActivityPanel } from "./client/workspace-panel.tsx";
 import { currentAppLanguage, watchAppLanguage } from "./client/use-app-language.ts";
@@ -83,10 +84,12 @@ export default function contribute(client: PluginClientContext) {
 
   const stopUsagePills = contributePills(client);
   const stopAttentionPills = contributeAttentionPills(client);
+  const stopHeaderButtons = contributeHeaderButtons(client);
   return () => {
     stopLanguage();
     removeScopedCommands();
     stopUsagePills();
     stopAttentionPills();
+    stopHeaderButtons();
   };
 }
