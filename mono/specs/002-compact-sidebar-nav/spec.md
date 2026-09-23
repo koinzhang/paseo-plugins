@@ -39,10 +39,7 @@
 
 ## 分割线
 
-- 选中 Mono 主题时移除左侧栏的两条分割线（与横排开关无关）：
-  - 顶部：导航分组 `styles.sidebarHeaderGroup` 的 `borderBottom`，分组由导航按钮的最近公共祖先定位
-  - 底部：`SidebarFooter` 的 `borderTop`，由 `sidebar-add-project` 与 `sidebar-settings` 的最近公共祖先定位
-- 只把边框颜色设为透明，保留 1px 宽度，不影响布局
+- 左侧栏顶部 / 底部分割线移除见 `specs/007-hide-dividers/`
 
 ## 设置
 

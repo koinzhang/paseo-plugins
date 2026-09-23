@@ -10,6 +10,8 @@ import {
 
 interface DomElement {
   parentElement: DomElement | null;
+  lastElementChild: DomElement | null;
+  childElementCount: number;
   isConnected: boolean;
   textContent: string | null;
   getAttribute(name: string): string | null;
@@ -18,6 +20,7 @@ interface DomElement {
   getBoundingClientRect(): { width: number; height: number };
   contains(element: DomElement): boolean;
   remove(): void;
+  querySelectorAll<T extends DomElement = DomElement>(selector: string): ArrayLike<T>;
 }
 
 interface DomParent {
@@ -34,6 +37,7 @@ interface DomDocument extends DomParent {
 declare const document: DomDocument;
 declare const window: object;
 declare const localStorage: { getItem(key: string): string | null };
+declare function getComputedStyle(element: DomElement): { borderBottomWidth: string };
 declare class MutationObserver {
   constructor(callback: () => void);
   observe(
@@ -58,6 +62,18 @@ const SIDEBAR_HEADER_ATTRIBUTE = "data-mono-sidebar-header";
 const SIDEBAR_FOOTER_ATTRIBUTE = "data-mono-sidebar-footer";
 // First and last children of left-sidebar.tsx's SidebarFooter (styles.sidebarFooter).
 const SIDEBAR_FOOTER_ANCHOR_IDS = ["sidebar-add-project", "sidebar-settings"] as const;
+const EXPLORER_DIVIDER_ATTRIBUTE = "data-mono-explorer-divider";
+const EXPLORER_SELECTOR = '[data-testid="workspace-explorer-sidebar"]';
+const EXPLORER_TAB_RAIL_SELECTOR = `${EXPLORER_SELECTOR} [data-testid="explorer-sidebar-tab-rail"]`;
+// PaneContentToolbar instances (ui/pane-content-toolbar.tsx) that draw a bottom border.
+const EXPLORER_TOOLBAR_TEST_IDS = [
+  "files-pane-header",
+  "changes-header",
+  "changes-repository-header",
+  "pr-pane-toolbar",
+  "commit-diff-header",
+  "file-panel-bar",
+] as const;
 const THEME_SUFFIXES = ["/theme/mono-light", "/theme/mono-dark"] as const;
 // Paseo's HEADER_INNER_HEIGHT and Unistyles `md` breakpoint; below md the header is 56px.
 const HEADER_HEIGHT_PX = 36;
@@ -73,6 +89,9 @@ const NAV_SELECTOR = [
   ...BUILTIN_SIDEBAR_NAV_IDS.map((id) => `[data-testid="${id}"]`),
   `[data-testid^="${PLUGIN_SIDEBAR_NAV_PREFIX}"]`,
 ].join(",");
+const HEADER_DIVIDER_ATTRIBUTE = "data-mono-header-divider";
+const HEADER_SELECTOR = '[data-testid="composer-dock-header"]';
+const TABS_ROW_SELECTOR = '[data-testid="workspace-tabs-row"]';
 
 type DesiredAttributes = Map<DomElement, Map<string, string>>;
 
@@ -178,6 +197,44 @@ export function installMonoWeb(): () => void {
     return footer && footer !== document.documentElement ? footer : null;
   }
 
+  // screen-header.tsx draws the divider on its inner row (styles.row), which has no test ID.
+  function findHeaderDividers(): DomElement[] {
+    const rows: DomElement[] = [];
+    for (const header of Array.from(document.querySelectorAll(HEADER_SELECTOR))) {
+      if (!visible(header)) continue;
+      const width = header.getBoundingClientRect().width;
+      const row = Array.from(header.querySelectorAll("*")).find(
+        (element) =>
+          getComputedStyle(element).borderBottomWidth !== "0px" &&
+          element.getBoundingClientRect().width >= width - 1,
+      );
+      if (row) rows.push(row);
+    }
+    return rows;
+  }
+
+  // explorer-sidebar.tsx renders `tabRailDivider` as an empty 1px last sibling after the rail.
+  function findExplorerTabDivider(): DomElement | null {
+    const rail = Array.from(document.querySelectorAll(EXPLORER_TAB_RAIL_SELECTOR)).find(visible);
+    let node = rail ?? null;
+    while (rail && node?.parentElement) {
+      const parent: DomElement = node.parentElement;
+      if (parent.getAttribute("data-testid") === "workspace-explorer-sidebar") return null;
+      const last = parent.lastElementChild;
+      if (
+        last &&
+        last !== node &&
+        !last.contains(rail) &&
+        last.childElementCount === 0 &&
+        last.getBoundingClientRect().height <= 2
+      ) {
+        return last;
+      }
+      node = parent;
+    }
+    return null;
+  }
+
   function lowestCommonAncestor(elements: DomElement[]): DomElement | null {
     let candidate = elements[0]?.parentElement ?? null;
     while (candidate && !elements.every((element) => candidate?.contains(element))) {
@@ -207,6 +264,9 @@ export function installMonoWeb(): () => void {
 
     const footer = findSidebarFooter();
     if (footer) setDesired(desired, footer, SIDEBAR_FOOTER_ATTRIBUTE);
+    const explorerDivider = findExplorerTabDivider();
+    if (explorerDivider) setDesired(desired, explorerDivider, EXPLORER_DIVIDER_ATTRIBUTE);
+    for (const row of findHeaderDividers()) setDesired(desired, row, HEADER_DIVIDER_ATTRIBUTE);
 
     const buttons = findNavButtons();
 
@@ -285,6 +345,18 @@ html[${THEME_ATTRIBUTE}] [${SIDEBAR_HEADER_ATTRIBUTE}] {
 }
 html[${THEME_ATTRIBUTE}] [${SIDEBAR_FOOTER_ATTRIBUTE}] {
   border-top-color: transparent !important;
+}
+html[${THEME_ATTRIBUTE}] [${HEADER_DIVIDER_ATTRIBUTE}],
+html[${THEME_ATTRIBUTE}] ${TABS_ROW_SELECTOR} {
+  border-bottom-color: transparent !important;
+}
+html[${THEME_ATTRIBUTE}] [${EXPLORER_DIVIDER_ATTRIBUTE}] {
+  background-color: transparent !important;
+}
+${EXPLORER_TOOLBAR_TEST_IDS.map(
+  (id) => `html[${THEME_ATTRIBUTE}] ${EXPLORER_SELECTOR} [data-testid="${id}"]`,
+).join(",\n")} {
+  border-bottom-color: transparent !important;
 }
 html[${ACTIVE_ATTRIBUTE}] [${GROUP_ATTRIBUTE}] {
   display: flex !important;
