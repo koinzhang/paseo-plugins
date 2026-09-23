@@ -52,6 +52,12 @@ paseo plugin install npm:@koinzhang/paseo-plugin-activity
 # Paseo 0.8: npm:@koinzhang/paseo-plugin-activity@0.4.0
 ```
 
+From a local checkout (development), run this inside `activity/`. It uses the same plugin ID `activity`, so don't pass `--id`, and it shares the same data directory:
+
+```bash
+paseo plugin install "$PWD"   # absolute path; `paseo plugin remove activity` first if npm is installed
+```
+
 After source changes, reload and check status:
 
 ```bash

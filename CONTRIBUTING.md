@@ -42,14 +42,16 @@ npm run typecheck
 npm test
 ```
 
-To try a plugin in a running Paseo:
+To try a plugin in a running Paseo, install the checkout under its manifest ID (`activity`). Do not pass `--id`. Use an absolute path, because the daemon resolves relative paths against its own working directory:
 
 ```bash
 cd activity
-paseo plugin install .
+paseo plugin install "$PWD"   # skip if `paseo plugin ls` already shows activity from this checkout
 paseo plugin reload activity
 paseo plugin logs activity
 ```
+
+If `activity` is already installed from npm or another directory, run `paseo plugin remove activity` first. Plugin data lives in `~/.paseo/plugin-data/activity/` whatever the install source is, so switching sources keeps your history.
 
 ## Pull requests
 

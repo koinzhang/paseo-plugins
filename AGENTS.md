@@ -37,17 +37,30 @@ paseo plugin ls                   # 确认 running
 
 改完 `client/` / `server/` / `shared/` / 入口 / `paseo-plugin.json` 后**主动** `paseo plugin reload activity`，不必等用户再说「重载」。
 
-### 与 npm 正式版并存（dev 调试）
+### 本地开发安装（默认）
 
-**不要**改 `paseo-plugin.json` 的 `id` 来区分 dev / 正式版；用安装时的 `--id` 覆盖运行时 ID：
+本地开发**默认直接以 manifest ID `activity` 安装当前 checkout，不带 `--id`**（不再使用 `activity-dev`）。文档、spec 验收与命令示例一律写 `activity`：
 
 ```bash
-paseo plugin install "$PWD" --id activity-dev   # dev 实例；发布仍用 manifest 的 activity
-paseo plugin reload activity-dev
+paseo plugin ls                    # 先看 activity 是否已安装、SOURCE 指向哪里
+paseo plugin install "$PWD"        # 未安装时；已指向本 checkout 则只需 reload
+paseo plugin reload activity
 ```
 
 - 同 ID 重复安装会被拒（`Plugin ID "activity" is already configured; choose another ID with --id`），不会覆盖已有安装
-- 数据目录由 `shared/plugin-id.ts` 的 `PLUGIN_ID` 硬编码，SDK 不向插件暴露 runtime id：dev 实例仍读写 `~/.paseo/plugin-data/activity/`，与 npm 版共库；两者同时启用会出现两个 Activity 入口
+- `activity` 已被 npm 正式版或其他目录占用时：先 `paseo plugin remove activity` 再 `paseo plugin install "$PWD"`；本机若残留 `activity-dev` 实例也 `remove` 掉，避免出现两个 Activity 入口
+- 数据目录由 `shared/plugin-id.ts` 的 `PLUGIN_ID` 硬编码，与安装来源无关：本地 checkout 与 npm 版都读写 `~/.paseo/plugin-data/activity/`，切换来源不丢数据
+
+### 例外：与 npm 正式版并存
+
+仅在用户明确要求同时保留 npm 正式版时，才用 `--id` 另起运行时 ID（**不要**改 `paseo-plugin.json` 的 `id`）：
+
+```bash
+paseo plugin install "$PWD" --id activity-dev
+paseo plugin reload activity-dev
+```
+
+- 两个实例共库（同一 `usage.db`，SQLite WAL + busy timeout 保证并发写不报错），且会出现两个 Activity 入口
 - 要完全隔离数据只能跑第二个 daemon（独立配置目录）
 
 ## 版本控制（jj）

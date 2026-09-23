@@ -38,11 +38,11 @@ paseo plugin ls                # confirm running
 
 From npm (Paseo 0.9+): `paseo plugin install npm:@koinzhang/paseo-plugin-activity`. On Paseo 0.8, pin `@0.4.0`.
 
-For a local checkout (development), install the directory instead:
+For a local checkout (development), install the directory instead. It uses the same plugin ID, `activity`, so don't pass `--id`:
 
 ```bash
 cd activity
-paseo plugin install .
+paseo plugin install "$PWD"    # absolute path; remove an npm install of activity first
 paseo plugin reload activity   # reload after source changes
 paseo plugin logs activity     # view child process logs
 ```
