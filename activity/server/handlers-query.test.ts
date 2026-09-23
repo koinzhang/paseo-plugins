@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -12,6 +12,7 @@ import {
   createAgentsHandler,
   createByProviderHandler,
   createRecentMcpCallsHandler,
+  createReadSkillHandler,
   createRecentSkillCallsHandler,
   createSkillsByNameHandler,
 } from "./handlers.ts";
@@ -391,5 +392,30 @@ test("skills-by-name keeps counts when agent metadata is unavailable", async () 
   } finally {
     store.close();
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("read-skill rejects SKILL.md symlinks to other files but follows symlinked skill dirs (064)", async () => {
+  const home = mkdtempSync(join(tmpdir(), "activity-read-skill-"));
+  const previousHome = process.env.HOME;
+  process.env.HOME = home;
+  try {
+    const skills = join(home, ".claude", "skills");
+    mkdirSync(join(skills, "evil"), { recursive: true });
+    writeFileSync(join(home, "secret.txt"), "private key");
+    symlinkSync(join(home, "secret.txt"), join(skills, "evil", "SKILL.md"));
+    const external = join(home, "dotfiles", "good");
+    mkdirSync(external, { recursive: true });
+    writeFileSync(join(external, "SKILL.md"), "# good");
+    symlinkSync(external, join(skills, "good"));
+
+    const read = createReadSkillHandler();
+    await assert.rejects(read({ path: "~/.claude/skills/evil/SKILL.md" }), /not allowed/);
+    const ok = await read({ path: "~/.claude/skills/good/SKILL.md" });
+    assert.equal(ok.body, "# good");
+    assert.equal(ok.path, "~/.claude/skills/good/SKILL.md");
+  } finally {
+    process.env.HOME = previousHome;
+    rmSync(home, { recursive: true, force: true });
   }
 });

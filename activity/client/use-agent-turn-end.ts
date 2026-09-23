@@ -56,7 +56,8 @@ function useActivityRefresh(scope: AgentTurnEndScope, onTurnEnd: () => void): vo
       : watchAgentDirectory(paseo.agents, (_snapshot, update) => {
           // Workspace-wide hint only. The 15s query poll owns completeness.
           // The surface owns its API observation, independently of the entry.
-          if (!update) { schedule(); return; }
+          // Snapshot-only publishes (mount, periodic re-read) are not activity.
+          if (!update) return;
           if (update.kind === "remove") {
             schedule();
             return;

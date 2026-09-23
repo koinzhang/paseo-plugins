@@ -232,3 +232,61 @@ test("sqlite: epoch replace deletes canonical user messages", () => {
   assert.equal(store.selectUserMessages({ agentId: "agent-1" })[0]?.messageId, "real-id");
   store.close();
 });
+
+for (const driver of ["sqlite", "jsonl"] as const) {
+  test(`${driver}: selectRecent / countRows page newest-first with scopes (064)`, () => {
+    const store = createUsageStore({ dir: tempDir(), driver });
+    store.upsertMany([
+      row({ callId: "a", ts: "2026-09-18T01:00:00.000Z", category: "skill", skillName: "alpha", confidence: "exact" }),
+      row({ callId: "b", ts: "2026-09-18T03:00:00.000Z", category: "skill", skillName: "low", confidence: "low" }),
+      row({ callId: "c", ts: "2026-09-18T02:00:00.000Z", category: "skill", skillName: "  ", confidence: "exact" }),
+      row({ callId: "d", ts: null, ingestedAt: "2026-09-18T04:00:00.000Z", category: "skill", skillName: "beta", confidence: "inferred" }),
+      row({ callId: "e", ts: "2026-09-18T05:00:00.000Z", workspaceId: "ws-2", category: "skill", skillName: "other", confidence: "exact" }),
+      row({ callId: "f", ts: "2026-09-18T02:00:00.000Z", category: "mcp", mcpServer: "paseo", mcpTool: "list" }),
+      row({ callId: "g", ts: "2026-09-18T06:00:00.000Z", category: "mcp", mcpServer: "paseo", mcpTool: null }),
+    ]);
+    const skill = { workspaceId: "ws-1", category: "skill" as const };
+    assert.deepEqual(
+      store.selectRecent(skill, { limit: 10, scope: "skill-named" }).map((r) => r.callId),
+      ["d", "a"],
+    );
+    assert.deepEqual(
+      store.selectRecent({ workspaceId: "ws-1", category: "mcp" }, { limit: 10, scope: "mcp-named" })
+        .map((r) => r.callId),
+      ["f"],
+    );
+    assert.deepEqual(
+      store.selectRecent({ workspaceId: "ws-1" }, { limit: 2, offset: 1 }).map((r) => r.callId),
+      ["d", "b"],
+    );
+    assert.equal(store.countRows({ workspaceId: "ws-1" }), 6);
+    assert.equal(store.countRows(skill), 4);
+    store.close();
+  });
+
+  test(`${driver}: generation, activity spans and terminal call ids (064)`, () => {
+    const store = createUsageStore({ dir: tempDir(), driver });
+    const g0 = store.generation();
+    store.upsertMany([
+      row({ callId: "x", ts: "2026-09-18T05:00:00.000Z", status: "completed", provider: "codex", workspaceId: "late" }),
+      row({ callId: "y", ts: "2026-09-18T01:00:00.000Z", status: "running", provider: "claude", workspaceId: "early" }),
+      row({ agentId: "agent-2", callId: "z", ts: "2026-09-18T02:00:00.000Z", status: "failed" }),
+    ]);
+    assert.ok(store.generation() > g0);
+    const g1 = store.generation();
+    store.select();
+    assert.equal(store.generation(), g1, "reads do not bump generation");
+    const spans = store.agentActivitySpans().sort((a, b) => a.agentId.localeCompare(b.agentId));
+    assert.deepEqual(spans[0], {
+      agentId: "agent-1",
+      provider: "claude",
+      workspaceId: "early",
+      firstAt: "2026-09-18T01:00:00.000Z",
+      lastAt: "2026-09-18T05:00:00.000Z",
+    });
+    assert.equal(spans.length, 2);
+    assert.deepEqual([...store.terminalCallIds("agent-1")], ["x"]);
+    assert.deepEqual([...store.terminalCallIds("agent-2")], ["z"]);
+    store.close();
+  });
+}

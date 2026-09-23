@@ -1,5 +1,5 @@
 import type { PluginHookAgent } from "@getpaseo/plugin/server";
-import type { AgentRow, ToolCallRow } from "./store.ts";
+import type { AgentActivitySpan, AgentRow, ToolCallRow } from "./store.ts";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -43,6 +43,20 @@ export function agentRowFromSnapshot(agent: {
     archivedAt: agent.archivedAt ?? null,
     updatedAt,
   };
+}
+
+/** Store-aggregated activity spans → registry rows (same shape as `agentsFromToolCalls`). */
+export function agentsFromActivitySpans(spans: readonly AgentActivitySpan[]): AgentRow[] {
+  return spans.map((span) => ({
+    agentId: span.agentId,
+    workspaceId: span.workspaceId,
+    parentAgentId: null,
+    provider: span.provider,
+    title: null,
+    createdAt: span.firstAt,
+    archivedAt: null,
+    updatedAt: span.lastAt,
+  }));
 }
 
 /** Earliest tool activity per agentId → approximate created_at for unknown agents. */

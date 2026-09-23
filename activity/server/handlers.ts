@@ -130,16 +130,12 @@ export function createListHandler(store: UsageStore) {
       from: input.from,
       to: input.to,
     };
-    const matched = store.select(filter).sort((a, b) => {
-      const ta = a.ts ?? a.ingestedAt;
-      const tb = b.ts ?? b.ingestedAt;
-      return tb.localeCompare(ta);
+    const page = store.selectRecent(filter, {
+      limit: input.limit ?? 200,
+      offset: input.offset ?? 0,
     });
-    const offset = input.offset ?? 0;
-    const limit = input.limit ?? 200;
-    const page = matched.slice(offset, offset + limit);
     return {
-      total: matched.length,
+      total: store.countRows(filter),
       rows: page.map((row) => ({
         agentId: row.agentId,
         callId: row.callId,
@@ -209,13 +205,10 @@ export function createRecentSkillCallsHandler(store: UsageStore) {
         .map((agent) => [agent.agentId, agent.title?.trim() || null] as const),
     );
     const items = store
-      .select({ workspaceId: input.workspaceId, category: "skill" })
-      .filter((row) => row.confidence !== "low" && row.skillName?.trim())
-      .sort((a, b) => {
-        const byTime = (b.ts ?? b.ingestedAt).localeCompare(a.ts ?? a.ingestedAt);
-        return byTime || b.callId.localeCompare(a.callId);
-      })
-      .slice(0, input.limit ?? 8)
+      .selectRecent(
+        { workspaceId: input.workspaceId, category: "skill" },
+        { limit: input.limit ?? 8, scope: "skill-named" },
+      )
       .map((row) => ({
         agentId: row.agentId,
         agentTitle: titles.get(row.agentId) ?? null,
@@ -237,13 +230,10 @@ export function createRecentMcpCallsHandler(store: UsageStore) {
         .map((agent) => [agent.agentId, agent.title?.trim() || null] as const),
     );
     const items = store
-      .select({ workspaceId: input.workspaceId, category: "mcp" })
-      .filter((row) => row.mcpServer?.trim() && row.mcpTool?.trim())
-      .sort((a, b) => {
-        const byTime = (b.ts ?? b.ingestedAt).localeCompare(a.ts ?? a.ingestedAt);
-        return byTime || b.callId.localeCompare(a.callId);
-      })
-      .slice(0, input.limit ?? 8)
+      .selectRecent(
+        { workspaceId: input.workspaceId, category: "mcp" },
+        { limit: input.limit ?? 8, scope: "mcp-named" },
+      )
       .map((row) => ({
         agentId: row.agentId,
         agentTitle: titles.get(row.agentId) ?? null,
@@ -356,7 +346,7 @@ export function createUnarchiveAgentHandler(store: UsageStore) {
     input: RpcInput<typeof usageAgentUnarchiveRpc>,
   ): Promise<RpcOutput<typeof usageAgentUnarchiveRpc>> => {
     try {
-      await execFileAsync("paseo", ["agent", "reload", input.agentId], {
+      await execFileAsync("paseo", ["agent", "reload", "--", input.agentId], {
         timeout: 120_000,
         maxBuffer: 1024 * 1024,
       });
@@ -439,9 +429,12 @@ function isPathInside(absolute: string, root: string): boolean {
   return abs === base || abs.startsWith(base.endsWith(sep) ? base : `${base}${sep}`);
 }
 
+function isSkillFileName(path: string): boolean {
+  return /\/SKILL\.md$/i.test(path.replace(/\\/g, "/"));
+}
+
 function assertAllowedSkillPath(absolute: string, homeDir: string): string {
-  const normalized = absolute.replace(/\\/g, "/");
-  if (!/\/SKILL\.md$/i.test(normalized)) {
+  if (!isSkillFileName(absolute)) {
     throw new Error("Skill path must end with SKILL.md");
   }
   let real = absolute;
@@ -449,6 +442,11 @@ function assertAllowedSkillPath(absolute: string, homeDir: string): string {
     real = realpathSync(absolute);
   } catch {
     throw new Error("Skill file not found");
+  }
+  // Skill dirs are often symlinked outside the roots, so only the file name of the
+  // resolved target is enforced; a SKILL.md link must not expose another file.
+  if (!isSkillFileName(real)) {
+    throw new Error("Skill path not allowed");
   }
   const roots = buildHomeSkillRoots(homeDir);
   const underHome =
@@ -644,6 +642,7 @@ export async function resyncAgents(
     updatedAt?: string;
     lastUserMessageAt?: string | null;
   } }>,
+  options: { incremental?: boolean } = {},
 ): Promise<HistoryScanResult> {
   if (signal?.aborted) throw new Error("History scan canceled");
   const homeDir = homedir();
@@ -681,8 +680,10 @@ export async function resyncAgents(
       });
       let pageInserted = 0;
 
-      // Always full-scan (tail → older). Upserts are idempotent and re-apply
-      // classification so OpenCode MCP server-list fixes rewrite prior rows.
+      // Scan tail → older. Full scans re-apply classification to every row;
+      // incremental scans (same epoch, caller vouches for current semantics)
+      // stop after the page that reaches the last synced seq. That page is
+      // ingested whole so tool lifecycles straddling lastSeq are refreshed.
       let page = await timeline.refetch({
         projection: "canonical",
         direction: "tail",
@@ -696,6 +697,10 @@ export async function resyncAgents(
         // Timeline replacement reshuffles seq; drop hash-keyed anonymous messages.
         store.deleteCanonicalUserMessages(agent.id);
       }
+      const stopAtSeq =
+        options.incremental && newest && previous && previous.epoch === newest.epoch
+          ? previous.lastSeq
+          : null;
       for (;;) {
         if (signal?.aborted) throw new Error("History scan canceled");
         pageInserted += ingestCanonicalPage(
@@ -707,6 +712,7 @@ export async function resyncAgents(
           model,
         );
         if (!page.hasOlder || !page.startCursor) break;
+        if (stopAtSeq != null && page.startCursor.seq <= stopAtSeq) break;
         page = await timeline.refetch({
           projection: "canonical",
           direction: "before",

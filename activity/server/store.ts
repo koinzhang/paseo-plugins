@@ -82,12 +82,38 @@ export type AgentQueryFilter = {
   to?: string;
 };
 
+/** Controlled extra predicates for `selectRecent` (not free-form SQL). */
+export type RecentRowScope = "skill-named" | "mcp-named";
+
+export type RecentRowOptions = {
+  limit: number;
+  offset?: number;
+  scope?: RecentRowScope;
+};
+
+/** Earliest / latest tool activity per agent (registry fallback for unknown agents). */
+export type AgentActivitySpan = {
+  agentId: string;
+  provider: string;
+  workspaceId: string | null;
+  firstAt: string;
+  lastAt: string;
+};
+
 export interface UsageStore {
   readonly driver: UsageStoreDriver;
+  /** Increments on every write; read caches compare against it. */
+  generation(): number;
   upsertMany(rows: readonly ToolCallRow[]): number;
   count(): number;
   getRow(agentId: string, callId: string): ToolCallRow | null;
   select(filter?: QueryFilter): ToolCallRow[];
+  /** Newest first (effective time, then call_id), paged in the store. */
+  selectRecent(filter: QueryFilter, options: RecentRowOptions): ToolCallRow[];
+  countRows(filter?: QueryFilter): number;
+  agentActivitySpans(): AgentActivitySpan[];
+  /** call_ids already stored in a terminal status for this agent. */
+  terminalCallIds(agentId: string): Set<string>;
   upsertUserMessages(rows: readonly UserMessageRow[]): number;
   selectUserMessages(filter?: UserMessageFilter): UserMessageRow[];
   upsertAgents(rows: readonly AgentRow[]): number;
@@ -134,6 +160,9 @@ CREATE INDEX IF NOT EXISTS idx_tool_calls_ts      ON tool_calls(ts, ingested_at)
 CREATE INDEX IF NOT EXISTS idx_tool_calls_skill   ON tool_calls(skill_name);
 CREATE INDEX IF NOT EXISTS idx_tool_calls_mcp     ON tool_calls(mcp_server, mcp_tool);
 CREATE INDEX IF NOT EXISTS idx_tool_calls_agent   ON tool_calls(agent_id, workspace_id);
+-- 064: workspace-scoped reads and COALESCE(ts, ingested_at) window filters / ordering
+CREATE INDEX IF NOT EXISTS idx_tool_calls_workspace ON tool_calls(workspace_id, category);
+CREATE INDEX IF NOT EXISTS idx_tool_calls_time      ON tool_calls(COALESCE(ts, ingested_at));
 
 -- 006: user_messages (turns the user sent; message body is not stored)
 -- Merged into store SCHEMA_SQL; file: ~/.paseo/plugin-data/activity/usage.db
@@ -153,6 +182,7 @@ CREATE TABLE IF NOT EXISTS user_messages (
 
 CREATE INDEX IF NOT EXISTS idx_user_messages_ts    ON user_messages(ts, ingested_at);
 CREATE INDEX IF NOT EXISTS idx_user_messages_agent ON user_messages(agent_id, workspace_id);
+CREATE INDEX IF NOT EXISTS idx_user_messages_time  ON user_messages(COALESCE(ts, ingested_at));
 
 CREATE TABLE IF NOT EXISTS sync_state (
   agent_id    TEXT PRIMARY KEY,
@@ -487,7 +517,28 @@ function mergeRow(previous: ToolCallRow, next: ToolCallRow): ToolCallRow {
   };
 }
 
-function toolCallSelectSql(filter: QueryFilter): { sql: string; params: Array<string | number | null> } {
+export function rowMatchesRecentScope(row: ToolCallRow, scope: RecentRowScope | undefined): boolean {
+  if (scope === "skill-named") return row.confidence !== "low" && !!row.skillName?.trim();
+  if (scope === "mcp-named") return !!row.mcpServer?.trim() && !!row.mcpTool?.trim();
+  return true;
+}
+
+function compareRecent(a: ToolCallRow, b: ToolCallRow): number {
+  const ta = rowEffectiveTime(a);
+  const tb = rowEffectiveTime(b);
+  if (ta !== tb) return ta < tb ? 1 : -1;
+  return a.callId === b.callId ? 0 : a.callId < b.callId ? 1 : -1;
+}
+
+const RECENT_SCOPE_SQL: Record<RecentRowScope, string> = {
+  "skill-named": "(confidence IS NULL OR confidence <> 'low') AND TRIM(COALESCE(skill_name, '')) <> ''",
+  "mcp-named": "TRIM(COALESCE(mcp_server, '')) <> '' AND TRIM(COALESCE(mcp_tool, '')) <> ''",
+};
+
+function toolCallWhere(
+  filter: QueryFilter,
+  scope?: RecentRowScope,
+): { where: string; params: Array<string | number | null> } {
   const clauses: string[] = [];
   const params: Array<string | number | null> = [];
   if (filter.agentId) {
@@ -525,8 +576,9 @@ function toolCallSelectSql(filter: QueryFilter): { sql: string; params: Array<st
     clauses.push("COALESCE(ts, ingested_at) <= ?");
     params.push(filter.to);
   }
+  if (scope) clauses.push(RECENT_SCOPE_SQL[scope]);
   const where = clauses.length ? ` WHERE ${clauses.join(" AND ")}` : "";
-  return { sql: `SELECT * FROM tool_calls${where}`, params };
+  return { where, params };
 }
 
 function userMessageSelectSql(filter: UserMessageFilter): { sql: string; params: Array<string | number | null> } {
@@ -582,9 +634,12 @@ class SqliteUsageStore implements UsageStore {
   private readonly insert: ReturnType<InstanceType<SqliteModule["DatabaseSync"]>["prepare"]>;
   private readonly insertAgent: ReturnType<InstanceType<SqliteModule["DatabaseSync"]>["prepare"]>;
   private readonly insertMessage: ReturnType<InstanceType<SqliteModule["DatabaseSync"]>["prepare"]>;
+  private writes = 0;
 
   constructor(filePath: string, sqlite: SqliteModule) {
-    this.db = new sqlite.DatabaseSync(filePath);
+    // Instances installed side by side with --id share this file: wait for locks instead of failing.
+    this.db = new sqlite.DatabaseSync(filePath, { timeout: 5_000 });
+    this.db.exec("PRAGMA journal_mode = WAL");
     this.db.exec(SCHEMA_SQL);
     ensureUserMessageModelColumn(this.db);
     this.insert = this.db.prepare(UPSERT_SQL);
@@ -592,8 +647,13 @@ class SqliteUsageStore implements UsageStore {
     this.insertMessage = this.db.prepare(UPSERT_MESSAGE_SQL);
   }
 
+  generation(): number {
+    return this.writes;
+  }
+
   upsertMany(rows: readonly ToolCallRow[]): number {
     if (rows.length === 0) return 0;
+    this.writes += 1;
     this.db.exec("BEGIN");
     try {
       for (const row of rows) {
@@ -622,13 +682,64 @@ class SqliteUsageStore implements UsageStore {
   }
 
   select(filter: QueryFilter = {}): ToolCallRow[] {
-    const { sql, params } = toolCallSelectSql(filter);
-    const records = this.db.prepare(sql).all(...params) as Record<string, unknown>[];
-    return records.map(rowFromRecord).filter((row) => rowMatchesFilter(row, filter));
+    const { where, params } = toolCallWhere(filter);
+    const records = this.db.prepare(`SELECT * FROM tool_calls${where}`).all(...params) as Record<string, unknown>[];
+    return records.map(rowFromRecord);
+  }
+
+  selectRecent(filter: QueryFilter, options: RecentRowOptions): ToolCallRow[] {
+    const { where, params } = toolCallWhere(filter, options.scope);
+    const records = this.db
+      .prepare(
+        `SELECT * FROM tool_calls${where}
+         ORDER BY COALESCE(ts, ingested_at) DESC, call_id DESC LIMIT ? OFFSET ?`,
+      )
+      .all(...params, options.limit, options.offset ?? 0) as Record<string, unknown>[];
+    return records.map(rowFromRecord);
+  }
+
+  countRows(filter: QueryFilter = {}): number {
+    const { where, params } = toolCallWhere(filter);
+    const record = this.db
+      .prepare(`SELECT COUNT(*) AS count FROM tool_calls${where}`)
+      .get(...params) as Record<string, unknown> | undefined;
+    return record ? Number(record.count) : 0;
+  }
+
+  agentActivitySpans(): AgentActivitySpan[] {
+    // Bare provider / workspace_id come from the MIN() row only while MIN is the
+    // sole aggregate (SQLite rule), so MAX lives in a correlated subquery.
+    const records = this.db
+      .prepare(
+        `SELECT agent_id, provider, workspace_id,
+                MIN(COALESCE(ts, ingested_at)) AS first_at,
+                (SELECT MAX(COALESCE(t.ts, t.ingested_at)) FROM tool_calls t
+                  WHERE t.agent_id = tool_calls.agent_id) AS last_at
+         FROM tool_calls GROUP BY agent_id`,
+      )
+      .all() as Record<string, unknown>[];
+    return records.map((record) => ({
+      agentId: String(record.agent_id),
+      provider: String(record.provider),
+      workspaceId: record.workspace_id == null ? null : String(record.workspace_id),
+      firstAt: String(record.first_at),
+      lastAt: String(record.last_at),
+    }));
+  }
+
+  terminalCallIds(agentId: string): Set<string> {
+    const records = this.db
+      .prepare(
+        `SELECT call_id FROM tool_calls
+         WHERE agent_id = ? AND status IN ('completed', 'failed', 'canceled')`,
+      )
+      .all(agentId) as Record<string, unknown>[];
+    return new Set(records.map((record) => String(record.call_id)));
   }
 
   upsertAgents(rows: readonly AgentRow[]): number {
     if (rows.length === 0) return 0;
+    this.writes += 1;
     this.db.exec("BEGIN");
     try {
       for (const row of rows) {
@@ -644,6 +755,7 @@ class SqliteUsageStore implements UsageStore {
 
   upsertUserMessages(rows: readonly UserMessageRow[]): number {
     if (!rows.length) return 0;
+    this.writes += 1;
     this.db.exec("BEGIN");
     try {
       for (const row of rows) {
@@ -670,7 +782,7 @@ class SqliteUsageStore implements UsageStore {
   selectUserMessages(filter: UserMessageFilter = {}): UserMessageRow[] {
     const { sql, params } = userMessageSelectSql(filter);
     const rows = this.db.prepare(sql).all(...params) as Array<Record<string, unknown>>;
-    return rows
+    const mapped = rows
       .map((row) => ({
         agentId: String(row.agentId),
         messageId: String(row.messageId),
@@ -681,8 +793,9 @@ class SqliteUsageStore implements UsageStore {
         seq: row.seq == null ? null : Number(row.seq),
         ts: row.ts == null ? null : String(row.ts),
         ingestedAt: String(row.ingestedAt),
-      }))
-      .filter((row) => messageMatchesFilter(row, filter));
+      }));
+    // Provider is compared normalized, so it cannot be pushed into SQL.
+    return filter.provider ? mapped.filter((row) => messageMatchesFilter(row, filter)) : mapped;
   }
 
   getAgent(agentId: string): AgentRow | null {
@@ -695,7 +808,8 @@ class SqliteUsageStore implements UsageStore {
   selectAgents(filter: AgentQueryFilter = {}): AgentRow[] {
     const { sql, params } = agentSelectSql(filter);
     const records = this.db.prepare(sql).all(...params) as Record<string, unknown>[];
-    return records.map(agentFromRecord).filter((row) => agentMatchesFilter(row, filter));
+    const rows = records.map(agentFromRecord);
+    return filter.provider ? rows.filter((row) => agentMatchesFilter(row, filter)) : rows;
   }
 
   getSyncState(agentId: string): SyncState | null {
@@ -712,6 +826,7 @@ class SqliteUsageStore implements UsageStore {
   }
 
   setSyncState(agentId: string, epoch: string, lastSeq: number): void {
+    this.writes += 1;
     this.db
       .prepare(
         `INSERT INTO sync_state (agent_id, epoch, last_seq, updated_at)
@@ -725,6 +840,7 @@ class SqliteUsageStore implements UsageStore {
   }
 
   deleteCanonicalUserMessages(agentId: string): number {
+    this.writes += 1;
     const result = this.db
       .prepare(`DELETE FROM user_messages WHERE agent_id = ? AND message_id LIKE 'canonical:%'`)
       .run(agentId) as { changes?: number };
@@ -808,8 +924,15 @@ class JsonlUsageStore implements UsageStore {
     }
   }
 
+  private writes = 0;
+
+  generation(): number {
+    return this.writes;
+  }
+
   upsertMany(rows: readonly ToolCallRow[]): number {
     if (rows.length === 0) return 0;
+    this.writes += 1;
     const lines: string[] = [];
     for (const row of rows) {
       const key = rowKey(row.agentId, row.callId);
@@ -834,8 +957,56 @@ class JsonlUsageStore implements UsageStore {
     return [...this.rows.values()].filter((row) => rowMatchesFilter(row, filter));
   }
 
+  selectRecent(filter: QueryFilter, options: RecentRowOptions): ToolCallRow[] {
+    const offset = options.offset ?? 0;
+    return this.select(filter)
+      .filter((row) => rowMatchesRecentScope(row, options.scope))
+      .sort(compareRecent)
+      .slice(offset, offset + options.limit);
+  }
+
+  countRows(filter: QueryFilter = {}): number {
+    return this.select(filter).length;
+  }
+
+  agentActivitySpans(): AgentActivitySpan[] {
+    const spans = new Map<string, AgentActivitySpan>();
+    for (const row of this.rows.values()) {
+      const t = rowEffectiveTime(row);
+      const span = spans.get(row.agentId);
+      if (!span) {
+        spans.set(row.agentId, {
+          agentId: row.agentId,
+          provider: row.provider,
+          workspaceId: row.workspaceId,
+          firstAt: t,
+          lastAt: t,
+        });
+        continue;
+      }
+      if (t < span.firstAt) {
+        span.firstAt = t;
+        span.provider = row.provider;
+        span.workspaceId = row.workspaceId;
+      }
+      if (t > span.lastAt) span.lastAt = t;
+    }
+    return [...spans.values()];
+  }
+
+  terminalCallIds(agentId: string): Set<string> {
+    const ids = new Set<string>();
+    for (const row of this.rows.values()) {
+      if (row.agentId === agentId && row.status && TERMINAL_STATUSES.has(row.status)) {
+        ids.add(row.callId);
+      }
+    }
+    return ids;
+  }
+
   upsertAgents(rows: readonly AgentRow[]): number {
     if (rows.length === 0) return 0;
+    this.writes += 1;
     const lines: string[] = [];
     for (const row of rows) {
       const previous = this.agents.get(row.agentId);
@@ -849,6 +1020,7 @@ class JsonlUsageStore implements UsageStore {
 
   upsertUserMessages(rows: readonly UserMessageRow[]): number {
     if (!rows.length) return 0;
+    this.writes += 1;
     const lines: string[] = [];
     for (const row of rows) {
       const key = rowKey(row.agentId, row.messageId);
@@ -884,6 +1056,7 @@ class JsonlUsageStore implements UsageStore {
       lastSeq,
       updatedAt: new Date().toISOString(),
     };
+    this.writes += 1;
     this.sync.set(agentId, state);
     appendFileSync(this.filePath, `${JSON.stringify({ __sync: state })}\n`);
   }
@@ -897,6 +1070,7 @@ class JsonlUsageStore implements UsageStore {
       }
     }
     if (removed > 0) {
+      this.writes += 1;
       appendFileSync(
         this.messagesPath,
         `${JSON.stringify({ __delete_canonical_messages: { agentId, removed } })}\n`,

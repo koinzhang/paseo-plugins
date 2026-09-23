@@ -49,6 +49,11 @@ function fakeStore(): UsageStore & { rows: ToolCallRow[] } {
     select() {
       return [...rows];
     },
+    generation: () => 0,
+    selectRecent: () => [],
+    countRows: () => rows.length,
+    agentActivitySpans: () => [],
+    terminalCallIds: () => new Set(),
     upsertAgents(batch) {
       for (const row of batch) agents.set(row.agentId, row);
       return batch.length;

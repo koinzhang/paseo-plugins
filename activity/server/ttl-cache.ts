@@ -23,6 +23,9 @@ export function createKeyedTtlCache<T>(ttlMs: number) {
       const now = Date.now();
       const hit = map.get(key);
       if (hit && hit.expiresAt > now) return hit.value;
+      for (const [staleKey, entry] of map) {
+        if (entry.expiresAt <= now) map.delete(staleKey);
+      }
       const value = compute();
       map.set(key, { value, expiresAt: now + ttlMs });
       return value;

@@ -5,7 +5,7 @@ import { LOG_PREFIX } from "../shared/plugin-id.ts";
 import { listAllAgentPages } from "../shared/list-agent-pages.ts";
 import type { UsageStore } from "./store.ts";
 import { defaultDataDir } from "./store.ts";
-import { agentRowFromSnapshot, agentsFromToolCalls } from "./agents.ts";
+import { agentRowFromSnapshot, agentsFromActivitySpans } from "./agents.ts";
 import { resyncAgents } from "./handlers.ts";
 
 type PaseoApi = PluginHandlerContext["paseo"];
@@ -64,7 +64,9 @@ export function createBackgroundSync(store: UsageStore, options: {
     // Directory synchronization belongs to the background task, never a UI read.
     store.upsertAgents(listedEntries.map(({ agent }) => agentRowFromSnapshot(agent)));
     const known = new Set(store.selectAgents().map(agent => agent.agentId));
-    store.upsertAgents(agentsFromToolCalls(store.select()).filter(agent => !known.has(agent.agentId)));
+    store.upsertAgents(
+      agentsFromActivitySpans(store.agentActivitySpans()).filter(agent => !known.has(agent.agentId)),
+    );
     console.log(
       `${LOG_PREFIX} directory sync listed=${listedEntries.length} (archived=${listedEntries.filter(entry => entry.agent.archivedAt).length}) registry=${known.size}`,
     );
@@ -85,7 +87,12 @@ export function createBackgroundSync(store: UsageStore, options: {
       if (agent.archivedAt) continue;
       const stamp = `${agent.updatedAt}:${agent.lastUserMessageAt ?? ""}`;
       if (checkpoints[agent.id] === stamp) continue;
-      const result = await scan(store, paseo, [agent.id], controller.signal, listedEntries);
+      // A checkpoint under this BACKFILL_VERSION means earlier rows already carry
+      // current classification, so only the new timeline tail needs scanning.
+      const incremental = checkpoints[agent.id] !== undefined;
+      const result = await scan(store, paseo, [agent.id], controller.signal, listedEntries, {
+        incremental,
+      });
       if (controller.signal.aborted) return;
       if (result.errors.length || result.syncedAgents !== 1) {
         console.error("[activity] background history scan incomplete", agent.id, result.errors);

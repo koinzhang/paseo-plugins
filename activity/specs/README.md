@@ -89,6 +89,7 @@
 | [061-heatmap-tab-font-size](./061-heatmap-tab-font-size/) | 已实现，页面验收待完成 | 热力图 Daily / Weekly / Cumulative 与横轴月份标签同字号（`LABEL_FONT_SIZE` 12） |
 | [062-measured-width-cache](./062-measured-width-cache/) | 已实现，页面验收待完成 | 测量宽度：0 宽不上报、同步测 DOM、监听 resize / visibilitychange；隐藏窗口与切页面不再重排 |
 | [063-workspace-skill-timeline](./063-workspace-skill-timeline/) | 已实现，页面验收待完成 | Workspace Skills / MCP 新增逐次调用时间线，共用持久化视图 |
+| [064-review-hardening](./064-review-hardening/) | 已实现 | 审查修复：read-skill 符号链接、unarchive 参数、读 RPC 缓存与 SQL 下推、目录 hint 多余刷新、增量历史扫描、SQLite busy timeout / WAL |
 
 ## 约定
 

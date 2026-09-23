@@ -1,6 +1,6 @@
 import { createBackgroundSync } from "./server/background-sync.ts";
 import { homedir } from "node:os";
-import type { PluginServerContext } from "@getpaseo/plugin/server";
+import type { PluginHandlerContext, PluginServerContext } from "@getpaseo/plugin/server";
 import {
   createActivityByHourHandler,
   createActivityByDayHandler,
@@ -21,6 +21,7 @@ import {
 import { agentRowFromHook } from "./server/agents.ts";
 import { ingestTimeline, ingestUserMessages } from "./server/ingest.ts";
 import { resolveAgentModel } from "./server/resolve-model.ts";
+import { createRpcCache } from "./server/rpc-cache.ts";
 import { createUsageStore } from "./server/store.ts";
 import {
   usageActivityByHourRpc,
@@ -45,58 +46,50 @@ import { explorerAgentDisplaySettings } from "./shared/explorer-agent-display.ts
 export default function contribute(server: PluginServerContext) {
   const store = createUsageStore();
   const background = createBackgroundSync(store);
+  const cache = createRpcCache({ generation: () => store.generation() });
   console.log(`[activity] store ready (driver=${store.driver})`);
   server.registerSettings(explorerAgentDisplaySettings);
 
-  server.handle(usageSummaryRpc, (input, context) => {
-    void background.request(context.paseo);
-    return createSummaryHandler(store)(input);
-  });
-  server.handle(usageListRpc, (input, context) => {
-    void background.request(context.paseo);
-    return createListHandler(store)(input);
-  });
-  server.handle(usageSkillsByNameRpc, (input, context) => {
-    void background.request(context.paseo);
-    return createSkillsByNameHandler(store)(input, context);
-  });
-  server.handle(usageRecentSkillCallsRpc, (input, context) => {
-    void background.request(context.paseo);
-    return createRecentSkillCallsHandler(store)(input);
-  });
-  server.handle(usageRecentMcpCallsRpc, (input, context) => {
-    void background.request(context.paseo);
-    return createRecentMcpCallsHandler(store)(input);
-  });
-  server.handle(usageMcpByToolRpc, (input, context) => {
-    void background.request(context.paseo);
-    return createMcpByToolHandler(store)(input);
-  });
-  server.handle(usageByProviderRpc, (input, context) => {
-    void background.request(context.paseo);
-    return createByProviderHandler(store)(input);
-  });
-  server.handle(usageAgentsRpc, (input, context) => {
-    void background.request(context.paseo);
-    return createAgentsHandler(store)(input);
-  });
+  /** Cached read RPC that also nudges the background history check. */
+  function read<I, O>(
+    rpc: { name: string },
+    handler: (input: I, context: PluginHandlerContext) => Promise<O>,
+  ) {
+    const cached = cache.wrap(rpc.name, handler);
+    return (input: I, context: PluginHandlerContext) => {
+      void background.request(context.paseo);
+      return cached(input, context);
+    };
+  }
+
+  server.handle(usageSummaryRpc, read(usageSummaryRpc, createSummaryHandler(store)));
+  server.handle(usageListRpc, read(usageListRpc, createListHandler(store)));
+  server.handle(usageSkillsByNameRpc, read(usageSkillsByNameRpc, createSkillsByNameHandler(store)));
+  server.handle(
+    usageRecentSkillCallsRpc,
+    read(usageRecentSkillCallsRpc, createRecentSkillCallsHandler(store)),
+  );
+  server.handle(
+    usageRecentMcpCallsRpc,
+    read(usageRecentMcpCallsRpc, createRecentMcpCallsHandler(store)),
+  );
+  server.handle(usageMcpByToolRpc, read(usageMcpByToolRpc, createMcpByToolHandler(store)));
+  server.handle(usageByProviderRpc, read(usageByProviderRpc, createByProviderHandler(store)));
+  server.handle(usageAgentsRpc, read(usageAgentsRpc, createAgentsHandler(store)));
   server.handle(usageAgentUnarchiveRpc, createUnarchiveAgentHandler(store));
-  server.handle(usageActivityByDayRpc, (input, context) => {
-    void background.request(context.paseo);
-    return createActivityByDayHandler(store)(input);
-  });
-  server.handle(usageActivityByHourRpc, (input, context) => {
-    void background.request(context.paseo);
-    return createActivityByHourHandler(store)(input);
-  });
-  server.handle(usageAgentLifetimeRpc, (input, context) => {
-    void background.request(context.paseo);
-    return createAgentLifetimeHandler(store)(input);
-  });
-  server.handle(usageAgentCreationsRpc, (input, context) => {
-    void background.request(context.paseo);
-    return createAgentCreationsHandler(store)(input);
-  });
+  server.handle(usageActivityByDayRpc, read(usageActivityByDayRpc, createActivityByDayHandler(store)));
+  server.handle(
+    usageActivityByHourRpc,
+    read(usageActivityByHourRpc, createActivityByHourHandler(store)),
+  );
+  server.handle(
+    usageAgentLifetimeRpc,
+    read(usageAgentLifetimeRpc, createAgentLifetimeHandler(store)),
+  );
+  server.handle(
+    usageAgentCreationsRpc,
+    read(usageAgentCreationsRpc, createAgentCreationsHandler(store)),
+  );
   server.handle(usageExportRpc, createExportHandler(store));
   server.handle(usageHostInfoRpc, () => ({ homeDir: homedir() }));
   server.handle(usageReadSkillRpc, createReadSkillHandler());
@@ -141,8 +134,13 @@ export default function contribute(server: PluginServerContext) {
         store.upsertUserMessages(
           ingestUserMessages(event.timeline, event.agent, { model }),
         );
-        // mcpServers resolved inside ingestTimeline (OpenCode config + paseo inject + agent persistence)
-        const rows = ingestTimeline(event.timeline, event.agent, null, {
+        // event.timeline is the whole history; calls already stored in a terminal
+        // status cannot change from a live snapshot, so only the rest are upserted.
+        const settled = store.terminalCallIds(event.agent.id);
+        const pending = event.timeline.filter(
+          (item) => item.type !== "tool_call" || !settled.has(item.callId),
+        );
+        const rows = ingestTimeline(pending, event.agent, null, {
           homeDir: homedir(),
         });
         if (rows.length > 0) {

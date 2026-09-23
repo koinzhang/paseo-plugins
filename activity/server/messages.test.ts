@@ -154,3 +154,40 @@ test("canceling an in-flight canonical scan prevents writes after the store clos
     assert.equal(result.errors[0]?.message, "History scan canceled");
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+
+test("incremental resync stops after the page reaching the last synced seq (064)", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "activity-incremental-"));
+  const store = createUsageStore({ dir, driver: "sqlite" });
+  let epoch = "e";
+  const requested: Array<number | null> = [];
+  // Three pages of one entry each: seq 30 (tail) → 20 → 10.
+  const pageAt = (seq: number) => ({
+    entries: [{ item: { type: "user_message", text: "", messageId: `m${seq}` }, timestamp: earlier, seqStart: seq }],
+    hasOlder: seq > 10,
+    startCursor: { epoch, seq },
+    endCursor: { epoch, seq: 30 },
+  });
+  const paseo = { agents: {
+    ref: () => ({ timeline: { refetch: async (input: { direction: string; cursor?: { seq: number } }) => {
+      requested.push(input.cursor?.seq ?? null);
+      return pageAt(input.direction === "tail" ? 30 : input.cursor!.seq - 10);
+    } } }),
+  } } as unknown as PaseoApi;
+  const listed = [{ agent: { ...agent, createdAt: earlier } }];
+  try {
+    await resyncAgents(store, paseo, undefined, undefined, listed);
+    assert.equal(requested.length, 3, "first scan is full");
+    requested.length = 0;
+    store.setSyncState(agent.id, "e", 20);
+    await resyncAgents(store, paseo, undefined, undefined, listed, { incremental: true });
+    assert.deepEqual(requested, [null, 30], "stops once a page starts at or before lastSeq");
+    requested.length = 0;
+    await resyncAgents(store, paseo, undefined, undefined, listed);
+    assert.equal(requested.length, 3, "non-incremental callers still scan everything");
+    requested.length = 0;
+    store.setSyncState(agent.id, "old-epoch", 30);
+    epoch = "e2";
+    await resyncAgents(store, paseo, undefined, undefined, listed, { incremental: true });
+    assert.equal(requested.length, 3, "epoch change forces a full scan");
+  } finally { store.close(); rmSync(dir, { recursive: true, force: true }); }
+});
