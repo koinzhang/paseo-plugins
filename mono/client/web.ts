@@ -96,6 +96,24 @@ const HEADER_DIVIDER_ATTRIBUTE = "data-mono-header-divider";
 const HEADER_SELECTOR = '[data-testid="composer-dock-header"]';
 const TABS_ROW_SELECTOR = '[data-testid="workspace-tabs-row"]';
 const SIDEBAR_EDGE_ATTRIBUTE = "data-mono-sidebar-edge";
+// SidebarCallout root (components/sidebar-callout.tsx); children share the test ID prefix,
+// and its outlined action buttons must keep their borders.
+const WORKTREE_CALLOUT_SELECTOR = '[data-testid^="worktree-setup-callout-"][role="alert"]';
+// model-browser.tsx renders `styles.separator` as an empty 1px sibling before each provider row.
+const PROVIDER_ROW = '[data-testid^="model-provider-"]';
+const PROVIDER_SEPARATOR_SELECTORS = [
+  `:empty:has(+ ${PROVIDER_ROW})`,
+  `:empty:has(+ * ${PROVIDER_ROW})`,
+] as const;
+// Profiles section: its container (styles.profilesContainer) draws the bottom line, and the
+// search row above it (adaptive-modal-sheet.tsx styles.inlineSearchRow) draws the top line.
+// The search row keeps its line when the popover has no profiles.
+const PROFILE_ROW = '[data-testid^="model-profile-row-"]';
+const MODEL_SEARCH_INPUTS = '[data-testid="model-search-input"], [data-testid="model-search-all-input"]';
+const PROFILES_BORDER_SELECTORS = [
+  `:has(> ${PROFILE_ROW})`,
+  `:has(${PROFILE_ROW}) :has(> :is(${MODEL_SEARCH_INPUTS}))`,
+] as const;
 // ResizeHandle (components/resize-handle.tsx) paints its 1px line as the root's background;
 // the hit area and hover highlight are children, so they keep working.
 const RESIZE_HANDLE_TEST_IDS = [
@@ -365,7 +383,8 @@ const COMPACT_NAV_CSS = `
 html[${THEME_ATTRIBUTE}] [${SIDEBAR_HEADER_ATTRIBUTE}] {
   border-bottom-color: transparent !important;
 }
-html[${THEME_ATTRIBUTE}] [${SIDEBAR_FOOTER_ATTRIBUTE}] {
+html[${THEME_ATTRIBUTE}] [${SIDEBAR_FOOTER_ATTRIBUTE}],
+html[${THEME_ATTRIBUTE}] ${WORKTREE_CALLOUT_SELECTOR} {
   border-top-color: transparent !important;
 }
 html[${THEME_ATTRIBUTE}] [${SIDEBAR_EDGE_ATTRIBUTE}] {
@@ -374,10 +393,12 @@ html[${THEME_ATTRIBUTE}] [${SIDEBAR_EDGE_ATTRIBUTE}] {
 ${RESIZE_HANDLE_TEST_IDS.map((id) => `html[${THEME_ATTRIBUTE}] [data-testid="${id}"]`).join(",\n")} {
   background-color: transparent !important;
 }
+${PROFILES_BORDER_SELECTORS.map((selector) => `html[${THEME_ATTRIBUTE}] ${selector}`).join(",\n")},
 html[${THEME_ATTRIBUTE}] [${HEADER_DIVIDER_ATTRIBUTE}],
 html[${THEME_ATTRIBUTE}] ${TABS_ROW_SELECTOR} {
   border-bottom-color: transparent !important;
 }
+${PROVIDER_SEPARATOR_SELECTORS.map((selector) => `html[${THEME_ATTRIBUTE}] ${selector}`).join(",\n")},
 html[${THEME_ATTRIBUTE}] [${EXPLORER_DIVIDER_ATTRIBUTE}] {
   background-color: transparent !important;
 }
