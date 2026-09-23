@@ -36,3 +36,14 @@
 - Mono 主题下内置项与插件项（如 Activity）横向排列且只显示图标；hover 显示名称；各按钮仍可点击
 - 在 Settings 调整导航顺序 / 隐藏某项后，横排随之变化
 - 切换非 Mono 主题或停用插件后恢复纵向文字布局
+
+## 分割线
+
+- 选中 Mono 主题时移除左侧栏的两条分割线（与横排开关无关）：
+  - 顶部：导航分组 `styles.sidebarHeaderGroup` 的 `borderBottom`，分组由导航按钮的最近公共祖先定位
+  - 底部：`SidebarFooter` 的 `borderTop`，由 `sidebar-add-project` 与 `sidebar-settings` 的最近公共祖先定位
+- 只把边框颜色设为透明，保留 1px 宽度，不影响布局
+
+## 设置
+
+- 可在 Settings → Plugins → mono → Settings 关闭（默认开启），见 `specs/005-voice-button-settings/`

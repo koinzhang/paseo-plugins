@@ -7,15 +7,18 @@
       "ES2023"
     ],
     "types": [
+      "react",
       "node"
     ],
     "allowImportingTsExtensions": true,
+    "jsx": "react-jsx",
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
     "esModuleInterop": true
   },
   "include": [
-    "**/*.ts"
+    "**/*.ts",
+    "**/*.tsx"
   ]
 }

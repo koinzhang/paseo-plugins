@@ -23,3 +23,7 @@
 - `npm run typecheck`、`npm test` 通过
 - `paseo plugin reload mono` 后状态为 `running`
 - 已有会话与新一轮输出中都看不到 Thinking 行；停用 mono 后恢复
+
+## 设置
+
+- 可在 Settings → Plugins → mono → Settings 关闭（默认开启），见 `specs/005-voice-button-settings/`

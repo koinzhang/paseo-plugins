@@ -1,5 +1,7 @@
 import { Platform } from "react-native";
-import { VOICE_BUTTON_SELECTORS } from "../shared/composer";
+import { hiddenVoiceButtonSelectors } from "../shared/composer";
+import type { MonoSettings } from "../shared/settings";
+import { getMonoSettings, subscribeMonoSettings } from "./settings-store";
 import {
   BUILTIN_SIDEBAR_NAV_IDS,
   PLUGIN_SIDEBAR_NAV_PREFIX,
@@ -52,6 +54,10 @@ const ACTIVE_ATTRIBUTE = "data-mono-nav-active";
 const GROUP_ATTRIBUTE = "data-mono-nav-group";
 const CELL_ATTRIBUTE = "data-mono-nav-cell";
 const BUTTON_ATTRIBUTE = "data-mono-nav-button";
+const SIDEBAR_HEADER_ATTRIBUTE = "data-mono-sidebar-header";
+const SIDEBAR_FOOTER_ATTRIBUTE = "data-mono-sidebar-footer";
+// First and last children of left-sidebar.tsx's SidebarFooter (styles.sidebarFooter).
+const SIDEBAR_FOOTER_ANCHOR_IDS = ["sidebar-add-project", "sidebar-settings"] as const;
 const THEME_SUFFIXES = ["/theme/mono-light", "/theme/mono-dark"] as const;
 // Paseo's HEADER_INNER_HEIGHT and Unistyles `md` breakpoint; below md the header is 56px.
 const HEADER_HEIGHT_PX = 36;
@@ -83,6 +89,15 @@ export function installMonoWeb(): () => void {
   style.setAttribute("data-mono-owned", "compact-sidebar-nav");
   style.textContent = COMPACT_NAV_CSS;
   document.head.append(style);
+
+  const voiceStyle = document.createElement("style");
+  voiceStyle.setAttribute("data-mono-owned", "composer-voice");
+  voiceStyle.textContent = voiceCss(getMonoSettings());
+  document.head.append(voiceStyle);
+  const unsubscribeSettings = subscribeMonoSettings((settings) => {
+    voiceStyle.textContent = voiceCss(settings);
+    schedule();
+  });
 
   const originals = new Map<DomElement, Map<string, string | null>>();
   let scheduled = false;
@@ -152,6 +167,17 @@ export function installMonoWeb(): () => void {
     );
   }
 
+  function findSidebarFooter(): DomElement | null {
+    const anchors: DomElement[] = [];
+    for (const id of SIDEBAR_FOOTER_ANCHOR_IDS) {
+      const anchor = Array.from(document.querySelectorAll(`[data-testid="${id}"]`)).find(visible);
+      if (!anchor) return null;
+      anchors.push(anchor);
+    }
+    const footer = lowestCommonAncestor(anchors);
+    return footer && footer !== document.documentElement ? footer : null;
+  }
+
   function lowestCommonAncestor(elements: DomElement[]): DomElement | null {
     let candidate = elements[0]?.parentElement ?? null;
     while (candidate && !elements.every((element) => candidate?.contains(element))) {
@@ -179,16 +205,20 @@ export function installMonoWeb(): () => void {
 
     setDesired(desired, document.documentElement, THEME_ATTRIBUTE, mode);
 
+    const footer = findSidebarFooter();
+    if (footer) setDesired(desired, footer, SIDEBAR_FOOTER_ATTRIBUTE);
+
     const buttons = findNavButtons();
 
     // A lone item has no sibling to anchor the group; its wrapper is unverifiable.
-    if (buttons.length < 2) {
+    const group = buttons.length >= 2 ? lowestCommonAncestor(buttons) : null;
+    if (!group || group === document.documentElement) {
       apply(desired);
       return;
     }
+    setDesired(desired, group, SIDEBAR_HEADER_ATTRIBUTE);
 
-    const group = lowestCommonAncestor(buttons);
-    if (!group || group === document.documentElement) {
+    if (!getMonoSettings().compactSidebarNav) {
       apply(desired);
       return;
     }
@@ -231,12 +261,31 @@ export function installMonoWeb(): () => void {
     disposed = true;
     observer.disconnect();
     clearInterval(interval);
+    unsubscribeSettings();
     apply(new Map());
     style.remove();
+    voiceStyle.remove();
   };
 }
 
+function voiceCss(settings: MonoSettings): string {
+  const selectors = hiddenVoiceButtonSelectors(settings);
+  if (selectors.length === 0) return "";
+  return `${selectors
+    .map((selector) => `html[${THEME_ATTRIBUTE}] [data-testid="message-input-root"] ${selector}`)
+    .join(",\n")} {
+  display: none !important;
+}
+`;
+}
+
 const COMPACT_NAV_CSS = `
+html[${THEME_ATTRIBUTE}] [${SIDEBAR_HEADER_ATTRIBUTE}] {
+  border-bottom-color: transparent !important;
+}
+html[${THEME_ATTRIBUTE}] [${SIDEBAR_FOOTER_ATTRIBUTE}] {
+  border-top-color: transparent !important;
+}
 html[${ACTIVE_ATTRIBUTE}] [${GROUP_ATTRIBUTE}] {
   display: flex !important;
   flex-direction: row !important;
@@ -275,11 +324,6 @@ html[${ACTIVE_ATTRIBUTE}] [${BUTTON_ATTRIBUTE}] {
   gap: 0 !important;
 }
 html[${ACTIVE_ATTRIBUTE}] [${BUTTON_ATTRIBUTE}] > :not(:first-child) {
-  display: none !important;
-}
-${VOICE_BUTTON_SELECTORS.map(
-  (selector) => `html[${THEME_ATTRIBUTE}] [data-testid="message-input-root"] ${selector}`,
-).join(",\n")} {
   display: none !important;
 }
 `;
