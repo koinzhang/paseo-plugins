@@ -40,6 +40,9 @@ declare const localStorage: { getItem(key: string): string | null };
 declare function getComputedStyle(element: DomElement): {
   borderBottomWidth: string;
   borderRightWidth: string;
+  borderTopWidth: string;
+  borderTopLeftRadius: string;
+  minHeight: string;
 };
 declare class MutationObserver {
   constructor(callback: () => void);
@@ -105,14 +108,23 @@ const PROVIDER_SEPARATOR_SELECTORS = [
   `:empty:has(+ ${PROVIDER_ROW})`,
   `:empty:has(+ * ${PROVIDER_ROW})`,
 ] as const;
-// Profiles section: its container (styles.profilesContainer) draws the bottom line, and the
-// search row above it (adaptive-modal-sheet.tsx styles.inlineSearchRow) draws the top line.
-// The search row keeps its line when the popover has no profiles.
+// Profiles section container (styles.profilesContainer) and the model search row
+// (adaptive-modal-sheet.tsx styles.inlineSearchRow) draw bottom lines.
 const PROFILE_ROW = '[data-testid^="model-profile-row-"]';
 const MODEL_SEARCH_INPUTS = '[data-testid="model-search-input"], [data-testid="model-search-all-input"]';
-const PROFILES_BORDER_SELECTORS = [
+const MODEL_PICKER_BORDER_SELECTORS = [
   `:has(> ${PROFILE_ROW})`,
-  `:has(${PROFILE_ROW}) :has(> :is(${MODEL_SEARCH_INPUTS}))`,
+  `:has(> :is(${MODEL_SEARCH_INPUTS}))`,
+] as const;
+const PILL_ATTRIBUTE = "data-mono-pill";
+// composerPillStyles.body (composer/pill-styles.ts): COMPOSER_PILL_MIN_HEIGHT, 1px border,
+// borderRadius["2xl"]. Pills have no shared test ID, so match that signature.
+const PILL_SIGNATURE = { minHeight: "32px", borderTopWidth: "1px", borderTopLeftRadius: "16px" };
+// Combobox (ui/combobox.tsx styles.desktopContainer) and menu (ui/menu/menu-overlay.tsx
+// styles.content, dataSet menuSurface) desktop popovers.
+const POPOVER_SELECTORS = [
+  '[data-testid="combobox-desktop-container"]',
+  '[data-menu-surface="true"]',
 ] as const;
 // ResizeHandle (components/resize-handle.tsx) paints its 1px line as the root's background;
 // the hit area and hover highlight are children, so they keep working.
@@ -225,6 +237,25 @@ export function installMonoWeb(): () => void {
     return footer && footer !== document.documentElement ? footer : null;
   }
 
+  // Keyed by class so a restyled element is re-measured instead of trusting a stale miss.
+  const pillCache = new WeakMap<DomElement, { className: string | null; pill: boolean }>();
+  function isPill(element: DomElement): boolean {
+    const className = element.getAttribute("class");
+    const cached = pillCache.get(element);
+    if (cached && cached.className === className) return cached.pill;
+    const style = getComputedStyle(element);
+    const pill =
+      style.minHeight === PILL_SIGNATURE.minHeight &&
+      style.borderTopWidth === PILL_SIGNATURE.borderTopWidth &&
+      style.borderTopLeftRadius === PILL_SIGNATURE.borderTopLeftRadius;
+    pillCache.set(element, { className, pill });
+    return pill;
+  }
+
+  function findPills(): DomElement[] {
+    return Array.from(document.querySelectorAll('[role="button"]')).filter(isPill);
+  }
+
   // left-sidebar.tsx draws the right edge on styles.desktopSidebarBorder, an ancestor of the footer.
   function findSidebarEdge(footer: DomElement | null): DomElement | null {
     let node = footer?.parentElement ?? null;
@@ -307,6 +338,7 @@ export function installMonoWeb(): () => void {
     const explorerDivider = findExplorerTabDivider();
     if (explorerDivider) setDesired(desired, explorerDivider, EXPLORER_DIVIDER_ATTRIBUTE);
     for (const row of findHeaderDividers()) setDesired(desired, row, HEADER_DIVIDER_ATTRIBUTE);
+    for (const pill of findPills()) setDesired(desired, pill, PILL_ATTRIBUTE);
 
     const buttons = findNavButtons();
 
@@ -387,13 +419,18 @@ html[${THEME_ATTRIBUTE}] [${SIDEBAR_FOOTER_ATTRIBUTE}],
 html[${THEME_ATTRIBUTE}] ${WORKTREE_CALLOUT_SELECTOR} {
   border-top-color: transparent !important;
 }
+html[${THEME_ATTRIBUTE}] [data-testid="message-input-root"] > *,
+html[${THEME_ATTRIBUTE}] [${PILL_ATTRIBUTE}],
+${POPOVER_SELECTORS.map((selector) => `html[${THEME_ATTRIBUTE}] ${selector}`).join(",\n")} {
+  border-color: transparent !important;
+}
 html[${THEME_ATTRIBUTE}] [${SIDEBAR_EDGE_ATTRIBUTE}] {
   border-right-color: transparent !important;
 }
 ${RESIZE_HANDLE_TEST_IDS.map((id) => `html[${THEME_ATTRIBUTE}] [data-testid="${id}"]`).join(",\n")} {
   background-color: transparent !important;
 }
-${PROFILES_BORDER_SELECTORS.map((selector) => `html[${THEME_ATTRIBUTE}] ${selector}`).join(",\n")},
+${MODEL_PICKER_BORDER_SELECTORS.map((selector) => `html[${THEME_ATTRIBUTE}] ${selector}`).join(",\n")},
 html[${THEME_ATTRIBUTE}] [${HEADER_DIVIDER_ATTRIBUTE}],
 html[${THEME_ATTRIBUTE}] ${TABS_ROW_SELECTOR} {
   border-bottom-color: transparent !important;

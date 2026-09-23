@@ -8,5 +8,6 @@
 - [x] 「Set up worktree scripts」提示上方分割线 — typecheck
 - [x] 模型选择器 Providers 行之间分割线 — typecheck
 - [x] 模型选择器 Profiles 上下分割线 — typecheck
+- [x] 模型选择器搜索框下方分割线（不再依赖 Profiles 存在） — typecheck
 - [x] typecheck / test / reload 验证 — 测试全部通过，`paseo plugin ls` 为 `running`
 - [ ] 手动验收：横 / 竖分割线在 Mono 主题下消失，切换主题后恢复；拖拽调整宽度与悬停高亮仍可用

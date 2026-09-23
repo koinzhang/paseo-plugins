@@ -17,7 +17,7 @@ Web / Electron 下，选中 Mono Light 或 Mono Dark 时，隐藏以下分割线
 - 模型选择器（新建 agent 草稿页 composer）
   - Providers 列表行之间：`styles.separator`（`components/model-browser.tsx`，每个非首行前的 1px 空 View），用 CSS `:empty:has(+ …[data-testid^="model-provider-"])` 匹配，背景透明
   - Profiles 区块下方：`styles.profilesContainer` 的 `borderBottom`，按「直接子节点含 `model-profile-row-*`」匹配
-  - Profiles 区块上方：搜索行 `styles.inlineSearchRow`（`components/adaptive-modal-sheet.tsx`）的 `borderBottom`，按「直接子节点为 `model-search-input` / `model-search-all-input`」匹配；仅当页面存在 profile 行时生效，无 Profiles 时搜索框下方分割线保留
+  - 搜索框下方（即 Profiles 区块上方）：搜索行 `styles.inlineSearchRow`（`components/adaptive-modal-sheet.tsx`）的 `borderBottom`，按「直接子节点为 `model-search-input` / `model-search-all-input`」匹配，始终隐藏
 - 区域之间的竖线（只隐藏线，保留拖拽调整宽度与悬停高亮）
   - 左侧栏与中部：`styles.desktopSidebarBorder` 的 `borderRight`（`components/left-sidebar.tsx`）
   - 中部与 Explorer：`workspace-explorer-sidebar-resize-handle` 根节点的 1px 背景（`components/resize-handle.tsx`）
