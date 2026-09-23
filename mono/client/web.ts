@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import { hiddenVoiceButtonSelectors } from "../shared/composer";
+import { MONO_THEMES } from "../shared/palette";
 import type { MonoSettings } from "../shared/settings";
 import { getMonoSettings, subscribeMonoSettings } from "./settings-store";
 import {
@@ -122,6 +123,9 @@ const PILL_ATTRIBUTE = "data-mono-pill";
 const PILL_SIGNATURE = { minHeight: "32px", borderTopWidth: "1px", borderTopLeftRadius: "16px" };
 // Combobox (ui/combobox.tsx styles.desktopContainer) and menu (ui/menu/menu-overlay.tsx
 // styles.content, dataSet menuSurface) desktop popovers.
+// Chrome renders sub-pixel borders as one device pixel (hairline on 2x displays, 1px on 1x).
+const HAIRLINE_PX = 0.5;
+const POPOVER_BORDER_OPACITY_PERCENT = 50;
 const POPOVER_SELECTORS = [
   '[data-testid="combobox-desktop-container"]',
   '[data-menu-surface="true"]',
@@ -420,10 +424,19 @@ html[${THEME_ATTRIBUTE}] ${WORKTREE_CALLOUT_SELECTOR} {
   border-top-color: transparent !important;
 }
 html[${THEME_ATTRIBUTE}] [data-testid="message-input-root"] > *,
-html[${THEME_ATTRIBUTE}] [${PILL_ATTRIBUTE}],
-${POPOVER_SELECTORS.map((selector) => `html[${THEME_ATTRIBUTE}] ${selector}`).join(",\n")} {
+html[${THEME_ATTRIBUTE}] [${PILL_ATTRIBUTE}] {
   border-color: transparent !important;
 }
+${POPOVER_SELECTORS.map((selector) => `html[${THEME_ATTRIBUTE}] ${selector}`).join(",\n")} {
+  border-width: ${HAIRLINE_PX}px !important;
+}
+${MONO_THEMES.map(
+  (theme) => `${POPOVER_SELECTORS.map(
+    (selector) => `html[${THEME_ATTRIBUTE}="${theme.appearance}"] ${selector}`,
+  ).join(",\n")} {
+  border-color: color-mix(in srgb, ${theme.colors.border} ${POPOVER_BORDER_OPACITY_PERCENT}%, transparent) !important;
+}`,
+).join("\n")}
 html[${THEME_ATTRIBUTE}] [${SIDEBAR_EDGE_ATTRIBUTE}] {
   border-right-color: transparent !important;
 }

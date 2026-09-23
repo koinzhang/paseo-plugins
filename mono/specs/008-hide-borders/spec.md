@@ -1,12 +1,13 @@
-# 008 · 隐藏 composer / pill / popover 边框
+# 008 · 隐藏 composer / pill 边框，popover 细边框
 
 ## 目标
 
-Web / Electron 下，选中 Mono Light 或 Mono Dark 时，隐藏以下元素的边框（只改颜色为透明，保留 1px 占位与背景、阴影）：
+Web / Electron 下，选中 Mono Light 或 Mono Dark 时：
 
-- Composer 输入框：`composer/input/input.tsx` 的 `styles.inputWrapper`（`message-input-root` 的直接子节点）
-- Composer 上方的 pill：`composer/pill-styles.ts` 的 `composerPillStyles.body`（导入、diff stat、track、插件 composer pill 等）
-- Popover：
+- 隐藏边框（只改颜色为透明，保留 1px 占位与背景）：
+  - Composer 输入框：`composer/input/input.tsx` 的 `styles.inputWrapper`（`message-input-root` 的直接子节点）
+  - Composer 上方的 pill：`composer/pill-styles.ts` 的 `composerPillStyles.body`（导入、diff stat、track、插件 composer pill 等）
+- Popover 边框宽度改为 0.5px（2x 屏为 1 物理像素的发丝线，1x 屏 Chrome 取整为 1px），颜色为当前 Mono 主题的 `border` 色 50% 透明（`color-mix(in srgb, <border> 50%, transparent)`，按 `html[data-mono-theme="light|dark"]` 取 `shared/palette.ts` 的值；宿主 combobox 用 `border`、menu 用 `borderAccent`，统一为同一颜色）：
   - Combobox 桌面弹层：`ui/combobox.tsx` 的 `styles.desktopContainer`（testID `combobox-desktop-container`，如模型选择器）
   - Menu 桌面弹层：`ui/menu/menu-overlay.tsx` 的 `styles.content`（dataSet `menuSurface` → `data-menu-surface="true"`）
 
@@ -35,4 +36,4 @@ Web / Electron 下，选中 Mono Light 或 Mono Dark 时，隐藏以下元素的
 
 - `npm run typecheck`、`npm test` 通过
 - `paseo plugin reload mono` 后状态为 `running`
-- Mono 主题下 composer、composer 上方 pill、模型选择器等弹层无边框
+- Mono 主题下 composer、composer 上方 pill 无边框；模型选择器等弹层为发丝线边框
