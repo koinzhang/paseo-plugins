@@ -53,6 +53,16 @@ const GROUP_ATTRIBUTE = "data-mono-nav-group";
 const CELL_ATTRIBUTE = "data-mono-nav-cell";
 const BUTTON_ATTRIBUTE = "data-mono-nav-button";
 const THEME_SUFFIXES = ["/theme/mono-light", "/theme/mono-dark"] as const;
+// Paseo's HEADER_INNER_HEIGHT and Unistyles `md` breakpoint; below md the header is 56px.
+const HEADER_HEIGHT_PX = 36;
+const DESKTOP_BREAKPOINT_PX = 720;
+// Mirrors the Explorer Files / Changes tabs (explorer-sidebar-tab-rail.tsx):
+// HEADER_CONTROL_HEIGHT, spacing[2] padding, borderRadius.md, TAB_GAP, inset 4 + TAB_GAP / 2.
+const CONTROL_HEIGHT_PX = 26;
+const CONTROL_PADDING_X_PX = 8;
+const CONTROL_RADIUS_PX = 6;
+const CONTROL_GAP_PX = 4;
+const RAIL_INSET_PX = 6;
 const NAV_SELECTOR = [
   ...BUILTIN_SIDEBAR_NAV_IDS.map((id) => `[data-testid="${id}"]`),
   `[data-testid^="${PLUGIN_SIDEBAR_NAV_PREFIX}"]`,
@@ -233,9 +243,18 @@ html[${ACTIVE_ATTRIBUTE}] [${GROUP_ATTRIBUTE}] {
   flex-wrap: wrap !important;
   justify-content: flex-start !important;
   align-items: center !important;
-  gap: 4px !important;
-  padding-left: 8px !important;
-  padding-right: 8px !important;
+  gap: ${CONTROL_GAP_PX}px !important;
+  padding-left: ${RAIL_INSET_PX}px !important;
+  padding-right: ${RAIL_INSET_PX}px !important;
+}
+@media (min-width: ${DESKTOP_BREAKPOINT_PX}px) {
+  html[${ACTIVE_ATTRIBUTE}] [${GROUP_ATTRIBUTE}] {
+    box-sizing: border-box !important;
+    min-height: ${HEADER_HEIGHT_PX}px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    align-content: center !important;
+  }
 }
 html[${ACTIVE_ATTRIBUTE}] [${GROUP_ATTRIBUTE}] > [${CELL_ATTRIBUTE}] {
   flex: 0 0 auto !important;
@@ -247,11 +266,11 @@ html[${ACTIVE_ATTRIBUTE}] [${GROUP_ATTRIBUTE}] > :not([${CELL_ATTRIBUTE}]) {
   flex-basis: 100% !important;
 }
 html[${ACTIVE_ATTRIBUTE}] [${BUTTON_ATTRIBUTE}] {
-  width: 32px !important;
-  height: 32px !important;
-  min-width: 32px !important;
-  min-height: 32px !important;
-  padding: 0 !important;
+  box-sizing: border-box !important;
+  height: ${CONTROL_HEIGHT_PX}px !important;
+  min-height: ${CONTROL_HEIGHT_PX}px !important;
+  padding: 0 ${CONTROL_PADDING_X_PX}px !important;
+  border-radius: ${CONTROL_RADIUS_PX}px !important;
   justify-content: center !important;
   gap: 0 !important;
 }
