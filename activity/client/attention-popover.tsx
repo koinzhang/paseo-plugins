@@ -12,6 +12,7 @@ import { openAttentionAgent } from "./open-agent.ts";
 import { useLatestUserMessagePreview } from "./use-latest-user-message.ts";
 import { useAttentionStatuses } from "./attention-status-store.ts";
 import { AgentRow, type AgentRowStyles } from "./workspace/agent-row.tsx";
+import { CONTROL, ICON_SIZE, ROW_PADDING, TEXT, pillRadius } from "./design-tokens.ts";
 
 function AttentionRow({
   item,
@@ -81,18 +82,17 @@ function AttentionPopoverAgent(
       flexDirection: "row",
       alignItems: "center",
       gap: 10,
-      paddingVertical: 6,
+      paddingVertical: ROW_PADDING.dense,
     };
     const title: TextStyle = {
+      ...TEXT.rowTitle,
       color: theme.colors.foreground,
-      fontSize: 14,
-      fontWeight: "500",
     };
     return {
       agentListRow: row,
       agentIconWrap: {
-        width: 18,
-        height: 18,
+        width: ICON_SIZE.leading,
+        height: ICON_SIZE.leading,
         alignItems: "center",
         justifyContent: "center",
       } satisfies ViewStyle,
@@ -103,40 +103,38 @@ function AttentionPopoverAgent(
       listLink: title,
       listTitle: title,
       listMeta: {
+        ...TEXT.meta,
         color: theme.colors.foregroundMuted,
-        fontSize: 12,
       } satisfies TextStyle,
       titleAction: { width: 0, height: 0 } satisfies ViewStyle,
       permissionBadge: {
         flexDirection: "row",
         alignItems: "center",
         gap: 3,
-        height: 18,
+        height: CONTROL.pillBadgeHeight,
         paddingHorizontal: 5,
-        borderRadius: 9,
+        borderRadius: pillRadius(CONTROL.pillBadgeHeight),
         borderWidth: 1,
         borderColor: theme.colors.border,
         backgroundColor: theme.colors.surface1,
         flexShrink: 0,
       } satisfies ViewStyle,
       permissionBadgeText: {
+        ...TEXT.pillBadge,
         color: theme.colors.statusWarning,
-        fontSize: 11,
-        fontWeight: "600",
-        fontVariant: ["tabular-nums"],
       } satisfies TextStyle,
     } satisfies AgentRowStyles;
   }, [theme]);
 
   if (!statuses) {
     return (
-      <Text style={{ color: theme.colors.foregroundMuted }}>Loading…</Text>
+      <Text style={{ ...TEXT.small, color: theme.colors.foregroundMuted }}>Loading…</Text>
     );
   }
 
   if (items.length === 0) {
     return (
-      <Text style={{ color: theme.colors.foregroundMuted }}>
+      <Text style={{ ...TEXT.small, color: theme.colors.foregroundMuted }}>
         No other agents need attention
       </Text>
     );

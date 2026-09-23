@@ -26,6 +26,7 @@ import {
 } from "./constants.ts";
 import { formatAgentMeta } from "./filters.ts";
 import type { WorkspaceTheme } from "./constants.ts";
+import { CONTROL, ICON_SIZE } from "../design-tokens.ts";
 
 export type AgentsSectionStyles = AgentRowStyles & {
   agentsSection: ViewStyle;
@@ -295,7 +296,7 @@ export function AgentsSection({
                 },
               ]}
             >
-              <Icon name="Search" size={14} color={theme.colors.foregroundMuted} />
+              <Icon name="Search" size={ICON_SIZE.inline} color={theme.colors.foregroundMuted} />
               <TextInput
                 ref={searchInputRef as never}
                 value={searchQuery}
@@ -316,7 +317,7 @@ export function AgentsSection({
               accessibilityRole="button"
               accessibilityLabel={agentSearchOpen ? "Close agent search" : "Search agents"}
               accessibilityState={{ expanded: agentSearchOpen }}
-              hitSlop={8}
+              hitSlop={CONTROL.hitSlop}
               onPress={() => {
                 if (agentSearchOpen) closeAgentSearch();
                 else openAgentSearch();
@@ -325,7 +326,7 @@ export function AgentsSection({
             >
               <Icon
                 name={agentSearchOpen ? "X" : "Search"}
-                size={14}
+                size={ICON_SIZE.action}
                 color={theme.colors.foregroundMuted}
               />
             </Pressable>
@@ -334,11 +335,11 @@ export function AgentsSection({
                 accessibilityRole="button"
                 accessibilityLabel="Agent display options"
                 accessibilityState={{ expanded: menuOpen }}
-                hitSlop={8}
+                hitSlop={CONTROL.hitSlop}
                 onPress={onToggleMenu}
                 style={styles.titleAction}
               >
-                <Icon name="Settings2" size={14} color={theme.colors.foregroundMuted} />
+                <Icon name="Settings2" size={ICON_SIZE.action} color={theme.colors.foregroundMuted} />
               </Pressable>
             </View>
           </View>
@@ -367,11 +368,11 @@ export function AgentsSection({
               accessibilityLabel="Previous agents page"
               accessibilityState={{ disabled: safePage === 0 }}
               disabled={safePage === 0}
-              hitSlop={8}
+              hitSlop={CONTROL.hitSlop}
               onPress={() => setPageIndex((p) => Math.max(0, p - 1))}
               style={[styles.pagerButton, safePage === 0 ? styles.pagerButtonDisabled : null]}
             >
-              <Icon name="ChevronLeft" size={14} color={theme.colors.foregroundMuted} />
+              <Icon name="ChevronLeft" size={ICON_SIZE.action} color={theme.colors.foregroundMuted} />
             </Pressable>
             <Text style={styles.pagerLabel}>
               {safePage + 1} / {pageCount}
@@ -381,14 +382,14 @@ export function AgentsSection({
               accessibilityLabel="Next agents page"
               accessibilityState={{ disabled: safePage >= pageCount - 1 }}
               disabled={safePage >= pageCount - 1}
-              hitSlop={8}
+              hitSlop={CONTROL.hitSlop}
               onPress={() => setPageIndex((p) => Math.min(pageCount - 1, p + 1))}
               style={[
                 styles.pagerButton,
                 safePage >= pageCount - 1 ? styles.pagerButtonDisabled : null,
               ]}
             >
-              <Icon name="ChevronRight" size={14} color={theme.colors.foregroundMuted} />
+              <Icon name="ChevronRight" size={ICON_SIZE.action} color={theme.colors.foregroundMuted} />
             </Pressable>
           </View>
         ) : null}

@@ -36,6 +36,17 @@ import { useAppLanguage } from "./use-app-language.ts";
 import { buildActivityInsights, buildActivityKpi, ACTIVITY_LIST_LIMIT } from "../shared/insights.ts";
 import { fixedWindowFrom, rangeFrom, RANGE_OPTIONS, type RangeId } from "./range.ts";
 import { useRegisterOpenAgent } from "./open-agent.ts";
+import {
+  CONTROL,
+  FONT_WEIGHT,
+  ICON_SIZE,
+  ROW_PADDING,
+  TEXT,
+  iconButton,
+  pageLayout,
+  sectionTitle,
+  titleGap,
+} from "./design-tokens.ts";
 
 /** Max rows for Activity insights and Most used skills / MCP. */
 const LIST_LIMIT = ACTIVITY_LIST_LIMIT;
@@ -163,7 +174,7 @@ function RankList({
     rankRow: ViewStyle;
     rankName: TextStyle;
     rankMeta: TextStyle;
-    emptyHint: TextStyle;
+    inlineEmpty: TextStyle;
   };
   colors: { accent: string; foregroundMuted: string; surface0: string };
   headerAction?: {
@@ -180,22 +191,22 @@ function RankList({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={headerAction.accessibilityLabel}
-            hitSlop={8}
+            hitSlop={CONTROL.hitSlop}
             onPress={headerAction.onPress}
             style={styles.titleAction}
           >
-            <Icon name={headerAction.icon} size={16} color={colors.foregroundMuted} />
+            <Icon name={headerAction.icon} size={ICON_SIZE.action} color={colors.foregroundMuted} />
           </Pressable>
         ) : null}
       </View>
       {items.length === 0 ? (
-        <Text style={styles.emptyHint}>{empty}</Text>
+        <Text style={styles.inlineEmpty}>{empty}</Text>
       ) : (
         items.map((item) => (
           <View key={item.key} style={styles.rankRow}>
             <Icon
               name={rankIconName(item.kind)}
-              size={14}
+              size={ICON_SIZE.inline}
               color={
                 item.kind === "mcp"
                   ? entityColor(item.server ?? "", chartColorScheme(colors.surface0))
@@ -225,7 +236,7 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
   // Recompute on each render so today / rolling windows refresh after midnight (poll-driven).
   const from = rangeFrom(range);
 
-  const padding = layout.compact ? 16 : 20;
+  const page = pageLayout("surface", layout.compact);
   const byProvider = useRpc(usageByProviderRpc);
   const activityByDay = useRpc(usageActivityByDayRpc);
   const activityByHour = useRpc(usageActivityByHourRpc);
@@ -523,9 +534,9 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
     () => ({
       screen: { flex: 1, backgroundColor: theme.colors.surface0 },
       content: {
-        padding,
-        paddingBottom: padding + 32,
-        gap: layout.compact ? 24 : 32,
+        padding: page.padding,
+        paddingBottom: page.padding + 32,
+        gap: page.gap,
         maxWidth: 780,
         width: "100%" as const,
         alignSelf: "center" as const,
@@ -544,14 +555,14 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
         gap: layout.compact ? 12 : 16,
       },
       tab: {
+        ...TEXT.body,
         color: theme.colors.foregroundMuted,
-        fontSize: 14,
-        fontWeight: "500" as const,
+        fontWeight: FONT_WEIGHT.medium,
       },
       tabActive: {
+        ...TEXT.body,
         color: theme.colors.foreground,
-        fontSize: 14,
-        fontWeight: "600" as const,
+        fontWeight: FONT_WEIGHT.semibold,
       },
       columns: {
         flexDirection: layout.compact ? ("column" as const) : ("row" as const),
@@ -571,35 +582,31 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
         alignItems: "center" as const,
         justifyContent: "space-between" as const,
         gap: 8,
-        // + block gap 2 = 10 (compact) / 12 (regular), the chart sections' title gap.
-        marginBottom: layout.compact ? 8 : 10,
+        // + block gap 2 = the shared title gap.
+        marginBottom: titleGap(layout.compact) - 2,
       },
       blockTitle: {
+        ...sectionTitle(layout.compact),
         color: theme.colors.foreground,
-        fontSize: layout.compact ? 13 : 15,
-        fontWeight: "500" as const,
         flexShrink: 1,
         marginBottom: 0,
       },
-      titleAction: {
-        padding: 4,
-        borderRadius: 6,
-      },
+      titleAction: iconButton,
       insightRow: {
         flexDirection: "row" as const,
         alignItems: "baseline" as const,
         justifyContent: "space-between" as const,
         gap: 8,
-        paddingVertical: 9,
+        paddingVertical: ROW_PADDING.regular,
       },
       insightLabel: {
+        ...TEXT.body,
         color: theme.colors.foregroundMuted,
-        fontSize: 14,
         flexShrink: 0,
       },
       insightValue: {
+        ...TEXT.body,
         color: theme.colors.foreground,
-        fontSize: 14,
         textAlign: "right" as const,
         flex: 1,
         minWidth: 0,
@@ -608,18 +615,17 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
         flexDirection: "row" as const,
         alignItems: "center" as const,
         gap: 10,
-        paddingVertical: 9,
+        paddingVertical: ROW_PADDING.regular,
       },
       rankName: {
+        ...TEXT.body,
         color: theme.colors.foreground,
-        fontSize: 14,
         flex: 1,
         minWidth: 0,
-
       },
       rankMeta: {
+        ...TEXT.body,
         color: theme.colors.foregroundMuted,
-        fontSize: 14,
         fontVariant: ["tabular-nums" as const],
       },
       emptyState: {
@@ -628,16 +634,19 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
         gap: 6,
       },
       emptyTitle: {
+        ...TEXT.display,
         color: theme.colors.foreground,
-        fontSize: 19,
-        fontWeight: "500" as const,
       },
       emptyHint: {
+        ...TEXT.body,
         color: theme.colors.foregroundMuted,
-        fontSize: 14,
+      },
+      inlineEmpty: {
+        ...TEXT.small,
+        color: theme.colors.foregroundMuted,
       },
     }),
-    [theme, layout.compact, padding],
+    [theme, layout.compact, page.padding, page.gap],
   );
 
   // Keep prior results visible while refetching; spinner only on cold start.
@@ -669,7 +678,7 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
 
       {loading ? <ActivityIndicator color={theme.colors.accent} /> : null}
       {error ? (
-        <Text style={{ color: theme.colors.statusDanger }}>
+        <Text style={{ ...TEXT.small, color: theme.colors.statusDanger }}>
           {error instanceof Error ? error.message : String(error)}
         </Text>
       ) : null}
@@ -725,7 +734,7 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
         <View style={styles.columns}>
           <View style={styles.column}>
             <View style={styles.block}>
-              <Text style={[styles.blockTitle, { marginBottom: layout.compact ? 8 : 10 }]}>Activity insights</Text>
+              <Text style={[styles.blockTitle, { marginBottom: titleGap(layout.compact) - 2 }]}>Activity insights</Text>
               {insights.map((row) => (
                 <View key={row.label} style={styles.insightRow}>
                   <Text style={styles.insightLabel}>{row.label}</Text>

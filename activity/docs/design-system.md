@@ -1,0 +1,122 @@
+# Activity — 设计规范
+
+适用范围：`client/` 下全部 UI（Global surface、Workspace / Agent panel、composer popover、图表）。  
+真相源：[`client/design-tokens.ts`](../client/design-tokens.ts)；`client/design-tokens.test.ts` 在 `npm test` 中禁止 `.tsx` 出现裸 `fontSize` / `fontWeight` / `borderRadius` / Icon `size` / `hitSlop` 数值。  
+引入与取值变更：[`specs/065-design-tokens`](../specs/065-design-tokens/)。
+
+## 1. 原则
+
+1. **颜色只来自 `theme.colors`**（宿主主题）；派生色用 `color-mix.ts`（`mixColor` / `ACTIVITY_MIX_STEPS`），品牌 / 排名色只在 `rank-color.ts`。
+2. **宿主只提供颜色与 `layout.compact`**；字号、间距、圆角、尺寸由插件 token 统一，不在组件里写数字。
+3. **按角色取值，不按像素取值**：先判断文本 / 控件属于哪个角色，再用对应 token；没有合适角色时先改本文件与 token，再写代码。
+4. 三层 scope 与 popover 共用同一套角色；差异只允许来自 `compact` 与 §3 的页面类型。
+
+## 2. 字体
+
+### 2.1 字号阶梯（`FONT_SIZE`）
+
+| Token | px | 角色 |
+|---|---|---|
+| `badge` | 9 | 图标角标计数（子 agent 数） |
+| `caption` | 11 | 胶囊徽标文字、密集图表刻度（Timeline 日刻度 / Now）、终端输出 |
+| `label` | 12 | 行 meta、坐标轴、图例、tooltip、图表内 tab、KPI 标签 |
+| `small` | 13 | 行内 empty / error / loading、行计数、搜索输入、返回链接、代码正文 |
+| `body` | 14 | 行标题、insights / 排行行、筛选 tab、菜单项；compact 下的节标题 |
+| `title` | 15 | 节标题（regular） |
+| `metric` | 18 | KPI 数值（FitText 基准，可缩小到适配） |
+| `display` | 19 | 整页空状态标题 |
+
+### 2.2 文本角色（`TEXT` / `sectionTitle`）
+
+| 角色 | 规格 | 颜色 |
+|---|---|---|
+| `sectionTitle(compact)` | 15（compact 14）/ 600 / letterSpacing −0.3 | `foreground` |
+| `TEXT.rowTitle` | 14 / 500 | `foreground` |
+| `TEXT.meta` | 12 | `foregroundMuted`（链接用 `accent`） |
+| `TEXT.count` | 13 / tabular-nums | `foregroundMuted` |
+| `TEXT.body` | 14 | insights label 用 muted，value 用 foreground |
+| `TEXT.small` | 13 | empty / loading 用 muted，error 用 `statusDanger` |
+| `TEXT.back` | 13 / 500 | `foregroundMuted` |
+| `TEXT.pillBadge` | 11 / 600 / tabular | 状态色（如 `statusWarning`） |
+| `TEXT.iconBadge` | 9 / 700 / tabular / lh 11 | `foregroundMuted` |
+| `TEXT.tooltip` | 12 / lh 16 | 正文 foreground，日期等次要 muted |
+| `TEXT.code` | 13 / lh 22 / MONO | `foreground`，底 `surface1` |
+| `TEXT.terminal` | 11 / lh 15 / MONO | `foregroundMuted` |
+| `TEXT.menu` | 14 / lh 18 / normal | label foreground，value muted |
+| `TEXT.display` | 19 / 500 | `foreground` |
+
+字重只用 `FONT_WEIGHT`：`regular` / `medium`（500）/ `semibold`（600）/ `bold`（700，仅图标角标）。
+
+### 2.3 Tab 两级
+
+- **筛选 tab**（Global range / provider）：`body` 14，未选 500 muted，选中 600 foreground
+- **图表内 tab**（热力图 Daily / Weekly / Cumulative）：`label` 12，与坐标轴同级（061）
+
+## 3. 布局与间距
+
+### 3.1 页面容器（`pageLayout(kind, compact)`）
+
+| kind | 用于 | padding | section gap |
+|---|---|---|---|
+| `surface` | Global 侧边栏页（图表、宽） | 16 / 24 | 24 / 32 |
+| `panel` | Workspace / Agent workspace panel | 16 / 24 | 20 / 28 |
+
+底部额外留白：surface `padding + 32`，panel `padding + 24`。最大宽度：surface 780，panel 1000。
+
+### 3.2 节内节奏
+
+- **标题 → 内容**：`titleGap(compact)` = 10 / 12；所有 section（图表、insights、排行、Agents、Terminals、Skills/MCP）一致
+- **composer popover** 视为 compact：`sectionTitle(true)`、`titleGap(true)`
+- **列表行垂直内边距**（`ROW_PADDING`）：
+  - `regular` 9：Global insights / 排行、Agent panel Skills / MCP
+  - `dense` 6：Workspace 运营列表（Agents / Terminals / Skills·MCP）、两个 composer popover
+- 行内：图标 → 文本 gap 10–12；标题 → meta gap 3；行间 gap 2（dense 列表）/ 4（Agent panel）
+
+## 4. 圆角（`RADIUS` / `pillRadius`）
+
+| Token | px | 用于 |
+|---|---|---|
+| `swatch` | 3 | 直方图柱顶、图例色块 |
+| `control` | 6 | 图标按钮、菜单行、终端预览 |
+| `overlay` | 8 | 菜单浮层、图表 tooltip |
+| `block` | 12 | SKILL.md 代码正文 |
+| `card` | 20 | KPI 卡片 |
+| `pillRadius(h)` | h / 2 | 胶囊徽标、搜索框、状态点、角标 |
+
+热力图格子按格宽推导（`max(2, cell / 4)`），不走 token。
+
+## 5. 图标与控件
+
+| Token | px | 用于 |
+|---|---|---|
+| `ICON_SIZE.badge` | 12 | 胶囊徽标内（permission） |
+| `ICON_SIZE.inline` | 14 | 输入框内 glyph、菜单选项 / 子菜单箭头、行尾动作（归档、关闭终端）、单行排行行首 |
+| `ICON_SIZE.action` | 16 | 节标题动作、返回、分页、菜单勾选 |
+| `ICON_SIZE.leading` | 18 | 双行列表行首（Agents、Skills、MCP、Terminals） |
+
+- 图标按钮统一 `iconButton`：24×24、`RADIUS.control`、`hitSlop={CONTROL.hitSlop}`（8）→ 触控区 40
+- 胶囊徽标高 `CONTROL.pillBadgeHeight`（18）
+
+## 6. 浮层
+
+- **图表 tooltip**：`tooltipSurface(colors)` — padding 10 / 6、`RADIUS.overlay`、`surface2` 底、1px `border`；正文 `TEXT.tooltip`
+- **菜单**：宽 `MENU_WIDTH`（232）、`RADIUS.overlay`、`surface1` 底、1px `border`、轻阴影；行高 compact 40 / regular 28
+
+## 7. 状态
+
+| 状态 | 规格 |
+|---|---|
+| 首次加载 | `ActivityIndicator color={accent}`；刷新时保留旧数据，不闪 spinner |
+| 错误 | `TEXT.small` + `statusDanger` |
+| 行内空 | `TEXT.small` + `foregroundMuted`（图表 / 列表内） |
+| 整页空 | `TEXT.display` 标题 + `TEXT.body` muted 提示 |
+| Agent attention | finished → `statusSuccess`、permission → `statusWarning`、error → `statusDanger`（034） |
+
+## 8. 新增 UI 检查清单
+
+- [ ] 颜色全部来自 `theme.colors` / `mixColor` / `rank-color.ts`
+- [ ] 字号 / 字重 / 圆角 / 图标尺寸 / hitSlop 用 token（`npm test` 会拦）
+- [ ] 节标题用 `sectionTitle`，标题 → 内容用 `titleGap`
+- [ ] 列表行选对 `ROW_PADDING` 密度
+- [ ] 可点元素有 `accessibilityRole` / `accessibilityLabel`，图标按钮带 `hitSlop`
+- [ ] compact 下目测一遍

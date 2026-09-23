@@ -6,6 +6,7 @@ import { useAppLanguage } from "./use-app-language.ts";
 import { useMeasuredWidth } from "./measured-width.ts";
 import { ACTIVITY_MIX_STEPS, mixColor } from "./color-mix.ts";
 export { computeStreaks, type HeatmapMode } from "../shared/activity.ts";
+import { FONT_SIZE, TEXT, sectionTitle, titleGap, tooltipSurface } from "./design-tokens.ts";
 
 type ThemeColors = {
   accent: string; border: string; foreground: string; foregroundMuted: string;
@@ -14,9 +15,9 @@ type ThemeColors = {
 
 type HoveredMonth = { year: number; month: number };
 
-// Month-axis labels and the mode tabs share one size: both are secondary labels under
-// the section title, so a separate 13 / 15 scale made the tabs outrank the axis.
-const LABEL_FONT_SIZE = 12;
+// Month-axis labels and the mode tabs share the label size: both are secondary labels
+// under the section title, so a separate 13 / 15 scale made the tabs outrank the axis.
+const LABEL_FONT_SIZE = FONT_SIZE.label;
 
 function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
   return `${count.toLocaleString()} ${count === 1 ? singular : pluralForm}`;
@@ -79,11 +80,11 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
   return (
     <View
       ref={widthRef}
-      style={{ gap: compact ? 10 : 12 }}
+      style={{ gap: titleGap(compact) }}
       onLayout={onWidthLayout}
     >
       <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <Text style={{ color: colors.foreground, fontSize: compact ? 13 : 15, fontWeight: "500" }}>Activity</Text>
+        <Text style={{ ...sectionTitle(compact), color: colors.foreground }}>Activity</Text>
         <View style={{ flexDirection: "row", gap: compact ? 14 : 20 }}>
           {modeOptions.map(option => (
             <Pressable key={option.id} accessibilityRole="tab" accessibilityState={{ selected: mode === option.id }} onPress={() => onModeChange(option.id)} style={{ paddingVertical: 6 }}>
@@ -175,10 +176,8 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
         <View pointerEvents="none"
           onLayout={event => setTooltipSize({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })}
           style={{ position: "absolute", left: tooltipLeft, top: tooltipTop, zIndex: 10,
-            maxWidth: width || 220, paddingHorizontal: 10, paddingVertical: 6,
-            borderRadius: 8, backgroundColor: colors.surface2,
-            borderWidth: 1, borderColor: colors.border }}>
-          <Text accessibilityLiveRegion="polite" style={{ color: colors.foreground, fontSize: 12, lineHeight: 16 }}>
+            maxWidth: width || 220, ...tooltipSurface(colors) }}>
+          <Text accessibilityLiveRegion="polite" style={{ ...TEXT.tooltip, color: colors.foreground }}>
             {tooltipText}
           </Text>
         </View>

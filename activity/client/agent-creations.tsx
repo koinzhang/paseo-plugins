@@ -11,6 +11,7 @@ import type { AgentCreationDay } from "../shared/usage.ts";
 import { creationBarColor } from "./color-mix.ts";
 import { chartColorScheme, creationProviderColors } from "./rank-color.ts";
 import { fixedWindowFrom } from "./range.ts";
+import { RADIUS, TEXT, sectionTitle, titleGap, tooltipSurface } from "./design-tokens.ts";
 
 type ThemeColors = {
   accent: string;
@@ -86,13 +87,13 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
   const first = buckets[0];
 
   return (
-    <View style={{ gap: compact ? 10 : 12 }}>
-      <Text style={{ color: colors.foreground, fontSize: compact ? 13 : 15, fontWeight: "500" }}>
+    <View style={{ gap: titleGap(compact) }}>
+      <Text style={{ ...sectionTitle(compact), color: colors.foreground }}>
         Agents
       </Text>
 
       {total === 0 ? (
-        <Text style={{ color: colors.foregroundMuted, fontSize: 14 }}>
+        <Text style={{ ...TEXT.small, color: colors.foregroundMuted }}>
           No agents created in the last {windowDays} days
         </Text>
       ) : (
@@ -129,8 +130,8 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
                           colors.surface2,
                           colors.accent,
                         ),
-                        borderTopLeftRadius: 3,
-                        borderTopRightRadius: 3,
+                        borderTopLeftRadius: RADIUS.swatch,
+                        borderTopRightRadius: RADIUS.swatch,
                       }}
                     />
                   )}
@@ -151,12 +152,7 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
                   left: tooltipLeft,
                   bottom: chartHeight + 6,
                   zIndex: 10,
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  borderRadius: 10,
-                  backgroundColor: colors.surface2,
-                  borderWidth: 1,
-                  borderColor: colors.border,
+                  ...tooltipSurface(colors),
                   gap: 4,
                 }}
               >
@@ -166,18 +162,18 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
                       style={{
                         width: 10,
                         height: 10,
-                        borderRadius: 3,
+                        borderRadius: RADIUS.swatch,
                         backgroundColor: colorByProvider.get(item.provider) ?? colors.accent,
                       }}
                     />
-                    <Text style={{ color: colors.foreground, fontSize: 13 }}>
+                    <Text style={{ ...TEXT.tooltip, color: colors.foreground }}>
                       {item.label}: {item.count}
                     </Text>
                   </View>
                 ))}
                 <Text
                   accessibilityLiveRegion="polite"
-                  style={{ color: colors.foregroundMuted, fontSize: 12, marginTop: 2 }}
+                  style={{ ...TEXT.tooltip, color: colors.foregroundMuted, marginTop: 2 }}
                 >
                   {dayLabel(active.key, locale)}
                 </Text>
@@ -185,10 +181,10 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
             ) : null}
           </View>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <Text style={{ color: colors.foregroundMuted, fontSize: 12 }}>
+            <Text style={{ ...TEXT.meta, color: colors.foregroundMuted }}>
               {first ? dayLabel(first.key, locale) : ""}
             </Text>
-            <Text style={{ color: colors.foregroundMuted, fontSize: 12 }}>Today</Text>
+            <Text style={{ ...TEXT.meta, color: colors.foregroundMuted }}>Today</Text>
           </View>
         </View>
       )}

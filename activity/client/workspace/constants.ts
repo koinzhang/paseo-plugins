@@ -85,7 +85,6 @@ export const SEARCH_TITLE_GAP = 8;
 /** Host MenuFlyout overlap between root surface and submenu (`SUBMENU_OVERLAP`). */
 export const MENU_SUBMENU_OVERLAP = 5;
 export const MENU_WIDTH = 232;
-export const MENU_OPTION_ICON_SIZE = 14;
 /** Approx list-row height (padding + title/meta) for stable Skills/MCP section size. */
 export const RANK_ROW_ESTIMATE = 42;
 /** Visible agents per page in Explorer; pager hidden when pageCount ≤ 1. */

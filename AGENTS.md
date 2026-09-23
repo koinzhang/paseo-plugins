@@ -103,7 +103,7 @@ jj undo / jj op log / jj op restore         # 恢复
 - **架构**：三层 Global / Workspace / Agent — 见 [`activity/docs/architecture.md`](./activity/docs/architecture.md)
 - 数据目录：`~/.paseo/plugin-data/activity/`（不要写进插件 checkout）；默认 SQLite `usage.db`
   - 升级：首次启动若仅有旧目录 `…/plugin-data/tool-usage/`，自动 rename 迁入 `activity/`
-- 客户端 UI 只用 React Native 原语 + `theme.colors` / `layout.compact`
+- 客户端 UI 只用 React Native 原语 + `theme.colors` / `layout.compact` + `client/design-tokens.ts`（字号 / 间距 / 圆角 / 图标；规范见 [`activity/docs/design-system.md`](./activity/docs/design-system.md)，`npm test` 拦截裸数值）
 - 主入口：
   - 本 agent：composer pill + agent workspace panel（标题 Activity）
   - 全部 + 按 provider：侧边栏 **Activity** surface

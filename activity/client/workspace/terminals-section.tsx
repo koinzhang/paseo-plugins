@@ -14,6 +14,7 @@ import {
 import { collapseHomePath } from "../../shared/home-path.ts";
 import { TERMINAL_PREVIEW_LINES, TERMINAL_REFETCH_MS } from "./constants.ts";
 import { terminalPreviewLines } from "./terminal-preview.ts";
+import { CONTROL, ICON_SIZE } from "../design-tokens.ts";
 
 export type TerminalListItem = {
   id: string;
@@ -23,6 +24,7 @@ export type TerminalListItem = {
 };
 
 export type TerminalsSectionStyles = {
+  section: ViewStyle;
   sectionHeaderRow: ViewStyle;
   sectionTitle: TextStyle;
   panel: ViewStyle;
@@ -76,7 +78,7 @@ export function TerminalsSection({
   });
 
   return (
-    <View style={{ gap: 12 }}>
+    <View style={styles.section}>
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>Terminals</Text>
       </View>
@@ -105,7 +107,7 @@ export function TerminalsSection({
                     } as object)
                   : null)}
               >
-                <Icon name="Terminal" size={18} color={mutedColor} />
+                <Icon name="Terminal" size={ICON_SIZE.leading} color={mutedColor} />
                 <View style={styles.listMain}>
                   <Text style={styles.listTitle} numberOfLines={1}>
                     {item.name}
@@ -119,7 +121,7 @@ export function TerminalsSection({
                   accessibilityLabel={`Close ${item.name}`}
                   accessibilityState={{ disabled: busyTerminalId != null }}
                   disabled={busyTerminalId != null || !showClose}
-                  hitSlop={8}
+                  hitSlop={CONTROL.hitSlop}
                   onPress={() => onClose(item)}
                   pointerEvents={showClose ? "auto" : "none"}
                   style={[styles.titleAction, { opacity: showClose ? 1 : 0 }]}
@@ -127,7 +129,7 @@ export function TerminalsSection({
                   {busy ? (
                     <ActivityIndicator size="small" color={mutedColor} />
                   ) : (
-                    <Icon name="X" size={14} color={mutedColor} />
+                    <Icon name="X" size={ICON_SIZE.inline} color={mutedColor} />
                   )}
                 </Pressable>
               </Pressable>

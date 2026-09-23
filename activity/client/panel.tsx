@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRegisterOpenAgent } from "./open-agent.ts";
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -28,6 +27,17 @@ import {
 import { useAgentTurnEnd } from "./use-agent-turn-end.ts";
 
 import { UsageStats } from "./usage-stats.tsx";
+import {
+  CONTROL,
+  ICON_SIZE,
+  RADIUS,
+  ROW_PADDING,
+  TEXT,
+  iconButton,
+  pageLayout,
+  sectionTitle,
+  titleGap,
+} from "./design-tokens.ts";
 
 type TabId = "skills" | "mcp";
 
@@ -36,7 +46,6 @@ type SkillDetail = {
   path: string;
 };
 
-const MONO = Platform.select({ ios: "Menlo", default: "monospace" });
 
 function CountText({
   value,
@@ -51,7 +60,7 @@ function CountText({
 export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPanelProps) {
   const [tab, setTab] = useState<TabId | null>(null);
   const [skillDetail, setSkillDetail] = useState<SkillDetail | null>(null);
-  const padding = layout.compact ? 16 : 28;
+  const page = pageLayout("panel", layout.compact);
   const agentTitle = useAgent(agentId, (agent) => agent.title);
   const openAgent = navigation?.openAgent;
   useRegisterOpenAgent(openAgent);
@@ -154,26 +163,17 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
     () => ({
       screen: { flex: 1, backgroundColor: theme.colors.surface0 },
       content: {
-        padding,
-        paddingBottom: padding + 24,
-        gap: layout.compact ? 20 : 28,
+        padding: page.padding,
+        paddingBottom: page.padding + 24,
+        gap: page.gap,
         maxWidth: 1000,
         width: "100%" as const,
         alignSelf: "center" as const,
       },
       sectionTitle: {
+        ...sectionTitle(layout.compact),
         color: theme.colors.foreground,
-        fontSize: 14,
-        fontWeight: "600" as const,
         flexShrink: 1,
-        letterSpacing: -0.3,
-      },
-      listSectionTitle: {
-        color: theme.colors.foreground,
-        fontSize: 15,
-        fontWeight: "600" as const,
-        flexShrink: 1,
-        letterSpacing: -0.3,
       },
       sectionHeaderRow: {
         flexDirection: "row" as const,
@@ -181,14 +181,7 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
         justifyContent: "space-between" as const,
         gap: 8,
       },
-      titleAction: {
-        width: 24,
-        height: 24,
-        alignItems: "center" as const,
-        justifyContent: "center" as const,
-        borderRadius: 6,
-        flexShrink: 0,
-      },
+      titleAction: iconButton,
       panel: {
         gap: 4,
         overflow: "hidden" as const,
@@ -198,7 +191,7 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
         alignItems: "center" as const,
         gap: 12,
         paddingHorizontal: 0,
-        paddingVertical: 12,
+        paddingVertical: ROW_PADDING.regular,
         borderTopWidth: 0,
         borderTopColor: theme.colors.border,
       },
@@ -211,33 +204,30 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
         gap: 3,
       },
       listTitle: {
+        ...TEXT.rowTitle,
         color: theme.colors.foreground,
-        fontSize: 14,
-        fontWeight: "500" as const,
       },
       listLink: {
+        ...TEXT.rowTitle,
         color: theme.colors.foreground,
-        fontSize: 14,
-        fontWeight: "500" as const,
       },
       listMeta: {
+        ...TEXT.meta,
         color: theme.colors.foregroundMuted,
-        fontSize: 12,
       },
       conversationLink: {
+        ...TEXT.meta,
         color: theme.colors.accent,
-        fontSize: 12,
       },
       countText: {
+        ...TEXT.count,
         color: theme.colors.foregroundMuted,
-        fontSize: 13,
-        fontVariant: ["tabular-nums" as const],
         minWidth: 24,
         textAlign: "right" as const,
       },
       empty: {
+        ...TEXT.small,
         color: theme.colors.foregroundMuted,
-        fontSize: 13,
       },
       backRow: {
         flexDirection: "row" as const,
@@ -246,21 +236,18 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
         alignSelf: "flex-start" as const,
       },
       back: {
+        ...TEXT.back,
         color: theme.colors.foregroundMuted,
-        fontSize: 13,
-        fontWeight: "500" as const,
       },
       body: {
+        ...TEXT.code,
         color: theme.colors.foreground,
-        fontSize: 13,
-        fontFamily: MONO,
-        lineHeight: 22,
         backgroundColor: theme.colors.surface1,
         padding: 16,
-        borderRadius: 12,
+        borderRadius: RADIUS.block,
       },
     }),
-    [theme, layout.compact, padding],
+    [theme, layout.compact, page.padding, page.gap],
   );
 
   const loading = skillsByName.isLoading || mcpByTool.isLoading;
@@ -282,13 +269,13 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
           }}
           style={styles.backRow}
         >
-          <Icon name="ChevronLeft" size={16} color={theme.colors.foregroundMuted} />
+          <Icon name="ChevronLeft" size={ICON_SIZE.action} color={theme.colors.foregroundMuted} />
           <Text style={styles.back}>Skills</Text>
         </Pressable>
         <Text style={styles.sectionTitle}>{formatDisplayName(skillDetail.skillName)}</Text>
         {skillFile.isLoading ? <ActivityIndicator color={theme.colors.accent} /> : null}
         {skillFile.error ? (
-          <Text style={{ color: theme.colors.statusDanger }}>
+          <Text style={{ ...TEXT.small, color: theme.colors.statusDanger }}>
             {skillFile.error instanceof Error ? skillFile.error.message : String(skillFile.error)}
           </Text>
         ) : null}
@@ -329,7 +316,7 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
 
       {loading ? <ActivityIndicator color={theme.colors.accent} /> : null}
       {error ? (
-        <Text style={{ color: theme.colors.statusDanger }}>
+        <Text style={{ ...TEXT.small, color: theme.colors.statusDanger }}>
           {error instanceof Error ? error.message : String(error)}
         </Text>
       ) : null}
@@ -339,20 +326,20 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
       ) : null}
 
       {tab ? (
-        <View style={{ gap: 12 }}>
+        <View style={{ gap: titleGap(layout.compact) }}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.listSectionTitle}>{tab === "skills" ? "Skills" : "MCP"}</Text>
+            <Text style={styles.sectionTitle}>{tab === "skills" ? "Skills" : "MCP"}</Text>
             {showToggle ? (
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={toggleAction.accessibilityLabel}
-                hitSlop={8}
+                hitSlop={CONTROL.hitSlop}
                 onPress={() => setTab(toggleAction.next)}
                 style={styles.titleAction}
               >
                 <Icon
                   name={toggleAction.icon}
-                  size={16}
+                  size={ICON_SIZE.action}
                   color={theme.colors.foregroundMuted}
                 />
               </Pressable>
@@ -384,7 +371,7 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
                     key={item.skillName}
                     style={[styles.listRow, index === 0 ? styles.listRowFirst : null]}
                   >
-                    <Icon name="Sparkles" size={18} color={theme.colors.foregroundMuted} />
+                    <Icon name="Sparkles" size={ICON_SIZE.leading} color={theme.colors.foregroundMuted} />
                     <View style={styles.listMain}>
                       {title}
                       <FormattedTime
@@ -405,7 +392,7 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
                   key={`${item.server}.${item.tool}`}
                   style={[styles.listRow, index === 0 ? styles.listRowFirst : null]}
                 >
-                  <Icon name="Plug" size={18} color={theme.colors.foregroundMuted} />
+                  <Icon name="Plug" size={ICON_SIZE.leading} color={theme.colors.foregroundMuted} />
                   <View style={styles.listMain}>
                     <Text style={styles.listTitle} numberOfLines={1}>
                       {formatDisplayName(`${item.server}.${item.tool}`)}

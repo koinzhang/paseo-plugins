@@ -3,6 +3,7 @@ import { PanResponder, Pressable, ScrollView, Text, View } from "react-native";
 import type { ActivityHour } from "../shared/usage.ts";
 import { useMeasuredWidth } from "./measured-width.ts";
 import { mixColor } from "./color-mix.ts";
+import { TEXT, sectionTitle, titleGap } from "./design-tokens.ts";
 
 type ThemeColors = {
   accent: string;
@@ -17,6 +18,8 @@ const VISIBLE_HOURS = 24;
 const STROKE = 2;
 /** Guards against a near-vertical segment asking for an absurd border band. */
 const MAX_STROKE_BAND = 48;
+/** A day label ("Sep 24") plus the right-pinned "Now" must fit, or the label overflows the scroll content. */
+const NOW_LABEL_CLEARANCE = 72;
 
 function hourRangeLabel(start: string, locale: string): string {
   const from = new Date(start);
@@ -285,7 +288,7 @@ export function HourlyActivityTimeline({
   return (
     <View
       ref={widthRef}
-      style={{ gap: compact ? 10 : 12 }}
+      style={{ gap: titleGap(compact) }}
       onLayout={onWidthLayout}
     >
       <View
@@ -297,18 +300,18 @@ export function HourlyActivityTimeline({
           gap: 12,
         }}
       >
-        <Text style={{ color: colors.foreground, fontSize: compact ? 13 : 15, fontWeight: "500" }}>
+        <Text style={{ ...sectionTitle(compact), color: colors.foreground }}>
           Timeline
         </Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-          <Text style={{ color: colors.accent, fontSize: 12 }}>▲ messages</Text>
-          <Text style={{ color: agentStroke, fontSize: 12 }}>▼ agents</Text>
+          <Text style={{ ...TEXT.meta, color: colors.accent }}>▲ messages</Text>
+          <Text style={{ ...TEXT.meta, color: agentStroke }}>▼ agents</Text>
         </View>
       </View>
 
       {hours.length === 0 || slot === 0 ? (
         <View style={{ height: plotHeight, justifyContent: "center" }}>
-          <Text style={{ color: colors.foregroundMuted, fontSize: 14 }}>
+          <Text style={{ ...TEXT.small, color: colors.foregroundMuted }}>
             {hours.length === 0 ? "No activity yet" : ""}
           </Text>
         </View>
@@ -350,27 +353,29 @@ export function HourlyActivityTimeline({
             {hotspots}
 
             <View style={{ height: 16, marginTop: 4 }}>
-              {dayTicks.map((tick) => (
-                <View
-                  key={tick.index}
-                  style={{ position: "absolute", left: tick.index * slot, top: -4 }}
-                >
-                  <View style={{ width: 1, height: 3, backgroundColor: colors.border }} />
-                  <Text
-                    numberOfLines={1}
-                    style={{ color: colors.foregroundMuted, fontSize: 11, marginTop: 2 }}
+              {dayTicks
+                .filter((tick) => tick.index * slot <= contentWidth - NOW_LABEL_CLEARANCE)
+                .map((tick) => (
+                  <View
+                    key={tick.index}
+                    style={{ position: "absolute", left: tick.index * slot, top: -4 }}
                   >
-                    {tick.label}
-                  </Text>
-                </View>
-              ))}
+                    <View style={{ width: 1, height: 3, backgroundColor: colors.border }} />
+                    <Text
+                      numberOfLines={1}
+                      style={{ ...TEXT.caption, color: colors.foregroundMuted, marginTop: 2 }}
+                    >
+                      {tick.label}
+                    </Text>
+                  </View>
+                ))}
               <Text
                 style={{
                   position: "absolute",
                   right: 0,
                   top: 1,
+                  ...TEXT.caption,
                   color: colors.foregroundMuted,
-                  fontSize: 11,
                 }}
               >
                 Now
@@ -383,7 +388,7 @@ export function HourlyActivityTimeline({
       <Text
         accessibilityLiveRegion="polite"
         numberOfLines={1}
-        style={{ color: colors.foregroundMuted, fontSize: 12 }}
+        style={{ ...TEXT.meta, color: colors.foregroundMuted }}
       >
         {readout}
       </Text>

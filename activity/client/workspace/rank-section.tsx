@@ -10,6 +10,7 @@ import type {
 } from "../../shared/usage.ts";
 import { FormattedTime } from "../formatted-time.tsx";
 import { RANK_ROW_ESTIMATE } from "./constants.ts";
+import { CONTROL, ICON_SIZE } from "../design-tokens.ts";
 
 type RankKind = "skills" | "mcp";
 export type RankView = "ranked" | "timeline";
@@ -35,6 +36,7 @@ function CountText({
 }
 
 export type RankSectionStyles = {
+  section: ViewStyle;
   sectionHeaderRow: ViewStyle;
   sectionTitle: TextStyle;
   titleAction: ViewStyle;
@@ -97,7 +99,7 @@ export function RankSection({
         : mcpItems;
 
   return (
-    <View style={{ gap: 12 }}>
+    <View style={styles.section}>
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>{rankTitle(rankKind)}</Text>
         <View style={styles.headerActions}>
@@ -105,11 +107,11 @@ export function RankSection({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={rankAction(rankKind).accessibilityLabel}
-              hitSlop={8}
+              hitSlop={CONTROL.hitSlop}
               onPress={onToggleKind}
               style={styles.titleAction}
             >
-              <Icon name={rankAction(rankKind).icon} size={16} color={mutedColor} />
+              <Icon name={rankAction(rankKind).icon} size={ICON_SIZE.action} color={mutedColor} />
             </Pressable>
           ) : null}
           <Pressable
@@ -119,13 +121,13 @@ export function RankSection({
                 ? `Show ${rankTitle(rankKind)} as a timeline`
                 : `Show ${rankTitle(rankKind)} ranked by calls`
             }
-            hitSlop={8}
+            hitSlop={CONTROL.hitSlop}
             onPress={onToggleRankView}
             style={styles.titleAction}
           >
             <Icon
               name={rankView === "ranked" ? "GitCommitVertical" : "LayoutList"}
-              size={16}
+              size={ICON_SIZE.action}
               color={mutedColor}
             />
           </Pressable>
@@ -228,7 +230,7 @@ export function RankSection({
           : rankKind === "skills"
             ? skillItems.map((item) => (
               <View key={item.skillName} style={styles.listRow}>
-                <Icon name="Sparkles" size={18} color={mutedColor} />
+                <Icon name="Sparkles" size={ICON_SIZE.leading} color={mutedColor} />
                 <View style={styles.listMain}>
                   <Text style={styles.listTitle} numberOfLines={1}>
                     {formatDisplayName(item.skillName)}
@@ -244,7 +246,7 @@ export function RankSection({
               ))
             : mcpItems.map((item) => (
               <View key={`${item.server}.${item.tool}`} style={styles.listRow}>
-                <Icon name="Plug" size={18} color={mutedColor} />
+                <Icon name="Plug" size={ICON_SIZE.leading} color={mutedColor} />
                 <View style={styles.listMain}>
                   <Text style={styles.listTitle} numberOfLines={1}>
                     {formatDisplayName(`${item.server}.${item.tool}`)}

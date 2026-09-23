@@ -65,10 +65,21 @@ import { MenuOptionList, MenuSubTrigger } from "./display-menu.tsx";
 import { matchesAgentTitle } from "./filters.ts";
 import { RankSection } from "./rank-section.tsx";
 import { TerminalsSection, type TerminalListItem } from "./terminals-section.tsx";
+import {
+  CONTROL,
+  FONT_WEIGHT,
+  ICON_SIZE,
+  RADIUS,
+  ROW_PADDING,
+  TEXT,
+  iconButton,
+  pageLayout,
+  pillRadius,
+  sectionTitle,
+  titleGap,
+} from "../design-tokens.ts";
 
 type RankKind = "skills" | "mcp";
-
-const MONO = Platform.select({ ios: "Menlo", default: "monospace" });
 
 /** Workspace-scoped Activity for the Explorer (024 / 031). */
 export function WorkspaceActivityPanel({
@@ -104,7 +115,7 @@ export function WorkspaceActivityPanel({
   const [rankKind, setRankKind] = useState<RankKind>("skills");
   const [busyAgentId, setBusyAgentId] = useState<string | null>(null);
   const [busyTerminalId, setBusyTerminalId] = useState<string | null>(null);
-  const padding = layout.compact ? 16 : 24;
+  const page = pageLayout("panel", layout.compact);
   const locale = useAppLanguage();
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -342,9 +353,9 @@ export function WorkspaceActivityPanel({
           : null),
       },
       content: {
-        padding,
-        paddingBottom: padding + 24,
-        gap: layout.compact ? 20 : 26,
+        padding: page.padding,
+        paddingBottom: page.padding + 24,
+        gap: page.gap,
         maxWidth: 1000,
         width: "100%" as const,
         alignSelf: "center" as const,
@@ -367,14 +378,7 @@ export function WorkspaceActivityPanel({
         justifyContent: "flex-end" as const,
         overflow: "hidden" as const,
       },
-      titleAction: {
-        width: 24,
-        height: 24,
-        alignItems: "center" as const,
-        justifyContent: "center" as const,
-        borderRadius: 6,
-        flexShrink: 0,
-      },
+      titleAction: iconButton,
       headerActions: {
         flexDirection: "row" as const,
         alignItems: "center" as const,
@@ -388,7 +392,7 @@ export function WorkspaceActivityPanel({
         gap: 6,
         height: AGENT_HEADER_HEIGHT,
         paddingHorizontal: 10,
-        borderRadius: AGENT_HEADER_HEIGHT / 2,
+        borderRadius: pillRadius(AGENT_HEADER_HEIGHT),
         borderWidth: 1,
         borderColor: theme.colors.border,
         backgroundColor: theme.colors.surface1,
@@ -399,17 +403,15 @@ export function WorkspaceActivityPanel({
         minWidth: 0,
         padding: 0,
         margin: 0,
+        ...TEXT.small,
         color: theme.colors.foreground,
-        fontSize: 13,
         lineHeight: 18,
         ...(Platform.OS === "web" ? ({ outlineStyle: "none" } as object) : null),
       },
       sectionTitle: {
+        ...sectionTitle(layout.compact),
         color: theme.colors.foreground,
-        fontSize: 16,
-        fontWeight: "600" as const,
         flexShrink: 0,
-        letterSpacing: -0.3,
         lineHeight: AGENT_HEADER_HEIGHT,
       },
       panel: {
@@ -420,7 +422,7 @@ export function WorkspaceActivityPanel({
         flexDirection: "row" as const,
         alignItems: "center" as const,
         gap: 12,
-        paddingVertical: 6,
+        paddingVertical: ROW_PADDING.dense,
       },
       timelineMarker: {
         width: 18,
@@ -446,17 +448,17 @@ export function WorkspaceActivityPanel({
         zIndex: 1,
         width: 7,
         height: 7,
-        borderRadius: 3.5,
+        borderRadius: pillRadius(7),
       },
       agentListRow: {
         flexDirection: "row" as const,
         alignItems: "center" as const,
         gap: 10,
-        paddingVertical: 6,
+        paddingVertical: ROW_PADDING.dense,
       },
       agentIconWrap: {
-        width: 18,
-        height: 18,
+        width: ICON_SIZE.leading,
+        height: ICON_SIZE.leading,
         alignItems: "center" as const,
         justifyContent: "center" as const,
       },
@@ -466,7 +468,7 @@ export function WorkspaceActivityPanel({
         bottom: -4,
         width: 13,
         height: 13,
-        borderRadius: 6.5,
+        borderRadius: pillRadius(13),
         alignItems: "center" as const,
         justifyContent: "center" as const,
         backgroundColor: theme.colors.surface0,
@@ -478,7 +480,7 @@ export function WorkspaceActivityPanel({
         minWidth: 14,
         height: 14,
         paddingHorizontal: 3,
-        borderRadius: 7,
+        borderRadius: pillRadius(14),
         alignItems: "center" as const,
         justifyContent: "center" as const,
         backgroundColor: theme.colors.surface0,
@@ -486,11 +488,8 @@ export function WorkspaceActivityPanel({
         borderColor: theme.colors.border,
       },
       subAgentBadgeText: {
+        ...TEXT.iconBadge,
         color: theme.colors.foregroundMuted,
-        fontSize: 9,
-        fontWeight: "700" as const,
-        fontVariant: ["tabular-nums" as const],
-        lineHeight: 11,
       },
       listMain: {
         flex: 1,
@@ -498,76 +497,69 @@ export function WorkspaceActivityPanel({
         gap: 3,
       },
       listTitle: {
+        ...TEXT.rowTitle,
         color: theme.colors.foreground,
-        fontSize: 14,
-        fontWeight: "500" as const,
       },
       listLink: {
+        ...TEXT.rowTitle,
         color: theme.colors.foreground,
-        fontSize: 14,
-        fontWeight: "500" as const,
       },
       listMeta: {
+        ...TEXT.meta,
         color: theme.colors.foregroundMuted,
-        fontSize: 12,
       },
       permissionBadge: {
         flexDirection: "row" as const,
         alignItems: "center" as const,
         gap: 3,
-        height: 18,
+        height: CONTROL.pillBadgeHeight,
         paddingHorizontal: 5,
-        borderRadius: 9,
+        borderRadius: pillRadius(CONTROL.pillBadgeHeight),
         borderWidth: 1,
         borderColor: theme.colors.border,
         backgroundColor: theme.colors.surface1,
         flexShrink: 0,
       },
       permissionBadgeText: {
+        ...TEXT.pillBadge,
         color: theme.colors.statusWarning,
-        fontSize: 11,
-        fontWeight: "600" as const,
-        fontVariant: ["tabular-nums" as const],
       },
       terminalRow: {
         flexDirection: "row" as const,
         alignItems: "center" as const,
         gap: 10,
-        paddingVertical: 6,
+        paddingVertical: ROW_PADDING.dense,
       },
       terminalPreview: {
         marginLeft: 28,
         marginBottom: 4,
         paddingVertical: 8,
         paddingHorizontal: 10,
-        borderRadius: 6,
+        borderRadius: RADIUS.control,
         backgroundColor: theme.colors.surface1,
         gap: 2,
       },
       terminalLine: {
+        ...TEXT.terminal,
         color: theme.colors.foregroundMuted,
-        fontFamily: MONO,
-        fontSize: 11,
-        lineHeight: 15,
       },
       countText: {
+        ...TEXT.count,
         color: theme.colors.foregroundMuted,
-        fontSize: 13,
-        fontVariant: ["tabular-nums" as const],
         minWidth: 24,
         textAlign: "right" as const,
       },
       empty: {
+        ...TEXT.small,
         color: theme.colors.foregroundMuted,
-        fontSize: 13,
       },
       agentGroup: {
         gap: 4,
       },
       groupLabel: {
+        ...TEXT.meta,
         color: theme.colors.foregroundMuted,
-        fontSize: 12,
-        fontWeight: "600" as const,
+        fontWeight: FONT_WEIGHT.semibold,
         paddingTop: 12,
         paddingBottom: 2,
       },
@@ -579,20 +571,13 @@ export function WorkspaceActivityPanel({
         paddingTop: 8,
         paddingBottom: 4,
       },
-      pagerButton: {
-        width: 28,
-        height: 28,
-        alignItems: "center" as const,
-        justifyContent: "center" as const,
-        borderRadius: 6,
-      },
+      pagerButton: iconButton,
       pagerButtonDisabled: {
         opacity: 0.35,
       },
       pagerLabel: {
+        ...TEXT.tabularMeta,
         color: theme.colors.foregroundMuted,
-        fontSize: 12,
-        fontVariant: ["tabular-nums" as const],
       },
       menuPage: {
         paddingVertical: 4,
@@ -607,7 +592,7 @@ export function WorkspaceActivityPanel({
         paddingVertical: 4,
         borderWidth: 1,
         borderColor: "transparent",
-        borderRadius: 6,
+        borderRadius: RADIUS.control,
       },
       menuRowHighlighted: {
         backgroundColor: theme.colors.surface2,
@@ -615,15 +600,12 @@ export function WorkspaceActivityPanel({
       menuLabel: {
         flexShrink: 1,
         minWidth: 0,
+        ...TEXT.menu,
         color: theme.colors.foreground,
-        fontSize: 14,
-        lineHeight: 18,
-        fontWeight: "normal" as const,
       },
       menuValue: {
+        ...TEXT.menu,
         color: theme.colors.foregroundMuted,
-        fontSize: 14,
-        lineHeight: 18,
         flexShrink: 1,
       },
       menuTrailing: {
@@ -643,23 +625,24 @@ export function WorkspaceActivityPanel({
         paddingVertical: 4,
         borderWidth: 1,
         borderColor: "transparent",
-        borderRadius: 6,
+        borderRadius: RADIUS.control,
       },
       menuOptionLabel: {
         flexShrink: 1,
         minWidth: 0,
+        ...TEXT.menu,
         color: theme.colors.foreground,
-        fontSize: 14,
-        lineHeight: 18,
-        fontWeight: "normal" as const,
       },
       menuLeadingSlot: {
         width: 16,
         alignItems: "center" as const,
         justifyContent: "center" as const,
       },
+      section: {
+        gap: titleGap(layout.compact),
+      },
       agentsSection: {
-        gap: 12,
+        gap: titleGap(layout.compact),
         position: "relative" as const,
       },
       agentsHeaderWrap: {
@@ -675,7 +658,7 @@ export function WorkspaceActivityPanel({
       },
       menuSurface: {
         width: MENU_WIDTH,
-        borderRadius: 8,
+        borderRadius: RADIUS.overlay,
         borderWidth: 1,
         borderColor: theme.colors.border,
         backgroundColor: theme.colors.surface1,
@@ -701,7 +684,7 @@ export function WorkspaceActivityPanel({
         backgroundColor: theme.colors.border,
       },
     }),
-    [theme, layout.compact, padding],
+    [theme, layout.compact, page.padding, page.gap],
   );
 
   const rowHeight = layout.compact ? 40 : 28;
@@ -902,7 +885,7 @@ export function WorkspaceActivityPanel({
         >
           {loading ? <ActivityIndicator color={theme.colors.accent} /> : null}
           {error ? (
-            <Text style={{ color: theme.colors.statusDanger }}>
+            <Text style={{ ...TEXT.small, color: theme.colors.statusDanger }}>
               {error instanceof Error ? error.message : String(error)}
             </Text>
           ) : null}

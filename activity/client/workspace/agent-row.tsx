@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import type { AgentAttentionKind, WorkspaceTheme } from "./constants.ts";
 import { RunningIndicator } from "./running-indicator.tsx";
+import { CONTROL, ICON_SIZE } from "../design-tokens.ts";
 
 export type AgentRowStyles = {
   agentListRow: ViewStyle;
@@ -102,7 +103,7 @@ export function AgentRow({
       <View style={styles.agentIconWrap}>
         <Icon
           name={archived ? "BotOff" : "Bot"}
-          size={18}
+          size={ICON_SIZE.leading}
           color={botColor}
         />
         {showRunning ? (
@@ -137,7 +138,7 @@ export function AgentRow({
           }
           style={styles.permissionBadge}
         >
-          <Icon name="ShieldAlert" size={12} color={theme.colors.statusWarning} />
+          <Icon name="ShieldAlert" size={ICON_SIZE.badge} color={theme.colors.statusWarning} />
           {permissionCount > 1 ? (
             <Text style={styles.permissionBadgeText}>{permissionCount}</Text>
           ) : null}
@@ -149,21 +150,21 @@ export function AgentRow({
           accessibilityLabel={archived ? `Unarchive ${label}` : `Archive ${label}`}
           accessibilityState={{ disabled: actionDisabled }}
           disabled={actionDisabled || !showAction}
-          hitSlop={8}
+          hitSlop={CONTROL.hitSlop}
           onPress={onArchiveToggle}
           pointerEvents={showAction ? "auto" : "none"}
           style={[styles.titleAction, { opacity: showAction ? 1 : 0 }]}
         >
           {busy ? (
             <ActivityIndicator
-              size={14}
+              size={ICON_SIZE.inline}
               color={theme.colors.foregroundMuted}
-              style={{ width: 14, height: 14 }}
+              style={{ width: ICON_SIZE.inline, height: ICON_SIZE.inline }}
             />
           ) : (
             <Icon
               name={archived ? "ArchiveRestore" : "Archive"}
-              size={14}
+              size={ICON_SIZE.inline}
               color={theme.colors.foregroundMuted}
             />
           )}

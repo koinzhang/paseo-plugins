@@ -3,7 +3,8 @@
 产品名 / 插件 ID / 数据目录：**Activity** / **`activity`** / `~/.paseo/plugin-data/activity/`  
 （原 id `tool-usage`；升级时自动迁移，见 [007-rename-activity](./007-rename-activity/) Phase 2。）
 
-**架构总览（Global / Workspace / Agent）**：[docs/architecture.md](../docs/architecture.md)
+**架构总览（Global / Workspace / Agent）**：[docs/architecture.md](../docs/architecture.md)  
+**设计规范（字体 / 间距 / 圆角 / 图标 / 状态）**：[docs/design-system.md](../docs/design-system.md) — 旧 spec 中的视觉数值以它为准（065）
 
 按编号增量演进；**不要往已关闭的目录里堆新需求**。实现前先改对应 `spec.md` / `plan.md`。
 
@@ -90,6 +91,7 @@
 | [062-measured-width-cache](./062-measured-width-cache/) | 已实现，页面验收待完成 | 测量宽度：0 宽不上报、同步测 DOM、监听 resize / visibilitychange；隐藏窗口与切页面不再重排 |
 | [063-workspace-skill-timeline](./063-workspace-skill-timeline/) | 已实现，页面验收待完成 | Workspace Skills / MCP 新增逐次调用时间线，共用持久化视图 |
 | [064-review-hardening](./064-review-hardening/) | 已实现 | 审查修复：read-skill 符号链接、unarchive 参数、读 RPC 缓存与 SQL 下推、目录 hint 多余刷新、增量历史扫描、SQLite busy timeout / WAL |
+| [065-design-tokens](./065-design-tokens/) | 已实现，页面验收待完成 | 设计规范统一：`client/design-tokens.ts` + `docs/design-system.md`；三层 scope 与 popover 同角色同值；测试拦截裸样式数值 |
 
 ## 约定
 

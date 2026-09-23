@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Text, View, type TextStyle } from "react-native";
 import { fitFontSize } from "./fit-text.ts";
+import { FONT_SIZE, FONT_WEIGHT, RADIUS } from "./design-tokens.ts";
 
 /** Hidden measuring box wide enough to never clamp the text (051). */
 const MEASURE_WIDTH = 1000;
@@ -20,7 +21,7 @@ function FitText({ text, available, base, min, lineHeight, color, weight, tabula
   min?: number;
   lineHeight: number;
   color: string;
-  weight?: "500";
+  weight?: typeof FONT_WEIGHT.medium;
   tabular?: boolean;
 }) {
   // The hidden copy renders at `fontSize` and reports its width; the fit is
@@ -89,16 +90,16 @@ function StatTile({ item, colors, dense, compact, bordered }: {
       <FitText
         text={item.value}
         available={available}
-        base={18}
+        base={FONT_SIZE.metric}
         lineHeight={22}
         color={colors.foreground}
-        weight="500"
+        weight={FONT_WEIGHT.medium}
         tabular
       />
       <FitText
         text={item.label}
         available={available}
-        base={12}
+        base={FONT_SIZE.label}
         min={10}
         lineHeight={16}
         color={colors.foregroundMuted}
@@ -115,7 +116,7 @@ export function UsageStats({ items, colors, compact, dense }: {
   dense?: boolean;
 }) {
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderColor: colors.border, borderRadius: 20, paddingVertical: dense ? 6 : compact ? 8 : 18, rowGap: dense ? 10 : 16 }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.card, paddingVertical: dense ? 6 : compact ? 8 : 18, rowGap: dense ? 10 : 16 }}>
       {items.map((item, index) => (
         <StatTile
           key={item.label}

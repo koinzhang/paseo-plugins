@@ -7,7 +7,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   Text,
   View,
@@ -20,8 +19,17 @@ import {
 import { formatDisplayName } from "../shared/format.ts";
 import { FormattedTime } from "./formatted-time.tsx";
 import { useUsagePillData } from "./usage-query.tsx";
+import {
+  CONTROL,
+  ICON_SIZE,
+  RADIUS,
+  ROW_PADDING,
+  TEXT,
+  iconButton,
+  sectionTitle,
+  titleGap,
+} from "./design-tokens.ts";
 
-const MONO = Platform.select({ ios: "Menlo", default: "monospace" });
 
 export type SkillDetail = { skillName: string; path: string };
 
@@ -108,7 +116,7 @@ function UsagePopoverAgent(
   const styles = useMemo(
     () => ({
       root: {
-        gap: 16,
+        gap: titleGap(true),
         minWidth: compact ? undefined : 300,
         maxWidth: compact ? undefined : 380,
       },
@@ -119,27 +127,19 @@ function UsagePopoverAgent(
         gap: 8,
       },
       sectionTitle: {
+        ...sectionTitle(true),
         color: theme.colors.foreground,
-        fontSize: 14,
-        fontWeight: "600" as const,
         flexShrink: 1,
       },
-      titleAction: {
-        width: 24,
-        height: 24,
-        alignItems: "center" as const,
-        justifyContent: "center" as const,
-        borderRadius: 6,
-        flexShrink: 0,
-      },
+      titleAction: iconButton,
       list: {
-        gap: 0,
+        gap: 2,
       },
       row: {
         flexDirection: "row" as const,
         alignItems: "center" as const,
         gap: 10,
-        paddingVertical: 10,
+        paddingVertical: ROW_PADDING.dense,
         borderTopWidth: 0,
         borderTopColor: theme.colors.border,
       },
@@ -150,29 +150,27 @@ function UsagePopoverAgent(
       rowMain: {
         flex: 1,
         minWidth: 0,
-        gap: 2,
+        gap: 3,
       },
       rowTitle: {
+        ...TEXT.rowTitle,
         color: theme.colors.foreground,
-        fontSize: 13,
-        fontWeight: "500" as const,
       },
       rowMeta: {
+        ...TEXT.meta,
         color: theme.colors.foregroundMuted,
-        fontSize: 11,
       },
       countBadge: {
         minWidth: 22,
         alignItems: "flex-end" as const,
       },
       countText: {
+        ...TEXT.count,
         color: theme.colors.foregroundMuted,
-        fontSize: 12,
-        fontVariant: ["tabular-nums" as const],
       },
       empty: {
+        ...TEXT.small,
         color: theme.colors.foregroundMuted,
-        fontSize: 13,
         paddingVertical: 4,
       },
       detailHeader: {
@@ -187,32 +185,21 @@ function UsagePopoverAgent(
         gap: 4,
       },
       back: {
+        ...TEXT.back,
         color: theme.colors.foregroundMuted,
-        fontSize: 12,
-        fontWeight: "500" as const,
       },
-      panelButton: {
-        width: 24,
-        height: 24,
-        alignItems: "center" as const,
-        justifyContent: "center" as const,
-        borderRadius: 6,
-        flexShrink: 0,
-      },
+      panelButton: iconButton,
       title: {
+        ...sectionTitle(true),
         color: theme.colors.foreground,
-        fontSize: 14,
-        fontWeight: "600" as const,
         flexShrink: 1,
       },
       body: {
+        ...TEXT.code,
         color: theme.colors.foreground,
-        fontSize: 13,
-        fontFamily: MONO,
-        lineHeight: 22,
         backgroundColor: theme.colors.surface1,
         padding: 16,
-        borderRadius: 12,
+        borderRadius: RADIUS.block,
       },
     }),
     [theme, compact],
@@ -235,28 +222,28 @@ function UsagePopoverAgent(
             onPress={() => setSkillDetail(null)}
             style={styles.backRow}
           >
-            <Icon name="ChevronLeft" size={14} color={theme.colors.foregroundMuted} />
+            <Icon name="ChevronLeft" size={ICON_SIZE.action} color={theme.colors.foregroundMuted} />
             <Text style={styles.back}>Skills</Text>
           </Pressable>
           {openSkillInPanel ? (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Open SKILL.md in panel"
-              hitSlop={8}
+              hitSlop={CONTROL.hitSlop}
               style={styles.panelButton}
               onPress={() => {
                 openSkillInPanel(skillDetail);
                 close();
               }}
             >
-              <Icon name="ArrowUpRight" size={16} color={theme.colors.foregroundMuted} />
+              <Icon name="ArrowUpRight" size={ICON_SIZE.action} color={theme.colors.foregroundMuted} />
             </Pressable>
           ) : null}
         </View>
         <Text style={styles.title}>{formatDisplayName(skillDetail.skillName)}</Text>
         {skillFile.isLoading ? <ActivityIndicator color={theme.colors.accent} /> : null}
         {skillFile.error ? (
-          <Text style={{ color: theme.colors.statusDanger }}>
+          <Text style={{ ...TEXT.small, color: theme.colors.statusDanger }}>
             {skillFile.error instanceof Error ? skillFile.error.message : String(skillFile.error)}
           </Text>
         ) : null}
@@ -278,13 +265,13 @@ function UsagePopoverAgent(
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={toggleAction.accessibilityLabel}
-              hitSlop={8}
+              hitSlop={CONTROL.hitSlop}
               onPress={() => setTab(toggleAction.next)}
               style={styles.titleAction}
             >
               <Icon
                 name={toggleAction.icon}
-                size={16}
+                size={ICON_SIZE.action}
                 color={theme.colors.foregroundMuted}
               />
             </Pressable>
@@ -294,7 +281,7 @@ function UsagePopoverAgent(
 
       {loading ? <ActivityIndicator color={theme.colors.accent} /> : null}
       {error ? (
-        <Text style={{ color: theme.colors.statusDanger }}>
+        <Text style={{ ...TEXT.small, color: theme.colors.statusDanger }}>
           {error instanceof Error ? error.message : String(error)}
         </Text>
       ) : null}
@@ -310,7 +297,7 @@ function UsagePopoverAgent(
             const rowStyle = [styles.row, index === 0 ? styles.rowFirst : null];
             const content = (
               <>
-                <Icon name="Sparkles" size={16} color={theme.colors.foregroundMuted} />
+                <Icon name="Sparkles" size={ICON_SIZE.leading} color={theme.colors.foregroundMuted} />
                 <View style={styles.rowMain}>
                   <Text style={styles.rowTitle} numberOfLines={1}>
                     {name}
@@ -353,8 +340,8 @@ function UsagePopoverAgent(
               key={`${item.server}.${item.tool}`}
               style={[styles.row, index === 0 ? styles.rowFirst : null]}
             >
-              <Icon name="Plug" size={16} color={theme.colors.foregroundMuted} />
-                <View style={styles.rowMain}>
+              <Icon name="Plug" size={ICON_SIZE.leading} color={theme.colors.foregroundMuted} />
+              <View style={styles.rowMain}>
                 <Text style={styles.rowTitle} numberOfLines={1}>
                   {formatDisplayName(`${item.server}.${item.tool}`)}
                 </Text>

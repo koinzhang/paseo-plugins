@@ -1,7 +1,8 @@
 import { Icon } from "@getpaseo/plugin/client/react-native";
 import type { ReactNode } from "react";
 import { Pressable, Text, View, type TextStyle, type ViewStyle } from "react-native";
-import { MENU_OPTION_ICON_SIZE, type MenuOption } from "./constants.ts";
+import { type MenuOption } from "./constants.ts";
+import { ICON_SIZE } from "../design-tokens.ts";
 
 export type MenuStyles = {
   menuPage: ViewStyle;
@@ -57,7 +58,7 @@ export function MenuSubTrigger({
               {value}
             </Text>
           ) : null}
-          <Icon name="ChevronRight" size={14} color={chevronColor} />
+          <Icon name="ChevronRight" size={ICON_SIZE.inline} color={chevronColor} />
         </View>
       </Pressable>
     </View>
@@ -98,14 +99,14 @@ export function MenuOptionList({
             ]}
           >
             <View style={styles.menuLeadingSlot}>
-              <Icon name={option.icon} size={MENU_OPTION_ICON_SIZE} color={iconColor} />
+              <Icon name={option.icon} size={ICON_SIZE.inline} color={iconColor} />
             </View>
             <Text style={styles.menuOptionLabel} numberOfLines={1}>
               {option.label}
             </Text>
             {selected ? (
               <View style={styles.menuTrailing}>
-                <Icon name="Check" size={16} color={checkColor} />
+                <Icon name="Check" size={ICON_SIZE.action} color={checkColor} />
               </View>
             ) : null}
           </Pressable>
