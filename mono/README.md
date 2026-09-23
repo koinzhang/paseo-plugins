@@ -4,7 +4,7 @@ Cool paper / ink themes for Paseo: **Mono Dark** and **Mono Light**. Blue-gray s
 
 Requires Paseo >= 0.9.1.
 
-On desktop and web, selecting either Mono theme also condenses the top sidebar navigation — **New workspace**, **History**, **Search**, **Schedules**, and any plugin sidebar items — into one icon-only row that follows your configured order. Hovering an icon shows its name; native buttons and accessibility labels remain intact. The composer's dictation and voice-mode buttons are hidden as well (keyboard shortcuts still work), and the divider lines at the top and bottom of the left sidebar and at the top of the Explorer are removed.
+On desktop and web, selecting either Mono theme also condenses the top sidebar navigation — **New workspace**, **History**, **Search**, **Schedules**, and any plugin sidebar items — into one icon-only row that follows your configured order. Hovering an icon shows its name; native buttons and accessibility labels remain intact. The composer's dictation and voice-mode buttons are hidden as well (keyboard shortcuts still work), and the divider lines at the top and bottom of the left sidebar, at the top of the Explorer, and under the center header and tabs are removed.
 
 On every platform, Mono also hides agent **Thinking** rows from the timeline (via an official timeline transformer). Tool calls and messages are unchanged.
 
