@@ -5,6 +5,20 @@ Paseo 插件仓库。当前包含插件 **Activity**（`activity/`）：本地�
 > 插件 ID / 目录名 / 数据目录：**`activity`**（原 `tool-usage`，见 `activity/specs/007-rename-activity/` Phase 2）。
 > 架构总览：[`activity/docs/architecture.md`](./activity/docs/architecture.md) · 产品 README：[`activity/README.md`](./activity/README.md)
 
+## Paseo 源码（查阅用）
+
+本地 Paseo 仓库一般与当前 checkout 同级（`../paseo`），写插件时可直接查证 API / 契约 / daemon 实现：
+
+- 本机路径：`/Users/koinzhang/Workspace/xws/paseo`；其他设备先 `ls ..` 确认，不存在就不要臆造路径
+- 常用位置：
+  - `packages/plugin/src/` — 插件运行时与插件 API（surface / RPC / hooks 等）
+  - `packages/protocol/` — RPC 与事件契约
+  - `packages/server/` — daemon（插件加载、`plugin-data` 数据目录等）
+  - `packages/cli/` — `paseo` CLI（`plugin install` / `reload` / `logs`）
+  - `plugin-examples/` — 官方示例插件（surface、timeline、theme 等）
+  - `skills/` — 上游 agent 技能；本仓库对应副本在 [`.agents/skills/`](./.agents/skills/)
+- 只读查阅：不要在 paseo 仓库做修改
+
 ## Spec 驱动开发
 
 编码前先读 [`activity/specs/README.md`](./activity/specs/README.md) 总览，再读对应编号目录（`001-usage-tracking` … `044-paseo-0.9-adaptation`）：
