@@ -26,6 +26,32 @@ export function setModelHidden(
   return hide ? [...rest, { provider: ref.provider, modelId: ref.modelId }] : rest;
 }
 
+/** Subtracts hidden models from a provider's picker count; `knownModelIds` drops stale entries when available. */
+export function visibleModelCount(
+  hidden: readonly ModelRef[],
+  provider: string,
+  total: number,
+  knownModelIds?: ReadonlySet<string>,
+): number {
+  const hiddenCount = hidden.filter(
+    (ref) => ref.provider === provider && (!knownModelIds || knownModelIds.has(ref.modelId)),
+  ).length;
+  return Math.max(0, total - hiddenCount);
+}
+
+/** Replaces the first number in a localized "N models" label; English plurals are adjusted. */
+export function rewriteModelCount(text: string, count: number): string {
+  const replaced = text.replace(/\d+/, String(count));
+  return count === 1
+    ? replaced.replace(/\bmodels\b/, "model")
+    : replaced.replace(/\bmodel\b/, "models");
+}
+
+export function parseModelCount(text: string): number | null {
+  const match = /\d+/.exec(text);
+  return match ? Number(match[0]) : null;
+}
+
 function cssString(value: string): string {
   return `"${value.replace(/["\\]/g, "\\$&").replace(/\n/g, "\\a ")}"`;
 }

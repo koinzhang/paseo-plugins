@@ -1,11 +1,6 @@
 import { settingsRpc } from "@getpaseo/plugin";
 import type { PluginClientContext } from "@getpaseo/plugin/client";
-import {
-  providerIdsByTitle,
-  setModelHidden,
-  type ModelRef,
-  type ProviderTitleSource,
-} from "../shared/models";
+import { providerIdsByTitle, setModelHidden, type ModelRef } from "../shared/models";
 import { MODEL_VISIBILITY_SETTINGS } from "../shared/settings";
 
 type Api = Pick<PluginClientContext, "rpc" | "paseo">;
@@ -17,6 +12,7 @@ let api: Api | null = null;
 let hidden: readonly ModelRef[] = [];
 let revision: string | null = null;
 let providerTitles = new Map<string, string>();
+let providerModels = new Map<string, ReadonlySet<string>>();
 let writes: Promise<void> = Promise.resolve();
 let pendingWrites = 0;
 const listeners = new Set<Listener>();
@@ -68,7 +64,12 @@ export function installModelVisibility(client: Api): () => void {
     hidden = [];
     revision = null;
     providerTitles = new Map();
+    providerModels = new Map();
   };
+}
+
+export function knownModelIds(provider: string): ReadonlySet<string> | undefined {
+  return providerModels.get(provider);
 }
 
 export function getHiddenModels(): readonly ModelRef[] {
@@ -86,11 +87,12 @@ export function refreshProviders(): void {
     .snapshot()
     .then((snapshot) => {
       if (api !== current) return;
-      const entries: ProviderTitleSource[] = [
-        ...snapshot.entries,
-        ...(snapshot.compactSnapshot?.entries ?? []),
-      ];
+      const entries = [...snapshot.entries, ...(snapshot.compactSnapshot?.entries ?? [])];
       providerTitles = providerIdsByTitle(entries);
+      providerModels = new Map();
+      for (const entry of entries) {
+        if (entry.models) providerModels.set(entry.provider, new Set(entry.models.map((m) => m.id)));
+      }
       publish();
     })
     .catch(() => {});
