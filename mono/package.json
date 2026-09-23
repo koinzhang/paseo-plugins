@@ -12,15 +12,19 @@
   "files": [
     "paseo-plugin.json",
     "index.client.ts",
+    "client/",
     "shared/"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test shared/palette.test.ts"
+    "test": "node --experimental-strip-types --test shared/*.test.ts"
   },
   "devDependencies": {
-    "@getpaseo/plugin": "0.9.0-beta.2",
+    "@getpaseo/plugin": "0.9.1",
     "@types/node": "^24.13.5",
+    "@types/react": "~19.2.0",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
     "typescript": "^5.9.3"
   }
 }
