@@ -12,6 +12,7 @@ A monorepo for Paseo plugins. Each plugin lives in its own directory with its ow
 | Plugin | ID | Description |
 |---|---|---|
 | [Activity](./activity/) | `activity` | Local usage analytics **and** workspace agent ops (Explorer fleet list, live attention, terminals) |
+| [Mono](./mono/) | `mono` | Cool paper / ink light and dark themes |
 
 ## Activity
 
