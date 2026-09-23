@@ -10,14 +10,14 @@ import { useAppLanguage } from "./use-app-language.ts";
 export function FormattedTime({
   iso,
   style,
-  prefix,
+  format,
 }: {
   iso: string | null | undefined;
   style?: TextStyle;
-  /** e.g. `"Last "` — concatenated before the stamp */
-  prefix?: string;
+  /** Wraps the stamp in localized copy, e.g. `messages.common.lastUsed`. */
+  format?: (stamp: string) => string;
 }): ReactNode {
   const locale = useAppLanguage();
   const stamp = formatActivityTime(iso, locale);
-  return <Text style={style}>{prefix ? `${prefix}${stamp}` : stamp}</Text>;
+  return <Text style={style}>{format ? format(stamp) : stamp}</Text>;
 }

@@ -99,24 +99,38 @@
 
 ## 6. 浮层
 
-- **图表 tooltip**：`tooltipSurface(colors)` — padding 10 / 6、`RADIUS.overlay`、`surface2` 底、1px `border`；正文 `TEXT.tooltip`
+- **图表 tooltip**：一律用 `ChartTooltip`（`client/ui.tsx`，066）— 容器 `tooltipSurface(colors)`（padding 10 / 6、`RADIUS.overlay`、`surface2` 底、1px `border`）；标题 medium 字重，行为「色块 · muted label · 等宽数值」；水平居中于指针并夹在图表内，垂直在锚点上方 8px。三个图表都用浮动 tooltip，不再用 readout 行；热力图不加强度图例
+- **composer popover**：宽度 `popoverFrame(compact)` — regular 300–380（`POPOVER_WIDTH`），compact 由宿主铺满
 - **菜单**：宽 `MENU_WIDTH`（232）、`RADIUS.overlay`、`surface1` 底、1px `border`、轻阴影；行高 compact 40 / regular 28
 
 ## 7. 状态
 
 | 状态 | 规格 |
 |---|---|
-| 首次加载 | `ActivityIndicator color={accent}`；刷新时保留旧数据，不闪 spinner |
-| 错误 | `TEXT.small` + `statusDanger` |
-| 行内空 | `TEXT.small` + `foregroundMuted`（图表 / 列表内） |
-| 整页空 | `TEXT.display` 标题 + `TEXT.body` muted 提示 |
+| 首次加载 | `LoadingState`；刷新时保留旧数据，不闪 spinner |
+| 错误 | `ErrorState`：`TEXT.small` + `statusDanger`「加载失败：原因」+ accent「重试」（重新请求失败的查询） |
+| 行内空 | `InlineEmpty`（图表 / 列表内） |
+| 整页空 | `PageEmpty`：`TEXT.display` 标题 + `TEXT.body` muted 提示 |
 | Agent attention | finished → `statusSuccess`、permission → `statusWarning`、error → `statusDanger`（034） |
 
-## 8. 新增 UI 检查清单
+## 8. 公共组件（`client/ui.tsx`，066）
+
+优先复用，不要在页面里重写：`IconButton`、`SectionHeader`（标题 + 右侧动作）、`Section`、`LoadingState`、`ErrorState`、`InlineEmpty`、`PageEmpty`、`TextTabs`（`filter` / `chart`）、`CountText`、`ChartTooltip`。
+
+## 9. 文案
+
+- 用户可见文案与 a11y label 全部来自 `shared/i18n.ts`：组件内 `useMessages()`，纯函数传 `locale` 调 `messagesFor(locale)`
+- 语言跟随 Paseo 设置（`@paseo:app-settings.language`，`system` → OS 首选）；目前 en / zh-CN，其余回退英文
+- 句式交给文案表（函数形式如 `lastUsed(time)`），不要在组件里拼接英文前后缀
+- 新增 key 时 en / zh-CN 同步补（zh-CN 表类型强制完整）；产品名 Activity 不翻译
+
+## 10. 新增 UI 检查清单
 
 - [ ] 颜色全部来自 `theme.colors` / `mixColor` / `rank-color.ts`
 - [ ] 字号 / 字重 / 圆角 / 图标尺寸 / hitSlop 用 token（`npm test` 会拦）
 - [ ] 节标题用 `sectionTitle`，标题 → 内容用 `titleGap`
 - [ ] 列表行选对 `ROW_PADDING` 密度
 - [ ] 可点元素有 `accessibilityRole` / `accessibilityLabel`，图标按钮带 `hitSlop`
+- [ ] 状态 / 节标题 / 图标按钮 / tooltip 用 `client/ui.tsx` 组件
+- [ ] 文案走 `useMessages()`，中文界面下目测一遍
 - [ ] compact 下目测一遍

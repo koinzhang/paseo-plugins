@@ -12,6 +12,8 @@ import {
   type AttentionAgentItem,
 } from "./attention-agents.ts";
 import { AttentionPopover } from "./attention-popover.tsx";
+import { messagesFor } from "../shared/i18n.ts";
+import { currentAppLanguage, watchAppLanguage } from "./use-app-language.ts";
 import {
   clearAttentionStatuses,
   getAttentionStatuses,
@@ -22,7 +24,7 @@ import { watchAgentDirectory } from "./agent-directory.ts";
 import { agentStatusInfo } from "./workspace/list-host-agents.ts";
 import type { AgentStatusInfo } from "./workspace/constants.ts";
 
-const TITLE = "Needs attention";
+const attentionTitle = () => messagesFor(currentAppLanguage()).attention.title;
 const PILL_ID = "attention";
 
 type PillEntry = {
@@ -56,7 +58,7 @@ export function contributeAttentionPills(client: PluginClientContext): () => voi
     entry.signature = signature;
 
     if (items.length === 0) {
-      pill.update({ visible: false, label: TITLE, disabled: false });
+      pill.update({ visible: false, label: attentionTitle(), disabled: false });
       return;
     }
 
@@ -64,7 +66,7 @@ export function contributeAttentionPills(client: PluginClientContext): () => voi
     pill.update({
       visible: true,
       label: String(items.length),
-      title: TITLE,
+      title: attentionTitle(),
       disabled: false,
       behavior: {
         kind: "popover",
@@ -115,8 +117,8 @@ export function contributeAttentionPills(client: PluginClientContext): () => voi
       workspaceId,
       agentId,
       button: {
-        title: TITLE,
-        label: TITLE,
+        title: attentionTitle(),
+        label: attentionTitle(),
         visible: false,
         icon: createPillIcon(agentId),
         behavior: {
@@ -154,7 +156,16 @@ export function contributeAttentionPills(client: PluginClientContext): () => voi
     for (const [workspaceId, statuses] of workspaces) applyWorkspace(workspaceId, statuses);
   });
 
+  const stopLanguage = watchAppLanguage(() => {
+    for (const [agentId, entry] of pills) {
+      entry.signature = "";
+      const cached = getAttentionStatuses(entry.workspaceId);
+      if (cached) applyPill(agentId, entry, cached);
+    }
+  });
+
   return () => {
+    stopLanguage();
     stopDirectory();
     pills.forEach((entry) => entry.registration?.remove());
     pills.clear();

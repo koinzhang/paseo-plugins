@@ -1,5 +1,6 @@
 import { matchesAgentTitleSearch } from "../../shared/agent-title-search.ts";
 import { formatActivityTime } from "../../shared/format.ts";
+import { messagesFor } from "../../shared/i18n.ts";
 import { providerLabel, type AgentUsageItem } from "../../shared/usage.ts";
 import {
   type AgentShowField,
@@ -23,9 +24,10 @@ export function formatAgentMeta(
   promptPreview?: string | null,
 ): string | null {
   const parts: string[] = [];
+  const { units } = messagesFor(locale);
   if (showFields.has("provider")) parts.push(providerLabel(item.provider));
-  if (showFields.has("calls")) parts.push(`${item.callCount} calls`);
-  if (showFields.has("messages")) parts.push(`${item.messageCount} messages`);
+  if (showFields.has("calls")) parts.push(units.calls(item.callCount));
+  if (showFields.has("messages")) parts.push(units.messages(item.messageCount));
   if (showFields.has("updated")) {
     const at = agentUpdatedAt(item, byId);
     if (at) parts.push(formatActivityTime(at, locale));

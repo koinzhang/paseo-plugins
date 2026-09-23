@@ -130,11 +130,12 @@ export const LIFECYCLE_FILTER_OPTIONS: ReadonlyArray<
   { id: "closed", label: "Closed", icon: "CircleOff" },
 ];
 
-export function optionLabel<T extends string>(
-  options: ReadonlyArray<{ id: T; label: string }>,
-  id: T,
-): string {
-  return options.find((option) => option.id === id)?.label ?? id;
+/** Swap option labels for localized copy (066); ids / icons unchanged. */
+export function localizeOptions<T extends string>(
+  options: ReadonlyArray<MenuOption & { id: T }>,
+  labels: Record<T, string>,
+): ReadonlyArray<MenuOption & { id: T }> {
+  return options.map((option) => ({ ...option, label: labels[option.id] ?? option.label }));
 }
 
 /** 0 = attention-worthy, then running / idle / initializing / closed (unknown). */

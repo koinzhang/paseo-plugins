@@ -1,3 +1,5 @@
+import { messagesFor } from "./i18n.ts";
+
 /** Format stored ISO timestamps for UI / export in the local timezone + locale. */
 export function formatLocalDateTime(
   iso: string | null | undefined,
@@ -61,14 +63,15 @@ export function formatCount(value: number): string {
   return String(value);
 }
 
-/** Compact locale-independent duration for agent lifetimes (049). */
-export function formatDuration(ms: number): string {
+/** Compact duration for agent lifetimes (049); units follow the app language (066). */
+export function formatDuration(ms: number, locale = "en"): string {
   if (!Number.isFinite(ms) || ms < 0) return "—";
-  if (ms < MINUTE_MS) return "<1 min";
-  if (ms < HOUR_MS) return `${Math.floor(ms / MINUTE_MS)} min`;
+  const m = messagesFor(locale).duration;
+  if (ms < MINUTE_MS) return m.underMinute;
+  if (ms < HOUR_MS) return m.minutes(Math.floor(ms / MINUTE_MS));
   const hours = ms / HOUR_MS;
-  if (hours < 48) return `${Number(hours.toFixed(1))} h`;
+  if (hours < 48) return m.hours(Number(hours.toFixed(1)));
   const days = ms / DAY_MS;
-  if (days < 60) return `${Number(days.toFixed(1))} days`;
-  return `${Number((days / 30.44).toFixed(1))} months`;
+  if (days < 60) return m.days(Number(days.toFixed(1)));
+  return m.months(Number((days / 30.44).toFixed(1)));
 }

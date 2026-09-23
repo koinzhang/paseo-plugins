@@ -27,6 +27,7 @@ import {
 import { formatAgentMeta } from "./filters.ts";
 import type { WorkspaceTheme } from "./constants.ts";
 import { CONTROL, ICON_SIZE } from "../design-tokens.ts";
+import { useMessages } from "../use-app-language.ts";
 
 export type AgentsSectionStyles = AgentRowStyles & {
   agentsSection: ViewStyle;
@@ -161,6 +162,7 @@ export function AgentsSection({
   /** Bump when workspace changes to collapse search. */
   resetKey: string;
 }): ReactNode {
+  const m = useMessages();
   const [agentSearchOpen, setAgentSearchOpen] = useState(false);
   const [searchSlotWidth, setSearchSlotWidth] = useState(0);
   const [pageIndex, setPageIndex] = useState(0);
@@ -226,8 +228,8 @@ export function AgentsSection({
         else active.push(item);
       }
       const groups: Array<[string, AgentUsageItem[]]> = [];
-      if (active.length > 0) groups.push(["Active", active]);
-      if (archived.length > 0) groups.push(["Archived", archived]);
+      if (active.length > 0) groups.push([m.workspace.options.status.active, active]);
+      if (archived.length > 0) groups.push([m.workspace.options.status.archived, archived]);
       return groups;
     }
     const map = new Map<string, AgentUsageItem[]>();
@@ -239,7 +241,7 @@ export function AgentsSection({
     return [...map.entries()].sort((a, b) =>
       providerLabel(a[0]).localeCompare(providerLabel(b[0])),
     );
-  }, [agentGroup, pageItems]);
+  }, [agentGroup, pageItems, m]);
 
   const subAgentCounts = useMemo(
     () => countSubAgentsByParent(agentItems, statusFilters),
@@ -271,7 +273,7 @@ export function AgentsSection({
     <View style={styles.agentsSection}>
       <View style={styles.agentsHeaderWrap}>
         <View style={styles.agentsHeaderRow}>
-          <Text style={styles.sectionTitle}>Agents</Text>
+          <Text style={styles.sectionTitle}>{m.common.agents}</Text>
           <View
             style={styles.agentsHeaderSearchSlot}
             onLayout={(event) => {
@@ -301,21 +303,21 @@ export function AgentsSection({
                 ref={searchInputRef as never}
                 value={searchQuery}
                 onChangeText={onSearchQueryChange}
-                placeholder="Search agents"
+                placeholder={m.workspace.searchPlaceholder}
                 placeholderTextColor={theme.colors.foregroundMuted}
                 autoCapitalize="none"
                 autoCorrect={false}
                 returnKeyType="search"
                 editable={agentSearchOpen}
                 style={styles.searchInput}
-                accessibilityLabel="Search agents by title"
+                accessibilityLabel={m.workspace.searchLabel}
               />
             </Animated.View>
           </View>
           <View style={styles.headerActions}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={agentSearchOpen ? "Close agent search" : "Search agents"}
+              accessibilityLabel={agentSearchOpen ? m.workspace.closeSearch : m.workspace.openSearch}
               accessibilityState={{ expanded: agentSearchOpen }}
               hitSlop={CONTROL.hitSlop}
               onPress={() => {
@@ -333,7 +335,7 @@ export function AgentsSection({
             <View ref={triggerRef} collapsable={false}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Agent display options"
+                accessibilityLabel={m.workspace.displayOptions}
                 accessibilityState={{ expanded: menuOpen }}
                 hitSlop={CONTROL.hitSlop}
                 onPress={onToggleMenu}
@@ -358,14 +360,14 @@ export function AgentsSection({
           : pageItems.map(renderAgentRow)}
         {visibleAgentItems.length === 0 ? (
           <Text style={styles.empty}>
-            {statusFiltersEmpty ? "No filters selected" : "No matching agents"}
+            {statusFiltersEmpty ? m.workspace.noFilters : m.workspace.noMatches}
           </Text>
         ) : null}
         {showPager ? (
           <View style={styles.pagerRow}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Previous agents page"
+              accessibilityLabel={m.workspace.previousPage}
               accessibilityState={{ disabled: safePage === 0 }}
               disabled={safePage === 0}
               hitSlop={CONTROL.hitSlop}
@@ -379,7 +381,7 @@ export function AgentsSection({
             </Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Next agents page"
+              accessibilityLabel={m.workspace.nextPage}
               accessibilityState={{ disabled: safePage >= pageCount - 1 }}
               disabled={safePage >= pageCount - 1}
               hitSlop={CONTROL.hitSlop}

@@ -67,17 +67,17 @@
 - [ ] 目测：两个 composer popover 行样式一致
 - [ ] 目测：热力图与直方图 tooltip 外观一致
 
-## 6. 后续优化建议（未实现，另起编号）
+## 6. 后续优化建议（另起编号；状态列见 066）
 
-| 方向 | 问题 | 建议 |
-|---|---|---|
-| 状态组件 | Loading / Error / Empty 在 5 个文件各写一遍；错误直接显示 `error.message`，无重试 | 抽 `StateView`（spinner / 错误 + Retry / 空态），统一文案 |
-| 图表 hover 反馈 | 热力图、直方图用浮动 tooltip，Timeline 用底部 readout 行 | 统一为一种；至少三图都有 readout 或都有 tooltip |
-| 图例 | Timeline 用 ▲▼ 文字，直方图只在 tooltip 有色块，热力图无强度图例 | 加 Less → More 强度图例；图例统一色块 + label |
-| i18n | 时间按 app 语言（039），其余文案硬编码英文，中文用户界面混排 | 引入文案表，跟随 `useAppLanguage` |
-| Global 页长度 | KPI + 热力图 + 直方图 + Timeline + insights + 排行纵向堆叠，常需滚动 | 直方图与 Timeline 合并为「Trends」tab，或记忆滚动位置 |
-| 可访问性 | KPI tile 无 `accessibilityLabel`；Global 筛选 tab 无 `tablist` 容器 | 补 label / role |
-| 代码结构 | `workspace/panel.tsx` 1000+ 行，样式与逻辑混在一起 | 样式拆到 `workspace/styles.ts` |
-| 品牌色对比度 | 部分 provider 浅色值（如 kilo `#F8F676`）在浅色主题上对比度低 | 按背景亮度校正或加描边 |
-| popover 宽度 | Usage popover 300–380，Attention popover min 240 | 统一 popover 宽度区间 |
-| 验收债 | 047 / 051 / 057–063 等仍「页面验收待完成」 | 结合本 spec 目测一并验收 |
+| 方向 | 问题 | 建议 | 状态 |
+|---|---|---|---|
+| 状态组件 | Loading / Error / Empty 在 5 个文件各写一遍；错误直接显示 `error.message`，无重试 | 抽 `StateView`（spinner / 错误 + Retry / 空态），统一文案 | 066 已实现 |
+| 图表 hover 反馈 | 热力图、直方图用浮动 tooltip，Timeline 用底部 readout 行 | 统一为一种；至少三图都有 readout 或都有 tooltip | 066 已实现（统一浮动 tooltip） |
+| 图例 | Timeline 用 ▲▼ 文字，直方图只在 tooltip 有色块，热力图无强度图例 | 加 Less → More 强度图例；图例统一色块 + label | 不做（用户决定热力图不加图例） |
+| i18n | 时间按 app 语言（039），其余文案硬编码英文，中文用户界面混排 | 引入文案表，跟随 `useAppLanguage` | 066 已实现（en / zh-CN） |
+| Global 页长度 | KPI + 热力图 + 直方图 + Timeline + insights + 排行纵向堆叠，常需滚动 | 直方图与 Timeline 合并为「Trends」tab，或记忆滚动位置 | 待定 |
+| 可访问性 | KPI tile 无 `accessibilityLabel`；Global 筛选 tab 无 `tablist` 容器 | 补 label / role | 待定 |
+| 代码结构 | `workspace/panel.tsx` 1000+ 行，样式与逻辑混在一起 | 样式拆到 `workspace/styles.ts` | 待定 |
+| 品牌色对比度 | 部分 provider 浅色值（如 kilo `#F8F676`）在浅色主题上对比度低 | 按背景亮度校正或加描边 | 待定 |
+| popover 宽度 | Usage popover 300–380，Attention popover min 240 | 统一 popover 宽度区间 | 066 已实现 |
+| 验收债 | 047 / 051 / 057–063 等仍「页面验收待完成」 | 结合本 spec 目测一并验收 | 待定 |

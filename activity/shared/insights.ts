@@ -1,6 +1,7 @@
 import type { ActivityDay, ProviderUsageItem } from "./usage.ts";
 import { isActiveDay } from "./activity.ts";
 import { formatCount, formatDisplayName, formatDuration } from "./format.ts";
+import { messagesFor } from "./i18n.ts";
 
 export type InsightRow = { label: string; value: string };
 
@@ -66,10 +67,11 @@ function pickBusiestDay(days: readonly ActivityDay[]): ActivityDay | null {
 
 function formatBusiest(day: ActivityDay, locale: string): string {
   const label = formatDayLabel(day.date, locale);
-  if (day.messages > 0) return `${label} · ${day.messages} messages`;
+  const { units } = messagesFor(locale);
+  if (day.messages > 0) return `${label} · ${units.messages(day.messages)}`;
   const calls = day.skills + day.mcp;
-  if (calls > 0) return `${label} · ${calls} calls`;
-  if (day.agents > 0) return `${label} · ${day.agents} agents`;
+  if (calls > 0) return `${label} · ${units.calls(calls)}`;
+  if (day.agents > 0) return `${label} · ${units.agents(day.agents)}`;
   return label;
 }
 
@@ -114,11 +116,11 @@ function topModelValue(
 }
 
 /** Share of active agents that are coding (018); empty creations excluded. */
-function codingVsChatValue(codingAgents: number, chatAgents: number): string {
+function codingVsChatValue(codingAgents: number, chatAgents: number, locale: string): string {
   const total = codingAgents + chatAgents;
   if (total <= 0) return "—";
   const pct = Math.round((codingAgents / total) * 100);
-  return `${pct}% coding`;
+  return messagesFor(locale).insights.codingShare(pct);
 }
 
 /** Weekday with the highest activity volume among active days. */
@@ -160,24 +162,25 @@ export function buildActivityInsights(input: {
   const busiest = pickBusiestDay(input.days);
   const codingAgents = input.summary.codingAgents ?? 0;
   const chatAgents = input.summary.chatAgents ?? 0;
+  const m = messagesFor(locale).insights;
 
   return [
-    { label: "Active days", value: String(activeDays) },
+    { label: m.activeDays, value: String(activeDays) },
     {
-      label: "Busiest day",
+      label: m.busiestDay,
       value: busiest ? formatBusiest(busiest, locale) : "—",
     },
-    { label: "Workspaces", value: formatCount(input.workspaces) },
-    { label: "Messages", value: input.summary.messages.toLocaleString(locale) },
-    { label: "Skill calls", value: input.summary.skills.toLocaleString(locale) },
-    { label: "MCP calls", value: input.summary.mcp.toLocaleString(locale) },
+    { label: m.workspaces, value: formatCount(input.workspaces) },
+    { label: m.messages, value: input.summary.messages.toLocaleString(locale) },
+    { label: m.skillCalls, value: input.summary.skills.toLocaleString(locale) },
+    { label: m.mcpCalls, value: input.summary.mcp.toLocaleString(locale) },
     {
-      label: "Messages per agent",
+      label: m.messagesPerAgent,
       value: formatRatio(input.summary.messages, input.summary.agents),
     },
     {
-      label: "Coding vs chat",
-      value: codingVsChatValue(codingAgents, chatAgents),
+      label: m.codingVsChat,
+      value: codingVsChatValue(codingAgents, chatAgents, locale),
     },
   ];
 }
@@ -199,23 +202,26 @@ export function buildActivityKpi(input: {
 }): InsightRow[] {
   const streak = input.longestStreak;
   const longest = input.longestAgent;
+  const locale = input.locale ?? "en";
+  const messages = messagesFor(locale);
+  const m = messages.kpi;
   return [
-    { label: "Agents", value: formatCount(input.agents) },
+    { label: m.agents, value: formatCount(input.agents) },
     {
-      label: "Longest agent",
+      label: m.longestAgent,
       value: longest
-        ? `${formatDuration(longest.durationMs)}${longest.active ? " · active" : ""}`
+        ? `${formatDuration(longest.durationMs, locale)}${longest.active ? ` · ${m.stillActive}` : ""}`
         : "—",
     },
     {
-      label: "Top provider",
+      label: m.topProvider,
       value: topProviderValue(input.providers, input.providerFilter),
     },
     {
-      label: "Top model",
+      label: m.topModel,
       value: topModelValue(input.providers, input.providerFilter),
     },
-    { label: "Peak weekday", value: peakWeekdayValue(input.days, input.locale ?? "en") },
-    { label: "Longest streak", value: `${streak} day${streak === 1 ? "" : "s"}` },
+    { label: m.peakWeekday, value: peakWeekdayValue(input.days, locale) },
+    { label: m.longestStreak, value: messages.units.days(streak) },
   ];
 }

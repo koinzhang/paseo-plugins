@@ -4,6 +4,8 @@ import type { ActivityHour } from "../shared/usage.ts";
 import { useMeasuredWidth } from "./measured-width.ts";
 import { mixColor } from "./color-mix.ts";
 import { TEXT, sectionTitle, titleGap } from "./design-tokens.ts";
+import { messagesFor } from "../shared/i18n.ts";
+import { ChartTooltip, InlineEmpty } from "./ui.tsx";
 
 type ThemeColors = {
   accent: string;
@@ -124,6 +126,8 @@ export function HourlyActivityTimeline({
   const pinnedRight = useRef(true);
   const [width, widthRef, onWidthLayout] = useMeasuredWidth("global:timeline");
   const [hovered, setHovered] = useState<string | null>(null);
+  const [plotTop, setPlotTop] = useState(0);
+  const m = messagesFor(locale);
 
   const topHeight = compact ? 44 : 58;
   const bottomHeight = compact ? 22 : 30;
@@ -170,7 +174,7 @@ export function HourlyActivityTimeline({
     scrollRef.current?.scrollToEnd({ animated: false });
   }, [resetKey]);
 
-  const { messages, agents, messagePeak, agentPeak, total } = useMemo(() => {
+  const { messages, agents, messagePeak, agentPeak } = useMemo(() => {
     const messages = hours.map((hour) => hour.messages);
     const agents = hours.map((hour) => hour.agents);
     return {
@@ -178,7 +182,6 @@ export function HourlyActivityTimeline({
       agents,
       messagePeak: messages.reduce((peak, value) => Math.max(peak, value), 0),
       agentPeak: agents.reduce((peak, value) => Math.max(peak, value), 0),
-      total: hours.reduce((sum, hour) => sum + hour.total, 0),
     };
   }, [hours]);
 
@@ -200,12 +203,11 @@ export function HourlyActivityTimeline({
 
   const activeIndex = hours.findIndex((hour) => hour.key === hovered);
   const active = activeIndex >= 0 ? hours[activeIndex] : undefined;
-  const readout = active
-    ? `${hourRangeLabel(active.start, locale)} — ${active.agents} agents · ${active.messages} messages · ${active.skills} skills · ${active.mcp} MCP`
-    : `Last ${hours.length} hours · ${total.toLocaleString(locale)} events · peak ${agentPeak} agents/h, ${messagePeak} messages/h`;
 
   const fill = mixColor(colors.surface2, colors.accent, 0.22);
   const agentStroke = mixColor(colors.surface2, colors.accent, 0.68);
+  const skillSwatch = mixColor(colors.surface2, colors.accent, 0.46);
+  const mcpSwatch = mixColor(colors.surface2, colors.accent, 0.3);
   // Softened toward the surface so the hover cursor reads grey, not near-black.
   const cursorColor = mixColor(colors.surface2, colors.foregroundMuted, 0.55);
 
@@ -266,7 +268,7 @@ export function HourlyActivityTimeline({
           <Pressable
             key={hour.key}
             focusable
-            accessibilityLabel={`${hourRangeLabel(hour.start, locale)}: ${hour.agents} agents, ${hour.messages} messages, ${hour.skills} skills, ${hour.mcp} MCP`}
+            accessibilityLabel={`${hourRangeLabel(hour.start, locale)}: ${m.units.messages(hour.messages)}, ${m.units.agents(hour.agents)}, ${m.units.skills(hour.skills)}, ${m.units.mcp(hour.mcp)}`}
             onHoverIn={() => setHovered(hour.key)}
             onHoverOut={() => setHovered(null)}
             onFocus={() => setHovered(hour.key)}
@@ -282,7 +284,7 @@ export function HourlyActivityTimeline({
         ))}
       </View>
     ),
-    [hours, slot, contentWidth, plotHeight, locale],
+    [hours, slot, contentWidth, plotHeight, locale, m],
   );
 
   return (
@@ -301,24 +303,23 @@ export function HourlyActivityTimeline({
         }}
       >
         <Text style={{ ...sectionTitle(compact), color: colors.foreground }}>
-          Timeline
+          {m.timeline.title}
         </Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-          <Text style={{ ...TEXT.meta, color: colors.accent }}>▲ messages</Text>
-          <Text style={{ ...TEXT.meta, color: agentStroke }}>▼ agents</Text>
+          <Text style={{ ...TEXT.meta, color: colors.accent }}>{m.timeline.legendMessages}</Text>
+          <Text style={{ ...TEXT.meta, color: agentStroke }}>{m.timeline.legendAgents}</Text>
         </View>
       </View>
 
       {hours.length === 0 || slot === 0 ? (
         <View style={{ height: plotHeight, justifyContent: "center" }}>
-          <Text style={{ ...TEXT.small, color: colors.foregroundMuted }}>
-            {hours.length === 0 ? "No activity yet" : ""}
-          </Text>
+          {hours.length === 0 ? <InlineEmpty text={m.timeline.empty} color={colors.foregroundMuted} /> : null}
         </View>
       ) : (
         <ScrollView
           ref={scrollRef}
           horizontal
+          onLayout={(event) => setPlotTop(event.nativeEvent.layout.y)}
           nestedScrollEnabled
           showsHorizontalScrollIndicator={false}
           scrollEventThrottle={16}
@@ -378,20 +379,29 @@ export function HourlyActivityTimeline({
                   color: colors.foregroundMuted,
                 }}
               >
-                Now
+                {m.common.now}
               </Text>
             </View>
           </View>
         </ScrollView>
       )}
 
-      <Text
-        accessibilityLiveRegion="polite"
-        numberOfLines={1}
-        style={{ ...TEXT.meta, color: colors.foregroundMuted }}
-      >
-        {readout}
-      </Text>
+      {active && slot > 0 ? (
+        <ChartTooltip
+          anchorX={activeIndex * slot - offsetRef.current}
+          anchorY={plotTop}
+          containerWidth={width}
+          clampTop={false}
+          title={hourRangeLabel(active.start, locale)}
+          rows={[
+            { label: m.common.messages, value: active.messages.toLocaleString(locale), color: colors.accent },
+            { label: m.common.agents, value: active.agents.toLocaleString(locale), color: agentStroke },
+            { label: m.common.skills, value: active.skills.toLocaleString(locale), color: skillSwatch },
+            { label: m.common.mcp, value: active.mcp.toLocaleString(locale), color: mcpSwatch },
+          ]}
+          colors={colors}
+        />
+      ) : null}
     </View>
   );
 }

@@ -10,12 +10,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRegisterOpenAgent } from "../open-agent.ts";
 import { useWorkspaceAgentStatuses } from "../use-workspace-agent-statuses.ts";
 import {
-  ActivityIndicator,
   Dimensions,
   Platform,
   Pressable,
   ScrollView,
-  Text,
   View,
 } from "react-native";
 import { ACTIVITY_LIST_LIMIT } from "../../shared/insights.ts";
@@ -36,6 +34,8 @@ import {
   usageSummaryRpc,
 } from "../../shared/usage.ts";
 import { useAppLanguage } from "../use-app-language.ts";
+import { messagesFor } from "../../shared/i18n.ts";
+import { ErrorState, InlineEmpty, LoadingState } from "../ui.tsx";
 import { useWorkspaceActivityRefresh } from "../use-agent-turn-end.ts";
 import { UsageStats } from "../usage-stats.tsx";
 import { AgentsSection } from "./agents-section.tsx";
@@ -51,8 +51,8 @@ import {
   STATUS_FILTER_OPTIONS,
   TERMINAL_REFETCH_MS,
   agentUpdatedAt,
+  localizeOptions,
   matchesAgentFilters,
-  optionLabel,
   type AgentGroup,
   type AgentLifecycleFilter,
   type AgentShowField,
@@ -117,6 +117,7 @@ export function WorkspaceActivityPanel({
   const [busyTerminalId, setBusyTerminalId] = useState<string | null>(null);
   const page = pageLayout("panel", layout.compact);
   const locale = useAppLanguage();
+  const m = messagesFor(locale);
   const toast = useToast();
   const queryClient = useQueryClient();
   const openAgent = navigation?.openAgent;
@@ -308,14 +309,16 @@ export function WorkspaceActivityPanel({
     recentMcpCalls.error;
 
   const kpi = [
-    { label: "Shell calls", value: (summary.data?.shellCalls ?? 0).toLocaleString() },
-    { label: "File reads", value: (summary.data?.fileReads ?? 0).toLocaleString() },
-    { label: "File writes", value: (summary.data?.fileWrites ?? 0).toLocaleString() },
-    {
-      label: "Messages",
-      value: (summary.data?.messageCount ?? 0).toLocaleString(),
-    },
+    { label: m.kpi.shellCalls, value: (summary.data?.shellCalls ?? 0).toLocaleString(locale) },
+    { label: m.kpi.fileReads, value: (summary.data?.fileReads ?? 0).toLocaleString(locale) },
+    { label: m.kpi.fileWrites, value: (summary.data?.fileWrites ?? 0).toLocaleString(locale) },
+    { label: m.kpi.messages, value: (summary.data?.messageCount ?? 0).toLocaleString(locale) },
   ];
+  const retry = () => {
+    for (const query of [summary, agents, skills, recentSkillCalls, mcp, recentMcpCalls]) {
+      if (query.error) void query.refetch();
+    }
+  };
 
   const terminalItems = terminals.data?.entries ?? [];
   const showAgents = agentItems.length > 0;
@@ -695,15 +698,15 @@ export function WorkspaceActivityPanel({
     : 0;
   const flyoutOptions: ReadonlyArray<MenuOption> =
     menuFlyout === "sort"
-      ? SORT_OPTIONS
+      ? localizeOptions(SORT_OPTIONS, m.workspace.options.sort)
       : menuFlyout === "group"
-        ? GROUP_OPTIONS
+        ? localizeOptions(GROUP_OPTIONS, m.workspace.options.group)
         : menuFlyout === "show"
-          ? SHOW_FIELD_OPTIONS
+          ? localizeOptions(SHOW_FIELD_OPTIONS, m.workspace.options.show)
           : menuFlyout === "status"
-            ? STATUS_FILTER_OPTIONS
+            ? localizeOptions(STATUS_FILTER_OPTIONS, m.workspace.options.status)
             : menuFlyout === "lifecycle"
-              ? LIFECYCLE_FILTER_OPTIONS
+              ? localizeOptions(LIFECYCLE_FILTER_OPTIONS, m.workspace.options.lifecycle)
               : [];
   const flyoutSelectedId: string | undefined =
     menuFlyout === "sort"
@@ -883,15 +886,11 @@ export function WorkspaceActivityPanel({
           showsVerticalScrollIndicator={false}
           showsHorizontalScrollIndicator={false}
         >
-          {loading ? <ActivityIndicator color={theme.colors.accent} /> : null}
-          {error ? (
-            <Text style={{ ...TEXT.small, color: theme.colors.statusDanger }}>
-              {error instanceof Error ? error.message : String(error)}
-            </Text>
-          ) : null}
+          {loading ? <LoadingState color={theme.colors.accent} /> : null}
+          {error ? <ErrorState error={error} onRetry={retry} colors={theme.colors} /> : null}
 
           {!loading && !error && !showContent ? (
-            <Text style={styles.empty}>No activity in this workspace yet</Text>
+            <InlineEmpty text={m.workspace.empty} color={theme.colors.foregroundMuted} />
           ) : null}
 
           {!loading && !error && showContent ? (
@@ -965,6 +964,8 @@ export function WorkspaceActivityPanel({
               activeAgentColor={theme.colors.accent}
               archivedAgentColor={theme.colors.foregroundMuted}
               mutedColor={theme.colors.foregroundMuted}
+              activeTitleColor={theme.colors.foreground}
+              compact={layout.compact}
               styles={styles}
             />
           ) : null}
@@ -974,7 +975,7 @@ export function WorkspaceActivityPanel({
       {menuOpen ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Close agent display options"
+          accessibilityLabel={m.workspace.closeDisplayOptions}
           onPress={closeMenu}
           style={styles.menuBackdrop}
         />
@@ -988,23 +989,23 @@ export function WorkspaceActivityPanel({
           <View style={styles.menuSurface}>
             <View style={styles.menuPage}>
               <MenuSubTrigger
-                label="Sort"
-                value={optionLabel(SORT_OPTIONS, agentSort)}
+                label={m.workspace.menu.sort}
+                value={m.workspace.options.sort[agentSort]}
                 active={menuFlyout === "sort"}
                 onOpen={() => setMenuFlyout("sort")}
                 styles={styles}
                 chevronColor={theme.colors.foregroundMuted}
               />
               <MenuSubTrigger
-                label="Group"
-                value={optionLabel(GROUP_OPTIONS, agentGroup)}
+                label={m.workspace.menu.group}
+                value={m.workspace.options.group[agentGroup]}
                 active={menuFlyout === "group"}
                 onOpen={() => setMenuFlyout("group")}
                 styles={styles}
                 chevronColor={theme.colors.foregroundMuted}
               />
               <MenuSubTrigger
-                label="Show"
+                label={m.workspace.menu.show}
                 active={menuFlyout === "show"}
                 onOpen={() => setMenuFlyout("show")}
                 styles={styles}
@@ -1012,14 +1013,14 @@ export function WorkspaceActivityPanel({
               />
               <View style={styles.menuSeparator} />
               <MenuSubTrigger
-                label="Status"
+                label={m.workspace.menu.status}
                 active={menuFlyout === "status"}
                 onOpen={() => setMenuFlyout("status")}
                 styles={styles}
                 chevronColor={theme.colors.foregroundMuted}
               />
               <MenuSubTrigger
-                label="Lifecycle"
+                label={m.workspace.menu.lifecycle}
                 active={menuFlyout === "lifecycle"}
                 onOpen={() => setMenuFlyout("lifecycle")}
                 styles={styles}

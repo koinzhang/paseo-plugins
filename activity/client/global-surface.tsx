@@ -3,8 +3,6 @@ import { Icon } from "@getpaseo/plugin/client/react-native";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
   ScrollView,
   Text,
   View,
@@ -36,17 +34,17 @@ import { useAppLanguage } from "./use-app-language.ts";
 import { buildActivityInsights, buildActivityKpi, ACTIVITY_LIST_LIMIT } from "../shared/insights.ts";
 import { fixedWindowFrom, rangeFrom, RANGE_OPTIONS, type RangeId } from "./range.ts";
 import { useRegisterOpenAgent } from "./open-agent.ts";
+import { ICON_SIZE, ROW_PADDING, TEXT, pageLayout, titleGap } from "./design-tokens.ts";
+import { messagesFor, type Messages } from "../shared/i18n.ts";
 import {
-  CONTROL,
-  FONT_WEIGHT,
-  ICON_SIZE,
-  ROW_PADDING,
-  TEXT,
-  iconButton,
-  pageLayout,
-  sectionTitle,
-  titleGap,
-} from "./design-tokens.ts";
+  ErrorState,
+  IconButton,
+  InlineEmpty,
+  LoadingState,
+  PageEmpty,
+  SectionHeader,
+  TextTabs,
+} from "./ui.tsx";
 
 /** Max rows for Activity insights and Most used skills / MCP. */
 const LIST_LIMIT = ACTIVITY_LIST_LIMIT;
@@ -82,31 +80,6 @@ function emptyProviderUsage(provider: string, label?: string): ProviderUsageItem
 
 
 
-function TextTabs({
-  options,
-  value,
-  onChange,
-  styles,
-}: {
-  options: ReadonlyArray<{ id: string; label: string }>;
-  value: string;
-  onChange: (id: string) => void;
-  styles: { tabRow: ViewStyle; tab: TextStyle; tabActive: TextStyle };
-}): ReactNode {
-  return (
-    <View style={styles.tabRow}>
-      {options.map((option) => {
-        const active = option.id === value;
-        return (
-          <Pressable key={option.id} accessibilityRole="tab" accessibilityState={{ selected: active }} style={{ paddingVertical: 6 }} onPress={() => onChange(option.id)}>
-            <Text style={active ? styles.tabActive : styles.tab}>{option.label}</Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
 type RankKind = "skills" | "mcp" | "models";
 
 type RankItem = {
@@ -115,7 +88,7 @@ type RankItem = {
   count: number;
   kind: RankKind;
   server?: string;
-  countLabel?: string;
+  unit?: "messages";
 };
 
 const RANK_CYCLE: RankKind[] = ["skills", "mcp", "models"];
@@ -124,29 +97,10 @@ function nextRankKind(kind: RankKind): RankKind {
   return RANK_CYCLE[(RANK_CYCLE.indexOf(kind) + 1) % RANK_CYCLE.length] ?? "skills";
 }
 
-function rankTitle(kind: RankKind): string {
-  if (kind === "skills") return "Most used skills";
-  if (kind === "mcp") return "Most used MCP";
-  return "Most used models";
-}
-
-function rankEmpty(kind: RankKind): string {
-  if (kind === "skills") return "No skills yet";
-  if (kind === "mcp") return "No MCP yet";
-  return "No models yet";
-}
-
-function rankHeaderAction(kind: RankKind): {
-  icon: "Sparkles" | "Plug" | "Bot";
-  accessibilityLabel: string;
-} {
-  if (kind === "skills") {
-    return { icon: "Plug", accessibilityLabel: "Show most used MCP" };
-  }
-  if (kind === "mcp") {
-    return { icon: "Bot", accessibilityLabel: "Show most used models" };
-  }
-  return { icon: "Sparkles", accessibilityLabel: "Show most used skills" };
+function rankShowIcon(kind: RankKind): "Sparkles" | "Plug" | "Bot" {
+  if (kind === "skills") return "Plug";
+  if (kind === "mcp") return "Bot";
+  return "Sparkles";
 }
 
 function rankIconName(kind: RankKind): "Sparkles" | "Plug" | "Bot" {
@@ -161,22 +115,21 @@ function RankList({
   empty,
   styles,
   colors,
+  compact,
+  units,
   headerAction,
 }: {
   title: string;
   items: RankItem[];
   empty: string;
   styles: {
-    block: ViewStyle;
-    blockTitle: TextStyle;
-    titleRow: ViewStyle;
-    titleAction: ViewStyle;
     rankRow: ViewStyle;
     rankName: TextStyle;
     rankMeta: TextStyle;
-    inlineEmpty: TextStyle;
   };
-  colors: { accent: string; foregroundMuted: string; surface0: string };
+  colors: { accent: string; foreground: string; foregroundMuted: string; surface0: string };
+  compact: boolean;
+  units: Messages["units"];
   headerAction?: {
     icon: "Sparkles" | "Plug" | "Bot";
     accessibilityLabel: string;
@@ -184,23 +137,21 @@ function RankList({
   };
 }): ReactNode {
   return (
-    <View style={styles.block}>
-      <View style={styles.titleRow}>
-        <Text style={styles.blockTitle}>{title}</Text>
-        {headerAction ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={headerAction.accessibilityLabel}
-            hitSlop={CONTROL.hitSlop}
-            onPress={headerAction.onPress}
-            style={styles.titleAction}
-          >
-            <Icon name={headerAction.icon} size={ICON_SIZE.action} color={colors.foregroundMuted} />
-          </Pressable>
-        ) : null}
+    <View style={{ gap: 2 }}>
+      <View style={{ marginBottom: titleGap(compact) - 2 }}>
+        <SectionHeader title={title} colors={colors} compact={compact}>
+          {headerAction ? (
+            <IconButton
+              icon={headerAction.icon}
+              label={headerAction.accessibilityLabel}
+              onPress={headerAction.onPress}
+              color={colors.foregroundMuted}
+            />
+          ) : null}
+        </SectionHeader>
       </View>
       {items.length === 0 ? (
-        <Text style={styles.inlineEmpty}>{empty}</Text>
+        <InlineEmpty text={empty} color={colors.foregroundMuted} />
       ) : (
         items.map((item) => (
           <View key={item.key} style={styles.rankRow}>
@@ -217,7 +168,7 @@ function RankList({
               {item.label}
             </Text>
             <Text style={styles.rankMeta}>
-              {item.count} {item.countLabel ?? "calls"}
+              {item.unit === "messages" ? units.messages(item.count) : units.calls(item.count)}
             </Text>
           </View>
         ))
@@ -233,6 +184,7 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
   const [heatmapMode, setHeatmapMode] = useState<HeatmapMode>("daily");
   const [rankKind, setRankKind] = useState<RankKind>("skills");
   const locale = useAppLanguage();
+  const m = messagesFor(locale);
   // Recompute on each render so today / rolling windows refresh after midnight (poll-driven).
   const from = rangeFrom(range);
 
@@ -317,10 +269,10 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
 
   const providerOptions = useMemo(
     () => [
-      { id: "all", label: "All" },
+      { id: "all", label: m.global.allProviders },
       ...selectProviderOptions(catalogProviders, providerFilter),
     ],
-    [catalogProviders, providerFilter],
+    [catalogProviders, providerFilter, m],
   );
 
   useEffect(() => {
@@ -399,7 +351,7 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
           label: formatDisplayName(model),
           count,
           kind: "models" as const,
-          countLabel: "messages",
+          unit: "messages" as const,
         }))
         .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 
@@ -436,7 +388,7 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
         label: formatDisplayName(item.model),
         count: item.count,
         kind: "models" as const,
-        countLabel: "messages",
+        unit: "messages" as const,
       }))
       .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 
@@ -548,22 +500,6 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
         justifyContent: "space-between" as const,
         gap: layout.compact ? 12 : 16,
       },
-      tabRow: {
-        flexDirection: "row" as const,
-        flexWrap: "wrap" as const,
-        alignItems: "center" as const,
-        gap: layout.compact ? 12 : 16,
-      },
-      tab: {
-        ...TEXT.body,
-        color: theme.colors.foregroundMuted,
-        fontWeight: FONT_WEIGHT.medium,
-      },
-      tabActive: {
-        ...TEXT.body,
-        color: theme.colors.foreground,
-        fontWeight: FONT_WEIGHT.semibold,
-      },
       columns: {
         flexDirection: layout.compact ? ("column" as const) : ("row" as const),
         alignItems: "flex-start" as const,
@@ -574,24 +510,6 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
         minWidth: 0,
         width: layout.compact ? ("100%" as const) : undefined,
       },
-      block: {
-        gap: 2,
-      },
-      titleRow: {
-        flexDirection: "row" as const,
-        alignItems: "center" as const,
-        justifyContent: "space-between" as const,
-        gap: 8,
-        // + block gap 2 = the shared title gap.
-        marginBottom: titleGap(layout.compact) - 2,
-      },
-      blockTitle: {
-        ...sectionTitle(layout.compact),
-        color: theme.colors.foreground,
-        flexShrink: 1,
-        marginBottom: 0,
-      },
-      titleAction: iconButton,
       insightRow: {
         flexDirection: "row" as const,
         alignItems: "baseline" as const,
@@ -628,23 +546,6 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
         color: theme.colors.foregroundMuted,
         fontVariant: ["tabular-nums" as const],
       },
-      emptyState: {
-        paddingVertical: 48,
-        alignItems: "center" as const,
-        gap: 6,
-      },
-      emptyTitle: {
-        ...TEXT.display,
-        color: theme.colors.foreground,
-      },
-      emptyHint: {
-        ...TEXT.body,
-        color: theme.colors.foregroundMuted,
-      },
-      inlineEmpty: {
-        ...TEXT.small,
-        color: theme.colors.foregroundMuted,
-      },
     }),
     [theme, layout.compact, page.padding, page.gap],
   );
@@ -655,39 +556,41 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
     (!activityQuery.data && activityQuery.isLoading) ||
     (!hourlyQuery.data && hourlyQuery.isLoading);
   const error = query.error ?? activityQuery.error ?? hourlyQuery.error;
+  const retry = () => {
+    void query.refetch();
+    void activityQuery.refetch();
+    void hourlyQuery.refetch();
+  };
   const showContent = filteredProviders.length > 0;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.filterRow}>
         <TextTabs
-          options={RANGE_OPTIONS}
+          options={RANGE_OPTIONS.map((option) => ({ id: option.id, label: m.global.ranges[option.id] }))}
           value={range}
-          onChange={(id) => setRange(id as RangeId)}
-          styles={styles}
+          onChange={setRange}
+          colors={theme.colors}
+          variant="filter"
+          gap={layout.compact ? 12 : 16}
         />
         {providerOptions.length > 1 ? (
           <TextTabs
             options={providerOptions}
             value={providerFilter}
             onChange={setProviderFilter}
-            styles={styles}
+            colors={theme.colors}
+            variant="filter"
+            gap={layout.compact ? 12 : 16}
           />
         ) : null}
       </View>
 
-      {loading ? <ActivityIndicator color={theme.colors.accent} /> : null}
-      {error ? (
-        <Text style={{ ...TEXT.small, color: theme.colors.statusDanger }}>
-          {error instanceof Error ? error.message : String(error)}
-        </Text>
-      ) : null}
+      {loading ? <LoadingState color={theme.colors.accent} /> : null}
+      {error ? <ErrorState error={error} onRetry={retry} colors={theme.colors} /> : null}
 
       {filteredProviders.length === 0 && !loading && !error ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>No usage yet</Text>
-          <Text style={styles.emptyHint}>Agents, messages, skill and MCP calls will show up here</Text>
-        </View>
+        <PageEmpty title={m.global.emptyTitle} hint={m.global.emptyHint} colors={theme.colors} />
       ) : null}
 
       {showContent ? (
@@ -703,9 +606,9 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
           mode={heatmapMode}
           onModeChange={setHeatmapMode}
           modeOptions={[
-            { id: "daily", label: "Daily" },
-            { id: "weekly", label: "Weekly" },
-            { id: "cumulative", label: "Cumulative" },
+            { id: "daily", label: m.global.heatmapModes.daily },
+            { id: "weekly", label: m.global.heatmapModes.weekly },
+            { id: "cumulative", label: m.global.heatmapModes.cumulative },
           ]}
         />
       ) : null}
@@ -733,8 +636,10 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
       {showContent ? (
         <View style={styles.columns}>
           <View style={styles.column}>
-            <View style={styles.block}>
-              <Text style={[styles.blockTitle, { marginBottom: titleGap(layout.compact) - 2 }]}>Activity insights</Text>
+            <View style={{ gap: 2 }}>
+              <View style={{ marginBottom: titleGap(layout.compact) - 2 }}>
+                <SectionHeader title={m.insights.title} colors={theme.colors} compact={layout.compact} />
+              </View>
               {insights.map((row) => (
                 <View key={row.label} style={styles.insightRow}>
                   <Text style={styles.insightLabel}>{row.label}</Text>
@@ -748,7 +653,7 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
 
           <View style={styles.column}>
             <RankList
-              title={rankTitle(rankKind)}
+              title={m.global.rankTitle[rankKind]}
               items={(
                 rankKind === "skills"
                   ? lists.skills
@@ -756,11 +661,14 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
                     ? lists.mcp
                     : lists.models
               ).slice(0, LIST_LIMIT)}
-              empty={rankEmpty(rankKind)}
+              empty={m.global.rankEmpty[rankKind]}
               styles={styles}
               colors={theme.colors}
+              compact={layout.compact}
+              units={m.units}
               headerAction={{
-                ...rankHeaderAction(rankKind),
+                icon: rankShowIcon(rankKind),
+                accessibilityLabel: m.global.rankShow[nextRankKind(rankKind)],
                 onPress: () => setRankKind((prev) => nextRankKind(prev)),
               }}
             />

@@ -4,28 +4,29 @@ import {
 } from "@getpaseo/plugin/client";
 import { Icon } from "@getpaseo/plugin/client/react-native";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  Text,
-  View,
-  type TextStyle,
-  type ViewStyle,
-} from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { Pressable, Text, View } from "react-native";
 import {
   usageReadSkillRpc,
 } from "../shared/usage.ts";
 import { formatDisplayName } from "../shared/format.ts";
 import { FormattedTime } from "./formatted-time.tsx";
 import { useUsagePillData } from "./usage-query.tsx";
+import { useMessages } from "./use-app-language.ts";
 import {
-  CONTROL,
+  CountText,
+  ErrorState,
+  IconButton,
+  InlineEmpty,
+  LoadingState,
+  SectionHeader,
+} from "./ui.tsx";
+import {
   ICON_SIZE,
   RADIUS,
   ROW_PADDING,
   TEXT,
-  iconButton,
+  popoverFrame,
   sectionTitle,
   titleGap,
 } from "./design-tokens.ts";
@@ -38,31 +39,14 @@ export type UsagePopoverProps = PluginButtonContentProps & {
   openSkillInPanel?: (skill: SkillDetail) => void;
 };
 
-function CountBadge({
-  value,
-  styles,
-}: {
-  value: number | string;
-  styles: { countBadge: ViewStyle; countText: TextStyle };
-}): ReactNode {
-  return (
-    <View style={styles.countBadge}>
-      <Text style={styles.countText}>{value}</Text>
-    </View>
-  );
-}
-
 /**
  * Composer-pill popover body. Host owns anchoring / sheet chrome / outer scroll;
  * render content only.
  */
 export function UsagePopover(props: UsagePopoverProps) {
+  const m = useMessages();
   if (props.context !== "agent") {
-    return (
-      <Text style={{ color: props.theme.colors.foregroundMuted }}>
-        Activity is only available for an agent
-      </Text>
-    );
+    return <InlineEmpty text={m.common.agentOnly} color={props.theme.colors.foregroundMuted} />;
   }
   return <UsagePopoverAgent {...props} context="agent" />;
 }
@@ -74,6 +58,7 @@ function UsagePopoverAgent(
   const [tab, setTab] = useState<"skills" | "mcp" | null>(null);
   const [skillDetail, setSkillDetail] = useState<SkillDetail | null>(null);
   const compact = layout.compact;
+  const m = useMessages();
 
   const usage = useUsagePillData(agentId);
   const readSkillRpc = useRpc(usageReadSkillRpc);
@@ -117,21 +102,8 @@ function UsagePopoverAgent(
     () => ({
       root: {
         gap: titleGap(true),
-        minWidth: compact ? undefined : 300,
-        maxWidth: compact ? undefined : 380,
+        ...popoverFrame(compact),
       },
-      sectionHeaderRow: {
-        flexDirection: "row" as const,
-        alignItems: "center" as const,
-        justifyContent: "space-between" as const,
-        gap: 8,
-      },
-      sectionTitle: {
-        ...sectionTitle(true),
-        color: theme.colors.foreground,
-        flexShrink: 1,
-      },
-      titleAction: iconButton,
       list: {
         gap: 2,
       },
@@ -160,19 +132,6 @@ function UsagePopoverAgent(
         ...TEXT.meta,
         color: theme.colors.foregroundMuted,
       },
-      countBadge: {
-        minWidth: 22,
-        alignItems: "flex-end" as const,
-      },
-      countText: {
-        ...TEXT.count,
-        color: theme.colors.foregroundMuted,
-      },
-      empty: {
-        ...TEXT.small,
-        color: theme.colors.foregroundMuted,
-        paddingVertical: 4,
-      },
       detailHeader: {
         flexDirection: "row" as const,
         alignItems: "center" as const,
@@ -188,7 +147,6 @@ function UsagePopoverAgent(
         ...TEXT.back,
         color: theme.colors.foregroundMuted,
       },
-      panelButton: iconButton,
       title: {
         ...sectionTitle(true),
         color: theme.colors.foreground,
@@ -210,8 +168,8 @@ function UsagePopoverAgent(
   const showToggle = skillItems.length > 0 && mcpItems.length > 0;
   const toggleAction =
     tab === "skills"
-      ? { icon: "Plug" as const, accessibilityLabel: "Show MCP", next: "mcp" as const }
-      : { icon: "Sparkles" as const, accessibilityLabel: "Show skills", next: "skills" as const };
+      ? { icon: "Plug" as const, accessibilityLabel: m.common.showMcp, next: "mcp" as const }
+      : { icon: "Sparkles" as const, accessibilityLabel: m.common.showSkills, next: "skills" as const };
 
   if (skillDetail) {
     return (
@@ -223,29 +181,24 @@ function UsagePopoverAgent(
             style={styles.backRow}
           >
             <Icon name="ChevronLeft" size={ICON_SIZE.action} color={theme.colors.foregroundMuted} />
-            <Text style={styles.back}>Skills</Text>
+            <Text style={styles.back}>{m.common.skills}</Text>
           </Pressable>
           {openSkillInPanel ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Open SKILL.md in panel"
-              hitSlop={CONTROL.hitSlop}
-              style={styles.panelButton}
+            <IconButton
+              icon="ArrowUpRight"
+              label={m.common.openSkillInPanel}
+              color={theme.colors.foregroundMuted}
               onPress={() => {
                 openSkillInPanel(skillDetail);
                 close();
               }}
-            >
-              <Icon name="ArrowUpRight" size={ICON_SIZE.action} color={theme.colors.foregroundMuted} />
-            </Pressable>
+            />
           ) : null}
         </View>
         <Text style={styles.title}>{formatDisplayName(skillDetail.skillName)}</Text>
-        {skillFile.isLoading ? <ActivityIndicator color={theme.colors.accent} /> : null}
+        {skillFile.isLoading ? <LoadingState color={theme.colors.accent} /> : null}
         {skillFile.error ? (
-          <Text style={{ ...TEXT.small, color: theme.colors.statusDanger }}>
-            {skillFile.error instanceof Error ? skillFile.error.message : String(skillFile.error)}
-          </Text>
+          <ErrorState error={skillFile.error} onRetry={() => void skillFile.refetch()} colors={theme.colors} />
         ) : null}
         {skillFile.data ? (
           <Text style={styles.body} selectable>
@@ -259,35 +212,23 @@ function UsagePopoverAgent(
   return (
     <View style={styles.root}>
       {tab && (skillItems.length > 0 || mcpItems.length > 0) ? (
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>{tab === "skills" ? "Skills" : "MCP"}</Text>
+        <SectionHeader title={tab === "skills" ? m.common.skills : m.common.mcp} colors={theme.colors} compact>
           {showToggle ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={toggleAction.accessibilityLabel}
-              hitSlop={CONTROL.hitSlop}
+            <IconButton
+              icon={toggleAction.icon}
+              label={toggleAction.accessibilityLabel}
               onPress={() => setTab(toggleAction.next)}
-              style={styles.titleAction}
-            >
-              <Icon
-                name={toggleAction.icon}
-                size={ICON_SIZE.action}
-                color={theme.colors.foregroundMuted}
-              />
-            </Pressable>
+              color={theme.colors.foregroundMuted}
+            />
           ) : null}
-        </View>
+        </SectionHeader>
       ) : null}
 
-      {loading ? <ActivityIndicator color={theme.colors.accent} /> : null}
-      {error ? (
-        <Text style={{ ...TEXT.small, color: theme.colors.statusDanger }}>
-          {error instanceof Error ? error.message : String(error)}
-        </Text>
-      ) : null}
+      {loading ? <LoadingState color={theme.colors.accent} /> : null}
+      {error ? <ErrorState error={error} onRetry={() => void usage.refetch()} colors={theme.colors} /> : null}
 
       {!loading && !error && skillItems.length === 0 && mcpItems.length === 0 ? (
-        <Text style={styles.empty}>No skill or MCP calls yet</Text>
+        <InlineEmpty text={m.common.noSkillOrMcp} color={theme.colors.foregroundMuted} />
       ) : null}
 
       {tab === "skills" && skillItems.length > 0 ? (
@@ -306,7 +247,7 @@ function UsagePopoverAgent(
                     <FormattedTime iso={item.lastUsedAt} style={styles.rowMeta} />
                   ) : null}
                 </View>
-                <CountBadge value={item.total} styles={styles} />
+                <CountText value={item.total} color={theme.colors.foregroundMuted} />
               </>
             );
             if (item.skillPath) {
@@ -314,7 +255,7 @@ function UsagePopoverAgent(
                 <Pressable
                   key={item.skillName}
                   accessibilityRole="link"
-                  accessibilityLabel={`Open ${name} SKILL.md`}
+                  accessibilityLabel={m.common.openSkillFile(name)}
                   onPress={() =>
                     setSkillDetail({ skillName: item.skillName, path: item.skillPath! })
                   }
@@ -346,12 +287,12 @@ function UsagePopoverAgent(
                   {formatDisplayName(`${item.server}.${item.tool}`)}
                 </Text>
                 {item.failures > 0 ? (
-                  <Text style={styles.rowMeta}>{item.failures} failed</Text>
+                  <Text style={styles.rowMeta}>{m.common.failed(item.failures)}</Text>
                 ) : item.lastUsedAt ? (
                   <FormattedTime iso={item.lastUsedAt} style={styles.rowMeta} />
                 ) : null}
               </View>
-              <CountBadge value={item.count} styles={styles} />
+              <CountText value={item.count} color={theme.colors.foregroundMuted} />
             </View>
           ))}
         </View>

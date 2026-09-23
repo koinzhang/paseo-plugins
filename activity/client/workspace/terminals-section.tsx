@@ -15,6 +15,7 @@ import { collapseHomePath } from "../../shared/home-path.ts";
 import { TERMINAL_PREVIEW_LINES, TERMINAL_REFETCH_MS } from "./constants.ts";
 import { terminalPreviewLines } from "./terminal-preview.ts";
 import { CONTROL, ICON_SIZE } from "../design-tokens.ts";
+import { useMessages } from "../use-app-language.ts";
 
 export type TerminalListItem = {
   id: string;
@@ -54,6 +55,7 @@ export function TerminalsSection({
   styles: TerminalsSectionStyles;
   onClose: (item: TerminalListItem) => void;
 }): ReactNode {
+  const m = useMessages();
   const paseo = usePaseo();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -80,7 +82,7 @@ export function TerminalsSection({
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionTitle}>Terminals</Text>
+        <Text style={styles.sectionTitle}>{m.workspace.terminals}</Text>
       </View>
       <View style={styles.panel}>
         {terminalItems.map((item) => {
@@ -94,7 +96,7 @@ export function TerminalsSection({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={
-                  expanded ? `Hide output of ${item.name}` : `Show output of ${item.name}`
+                  expanded ? m.workspace.hideOutput(item.name) : m.workspace.showOutput(item.name)
                 }
                 accessibilityState={{ expanded }}
                 onPress={() => setExpandedId(expanded ? null : item.id)}
@@ -118,7 +120,7 @@ export function TerminalsSection({
                 </View>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={`Close ${item.name}`}
+                  accessibilityLabel={m.workspace.closeTerminal(item.name)}
                   accessibilityState={{ disabled: busyTerminalId != null }}
                   disabled={busyTerminalId != null || !showClose}
                   hitSlop={CONTROL.hitSlop}
@@ -136,9 +138,9 @@ export function TerminalsSection({
               {expanded ? (
                 <View style={styles.terminalPreview}>
                   {capture.isPending ? (
-                    <Text style={styles.listMeta}>Loading…</Text>
+                    <Text style={styles.listMeta}>{m.common.loading}</Text>
                   ) : lines.length === 0 ? (
-                    <Text style={styles.listMeta}>No output</Text>
+                    <Text style={styles.listMeta}>{m.workspace.noOutput}</Text>
                   ) : (
                     lines.map((line, index) => (
                       <Text key={index} style={styles.terminalLine} numberOfLines={1}>

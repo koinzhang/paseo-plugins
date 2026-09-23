@@ -3,7 +3,7 @@ import {
   useAgent,
 } from "@getpaseo/plugin/client";
 import { useEffect, useMemo, type ReactNode } from "react";
-import { Text, View, type TextStyle, type ViewStyle } from "react-native";
+import { View, type TextStyle, type ViewStyle } from "react-native";
 import {
   filterAttentionAgents,
   type AttentionAgentItem,
@@ -12,7 +12,9 @@ import { openAttentionAgent } from "./open-agent.ts";
 import { useLatestUserMessagePreview } from "./use-latest-user-message.ts";
 import { useAttentionStatuses } from "./attention-status-store.ts";
 import { AgentRow, type AgentRowStyles } from "./workspace/agent-row.tsx";
-import { CONTROL, ICON_SIZE, ROW_PADDING, TEXT, pillRadius } from "./design-tokens.ts";
+import { CONTROL, ICON_SIZE, ROW_PADDING, TEXT, pillRadius, popoverFrame } from "./design-tokens.ts";
+import { useMessages } from "./use-app-language.ts";
+import { InlineEmpty } from "./ui.tsx";
 
 function AttentionRow({
   item,
@@ -57,12 +59,9 @@ function AttentionRow({
 
 /** Popover body: other agents in this workspace that need attention. */
 export function AttentionPopover(props: PluginButtonContentProps) {
+  const m = useMessages();
   if (props.context !== "agent") {
-    return (
-      <Text style={{ color: props.theme.colors.foregroundMuted }}>
-        Attention is only available for an agent
-      </Text>
-    );
+    return <InlineEmpty text={m.attention.agentOnly} color={props.theme.colors.foregroundMuted} />;
   }
   return <AttentionPopoverAgent {...props} context="agent" />;
 }
@@ -70,7 +69,8 @@ export function AttentionPopover(props: PluginButtonContentProps) {
 function AttentionPopoverAgent(
   props: PluginButtonContentProps & { context: "agent" },
 ) {
-  const { theme, workspaceId, agentId, close } = props;
+  const { theme, layout, workspaceId, agentId, close } = props;
+  const m = useMessages();
   const statuses = useAttentionStatuses(workspaceId);
   const items = useMemo(
     () => filterAttentionAgents(statuses, agentId),
@@ -128,20 +128,18 @@ function AttentionPopoverAgent(
 
   if (!statuses) {
     return (
-      <Text style={{ ...TEXT.small, color: theme.colors.foregroundMuted }}>Loading…</Text>
+      <InlineEmpty text={m.common.loading} color={theme.colors.foregroundMuted} />
     );
   }
 
   if (items.length === 0) {
     return (
-      <Text style={{ ...TEXT.small, color: theme.colors.foregroundMuted }}>
-        No other agents need attention
-      </Text>
+      <InlineEmpty text={m.attention.empty} color={theme.colors.foregroundMuted} />
     );
   }
 
   return (
-    <View style={{ gap: 2, minWidth: 240 }}>
+    <View style={{ gap: 2, ...popoverFrame(layout.compact) }}>
       {items.map((item) => (
         <AttentionRow
           key={item.agentId}

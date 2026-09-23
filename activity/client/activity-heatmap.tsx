@@ -6,7 +6,9 @@ import { useAppLanguage } from "./use-app-language.ts";
 import { useMeasuredWidth } from "./measured-width.ts";
 import { ACTIVITY_MIX_STEPS, mixColor } from "./color-mix.ts";
 export { computeStreaks, type HeatmapMode } from "../shared/activity.ts";
-import { FONT_SIZE, TEXT, sectionTitle, titleGap, tooltipSurface } from "./design-tokens.ts";
+import { FONT_SIZE, sectionTitle, titleGap } from "./design-tokens.ts";
+import { messagesFor } from "../shared/i18n.ts";
+import { ChartTooltip, TextTabs } from "./ui.tsx";
 
 type ThemeColors = {
   accent: string; border: string; foreground: string; foregroundMuted: string;
@@ -18,10 +20,6 @@ type HoveredMonth = { year: number; month: number };
 // Month-axis labels and the mode tabs share the label size: both are secondary labels
 // under the section title, so a separate 13 / 15 scale made the tabs outrank the axis.
 const LABEL_FONT_SIZE = FONT_SIZE.label;
-
-function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
-  return `${count.toLocaleString()} ${count === 1 ? singular : pluralForm}`;
-}
 
 function cellInMonth(dateKey: string, hovered: HoveredMonth | null): boolean {
   if (!hovered) return false;
@@ -38,7 +36,6 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
   const [width, widthRef, onWidthLayout] = useMeasuredWidth("global:heatmap");
   const [gridTop, setGridTop] = useState(0);
   const [scrollX, setScrollX] = useState(0);
-  const [tooltipSize, setTooltipSize] = useState({ width: 220, height: 28 });
   const [selected, setSelected] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const [hoveredMonth, setHoveredMonth] = useState<HoveredMonth | null>(null);
@@ -62,20 +59,24 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
   const active = activeIndex >= 0 ? weeks.flat()[activeIndex] : undefined;
   const anchorX = Math.floor(activeIndex / 7) * (cellSize + gap) + cellSize / 2 - scrollX;
   const anchorY = gridTop + (activeIndex % 7) * (cellSize + gap);
-  const tooltipLeft = Math.max(0, Math.min(anchorX - tooltipSize.width / 2, width - tooltipSize.width));
-  const tooltipTop = Math.max(0, anchorY - tooltipSize.height - 8);
   const dateLabel = active ? (() => {
     const [year, month, day] = active.key.split("-").map(Number);
     return new Date(year!, month! - 1, day!).toLocaleDateString(locale, {
       month: "short", day: "numeric", year: year !== new Date().getFullYear() ? "numeric" : undefined,
     });
   })() : "";
-  const datePrefix = mode === "weekly" ? "in week containing" : mode === "cumulative" ? "through" : "on";
-  const tooltipText = active
-    ? `${plural(active.skills, "skill")}, ${plural(active.mcp, "mcp")}, ${plural(active.agents, "agent")}, ${plural(active.messages, "message")} ${datePrefix} ${dateLabel}`
-    : "";
+  const m = messagesFor(locale);
+  const periodLabel = (date: string) =>
+    mode === "weekly" ? m.heatmap.weekContaining(date) : mode === "cumulative" ? m.heatmap.through(date) : date;
+  const tooltipRows = active
+    ? [
+        { label: m.common.messages, value: active.messages.toLocaleString(locale) },
+        { label: m.common.agents, value: active.agents.toLocaleString(locale) },
+        { label: m.common.skills, value: active.skills.toLocaleString(locale) },
+        { label: m.common.mcp, value: active.mcp.toLocaleString(locale) },
+      ]
+    : [];
   const axisWidth = needsScroll ? gridWidth : width;
-  const modeLabel = mode === "weekly" ? "Week containing" : mode === "cumulative" ? "Through" : "";
   const monthFocus = hoveredMonth != null;
   return (
     <View
@@ -84,14 +85,8 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
       onLayout={onWidthLayout}
     >
       <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <Text style={{ ...sectionTitle(compact), color: colors.foreground }}>Activity</Text>
-        <View style={{ flexDirection: "row", gap: compact ? 14 : 20 }}>
-          {modeOptions.map(option => (
-            <Pressable key={option.id} accessibilityRole="tab" accessibilityState={{ selected: mode === option.id }} onPress={() => onModeChange(option.id)} style={{ paddingVertical: 6 }}>
-              <Text style={{ color: mode === option.id ? colors.foreground : colors.foregroundMuted, fontSize: LABEL_FONT_SIZE }}>{option.label}</Text>
-            </Pressable>
-          ))}
-        </View>
+        <Text style={{ ...sectionTitle(compact), color: colors.foreground }}>{m.heatmap.title}</Text>
+        <TextTabs options={modeOptions} value={mode} onChange={onModeChange} colors={colors} variant="chart" gap={compact ? 14 : 20} />
       </View>
       <ScrollView
         horizontal
@@ -125,7 +120,7 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
                       : 1;
                   return (
                     <Pressable key={cell.key} disabled={hidden} accessibilityRole="button"
-                      accessibilityLabel={`${modeLabel} ${cell.key}: ${cell.total} activity, ${cell.skills} skills, ${cell.mcp} MCP, ${cell.agents} agents, ${cell.messages} messages`}
+                      accessibilityLabel={`${periodLabel(cell.key)}: ${m.units.messages(cell.messages)}, ${m.units.agents(cell.agents)}, ${m.units.skills(cell.skills)}, ${m.units.mcp(cell.mcp)}`}
                       accessibilityState={{ selected: activeKey === cell.key }}
                       onHoverIn={() => setHovered(cell.key)} onHoverOut={() => setHovered(null)}
                       onFocus={() => setHovered(cell.key)} onBlur={() => setHovered(null)}
@@ -150,7 +145,7 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
                 <Pressable
                   key={`${item.year}-${item.month}-${i}`}
                   accessibilityRole="button"
-                  accessibilityLabel={`Highlight ${item.label}`}
+                  accessibilityLabel={m.heatmap.highlightMonth(item.label)}
                   onHoverIn={() => setHoveredMonth({ year: item.year, month: item.month })}
                   onHoverOut={() => setHoveredMonth(null)}
                   onFocus={() => setHoveredMonth({ year: item.year, month: item.month })}
@@ -173,14 +168,14 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
         </View>
       </ScrollView>
       {active && anchorX >= 0 && anchorX <= width ? (
-        <View pointerEvents="none"
-          onLayout={event => setTooltipSize({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })}
-          style={{ position: "absolute", left: tooltipLeft, top: tooltipTop, zIndex: 10,
-            maxWidth: width || 220, ...tooltipSurface(colors) }}>
-          <Text accessibilityLiveRegion="polite" style={{ ...TEXT.tooltip, color: colors.foreground }}>
-            {tooltipText}
-          </Text>
-        </View>
+        <ChartTooltip
+          anchorX={anchorX}
+          anchorY={anchorY}
+          containerWidth={width}
+          title={periodLabel(dateLabel)}
+          rows={tooltipRows}
+          colors={colors}
+        />
       ) : null}
     </View>
   );

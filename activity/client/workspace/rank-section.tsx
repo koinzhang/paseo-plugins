@@ -10,30 +10,13 @@ import type {
 } from "../../shared/usage.ts";
 import { FormattedTime } from "../formatted-time.tsx";
 import { RANK_ROW_ESTIMATE } from "./constants.ts";
-import { CONTROL, ICON_SIZE } from "../design-tokens.ts";
+import { ICON_SIZE } from "../design-tokens.ts";
+import { useMessages } from "../use-app-language.ts";
+import { CountText, IconButton, SectionHeader } from "../ui.tsx";
 
 type RankKind = "skills" | "mcp";
 export type RankView = "ranked" | "timeline";
 
-function rankTitle(kind: RankKind): string {
-  return kind === "skills" ? "Skills" : "MCP";
-}
-
-function rankAction(kind: RankKind): { icon: "Sparkles" | "Plug"; accessibilityLabel: string } {
-  return kind === "skills"
-    ? { icon: "Plug", accessibilityLabel: "Show most used MCP" }
-    : { icon: "Sparkles", accessibilityLabel: "Show most used skills" };
-}
-
-function CountText({
-  value,
-  styles,
-}: {
-  value: number | string;
-  styles: { countText: TextStyle };
-}): ReactNode {
-  return <Text style={styles.countText}>{value}</Text>;
-}
 
 export type RankSectionStyles = {
   section: ViewStyle;
@@ -69,6 +52,8 @@ export function RankSection({
   activeAgentColor,
   archivedAgentColor,
   mutedColor,
+  activeTitleColor,
+  compact,
   styles,
 }: {
   rankKind: RankKind;
@@ -85,9 +70,13 @@ export function RankSection({
   activeAgentColor: string;
   archivedAgentColor: string;
   mutedColor: string;
+  activeTitleColor: string;
+  compact: boolean;
   styles: RankSectionStyles;
 }): ReactNode {
+  const m = useMessages();
   if (skillItems.length === 0 && mcpItems.length === 0) return null;
+  const title = rankKind === "skills" ? m.common.skills : m.common.mcp;
 
   const items =
     rankView === "timeline"
@@ -100,39 +89,22 @@ export function RankSection({
 
   return (
     <View style={styles.section}>
-      <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionTitle}>{rankTitle(rankKind)}</Text>
-        <View style={styles.headerActions}>
-          {showToggle ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={rankAction(rankKind).accessibilityLabel}
-              hitSlop={CONTROL.hitSlop}
-              onPress={onToggleKind}
-              style={styles.titleAction}
-            >
-              <Icon name={rankAction(rankKind).icon} size={ICON_SIZE.action} color={mutedColor} />
-            </Pressable>
-          ) : null}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={
-              rankView === "ranked"
-                ? `Show ${rankTitle(rankKind)} as a timeline`
-                : `Show ${rankTitle(rankKind)} ranked by calls`
-            }
-            hitSlop={CONTROL.hitSlop}
-            onPress={onToggleRankView}
-            style={styles.titleAction}
-          >
-            <Icon
-              name={rankView === "ranked" ? "GitCommitVertical" : "LayoutList"}
-              size={ICON_SIZE.action}
-              color={mutedColor}
-            />
-          </Pressable>
-        </View>
-      </View>
+      <SectionHeader title={title} colors={{ foreground: activeTitleColor, foregroundMuted: mutedColor }} compact={compact}>
+        {showToggle ? (
+          <IconButton
+            icon={rankKind === "skills" ? "Plug" : "Sparkles"}
+            label={rankKind === "skills" ? m.global.rankShow.mcp : m.global.rankShow.skills}
+            onPress={onToggleKind}
+            color={mutedColor}
+          />
+        ) : null}
+        <IconButton
+          icon={rankView === "ranked" ? "GitCommitVertical" : "LayoutList"}
+          label={rankView === "ranked" ? m.workspace.showTimeline(title) : m.workspace.showRanked(title)}
+          onPress={onToggleRankView}
+          color={mutedColor}
+        />
+      </SectionHeader>
       <View
         style={[
           styles.panel,
@@ -149,7 +121,7 @@ export function RankSection({
                   key={`${item.agentId}:${item.callId}`}
                   accessibilityRole={canOpen ? "link" : undefined}
                   accessibilityLabel={
-                    canOpen ? `Open conversation ${item.agentTitle ?? item.agentId}` : undefined
+                    canOpen ? m.common.openConversation(item.agentTitle ?? item.agentId) : undefined
                   }
                   accessibilityState={{ disabled: !canOpen }}
                   disabled={!canOpen}
@@ -192,7 +164,7 @@ export function RankSection({
                     key={`${item.agentId}:${item.callId}`}
                     accessibilityRole={canOpen ? "link" : undefined}
                     accessibilityLabel={
-                      canOpen ? `Open conversation ${item.agentTitle ?? item.agentId}` : undefined
+                      canOpen ? m.common.openConversation(item.agentTitle ?? item.agentId) : undefined
                     }
                     accessibilityState={{ disabled: !canOpen }}
                     disabled={!canOpen}
@@ -237,11 +209,11 @@ export function RankSection({
                   </Text>
                   <FormattedTime
                     iso={item.lastUsedAt}
-                    prefix="Last "
+                    format={m.common.lastUsed}
                     style={styles.listMeta}
                   />
                 </View>
-                <CountText value={item.total} styles={styles} />
+                <CountText value={item.total} color={mutedColor} />
               </View>
               ))
             : mcpItems.map((item) => (
@@ -252,18 +224,18 @@ export function RankSection({
                     {formatDisplayName(`${item.server}.${item.tool}`)}
                   </Text>
                   {item.failures > 0 ? (
-                    <Text style={styles.listMeta}>{item.failures} failed</Text>
+                    <Text style={styles.listMeta}>{m.common.failed(item.failures)}</Text>
                   ) : item.lastUsedAt ? (
                     <FormattedTime
                       iso={item.lastUsedAt}
-                      prefix="Last "
+                      format={m.common.lastUsed}
                       style={styles.listMeta}
                     />
                   ) : (
                     <Text style={styles.listMeta}>—</Text>
                   )}
                 </View>
-                <CountText value={item.count} styles={styles} />
+                <CountText value={item.count} color={mutedColor} />
               </View>
             ))}
       </View>

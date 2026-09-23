@@ -1,16 +1,9 @@
 import { type PluginAgentPanelProps, useAgent, useRpc } from "@getpaseo/plugin/client";
 import { Icon } from "@getpaseo/plugin/client/react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRegisterOpenAgent } from "./open-agent.ts";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-  type TextStyle,
-} from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import {
   usageMcpByToolRpc,
   usageReadSkillRpc,
@@ -27,8 +20,17 @@ import {
 import { useAgentTurnEnd } from "./use-agent-turn-end.ts";
 
 import { UsageStats } from "./usage-stats.tsx";
+import { useAppLanguage, useMessages } from "./use-app-language.ts";
 import {
-  CONTROL,
+  CountText,
+  ErrorState,
+  IconButton,
+  InlineEmpty,
+  LoadingState,
+  Section,
+  SectionHeader,
+} from "./ui.tsx";
+import {
   ICON_SIZE,
   RADIUS,
   ROW_PADDING,
@@ -36,7 +38,6 @@ import {
   iconButton,
   pageLayout,
   sectionTitle,
-  titleGap,
 } from "./design-tokens.ts";
 
 type TabId = "skills" | "mcp";
@@ -47,17 +48,9 @@ type SkillDetail = {
 };
 
 
-function CountText({
-  value,
-  styles,
-}: {
-  value: number | string;
-  styles: { countText: TextStyle };
-}): ReactNode {
-  return <Text style={styles.countText}>{value}</Text>;
-}
-
 export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPanelProps) {
+  const locale = useAppLanguage();
+  const m = useMessages();
   const [tab, setTab] = useState<TabId | null>(null);
   const [skillDetail, setSkillDetail] = useState<SkillDetail | null>(null);
   const page = pageLayout("panel", layout.compact);
@@ -144,10 +137,10 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
 
   const tabs = useMemo(() => {
     const next: Array<{ id: TabId; label: string }> = [];
-    if (skillItems.length > 0) next.push({ id: "skills", label: "Skills" });
-    if (mcpItems.length > 0) next.push({ id: "mcp", label: "MCP" });
+    if (skillItems.length > 0) next.push({ id: "skills", label: m.common.skills });
+    if (mcpItems.length > 0) next.push({ id: "mcp", label: m.common.mcp });
     return next;
-  }, [skillItems.length, mcpItems.length]);
+  }, [skillItems.length, mcpItems.length, m]);
 
   useEffect(() => {
     if (tabs.length === 0) {
@@ -255,8 +248,8 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
   const showToggle = tabs.length > 1;
   const toggleAction =
     tab === "skills"
-      ? { icon: "Plug" as const, accessibilityLabel: "Show MCP", next: "mcp" as const }
-      : { icon: "Sparkles" as const, accessibilityLabel: "Show skills", next: "skills" as const };
+      ? { icon: "Plug" as const, accessibilityLabel: m.common.showMcp, next: "mcp" as const }
+      : { icon: "Sparkles" as const, accessibilityLabel: m.common.showSkills, next: "skills" as const };
 
   if (skillDetail) {
     return (
@@ -270,14 +263,12 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
           style={styles.backRow}
         >
           <Icon name="ChevronLeft" size={ICON_SIZE.action} color={theme.colors.foregroundMuted} />
-          <Text style={styles.back}>Skills</Text>
+          <Text style={styles.back}>{m.common.skills}</Text>
         </Pressable>
         <Text style={styles.sectionTitle}>{formatDisplayName(skillDetail.skillName)}</Text>
-        {skillFile.isLoading ? <ActivityIndicator color={theme.colors.accent} /> : null}
+        {skillFile.isLoading ? <LoadingState color={theme.colors.accent} /> : null}
         {skillFile.error ? (
-          <Text style={{ ...TEXT.small, color: theme.colors.statusDanger }}>
-            {skillFile.error instanceof Error ? skillFile.error.message : String(skillFile.error)}
-          </Text>
+          <ErrorState error={skillFile.error} onRetry={() => void skillFile.refetch()} colors={theme.colors} />
         ) : null}
         {skillFile.data ? (
           <Text style={styles.body} selectable>
@@ -294,7 +285,7 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
         {openAgent ? (
           <Text
             accessibilityRole="link"
-            accessibilityLabel={`Open conversation ${conversationLabel}`}
+            accessibilityLabel={m.common.openConversation(conversationLabel)}
             style={styles.conversationLink}
             onPress={() => openAgent({ agentId })}
           >
@@ -305,46 +296,43 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
         )}
       </View>
       {!loading && !error ? <UsageStats compact={layout.compact} dense colors={theme.colors} items={[
-        { label: "Skill calls", value: skillItems.reduce((sum, item) => sum + item.total, 0).toLocaleString() },
-        { label: "MCP calls", value: mcpItems.reduce((sum, item) => sum + item.count, 0).toLocaleString() },
-        { label: "Shell calls", value: (usageSummary.data?.shellCalls ?? 0).toLocaleString() },
-        { label: "File reads", value: (usageSummary.data?.fileReads ?? 0).toLocaleString() },
-        { label: "File writes", value: (usageSummary.data?.fileWrites ?? 0).toLocaleString() },
-        { label: "Messages", value: (usageSummary.data?.messageCount ?? 0).toLocaleString() },
-        { label: "Tools explored", value: String(skillItems.length + mcpItems.length) },
+        { label: m.kpi.skillCalls, value: skillItems.reduce((sum, item) => sum + item.total, 0).toLocaleString(locale) },
+        { label: m.kpi.mcpCalls, value: mcpItems.reduce((sum, item) => sum + item.count, 0).toLocaleString(locale) },
+        { label: m.kpi.shellCalls, value: (usageSummary.data?.shellCalls ?? 0).toLocaleString(locale) },
+        { label: m.kpi.fileReads, value: (usageSummary.data?.fileReads ?? 0).toLocaleString(locale) },
+        { label: m.kpi.fileWrites, value: (usageSummary.data?.fileWrites ?? 0).toLocaleString(locale) },
+        { label: m.kpi.messages, value: (usageSummary.data?.messageCount ?? 0).toLocaleString(locale) },
+        { label: m.kpi.toolsExplored, value: String(skillItems.length + mcpItems.length) },
       ]} /> : null}
 
-      {loading ? <ActivityIndicator color={theme.colors.accent} /> : null}
+      {loading ? <LoadingState color={theme.colors.accent} /> : null}
       {error ? (
-        <Text style={{ ...TEXT.small, color: theme.colors.statusDanger }}>
-          {error instanceof Error ? error.message : String(error)}
-        </Text>
+        <ErrorState
+          error={error}
+          onRetry={() => {
+            void skillsByName.refetch();
+            void mcpByTool.refetch();
+          }}
+          colors={theme.colors}
+        />
       ) : null}
 
       {!loading && !error && tabs.length === 0 ? (
-        <Text style={styles.empty}>No skill or MCP calls yet</Text>
+        <InlineEmpty text={m.common.noSkillOrMcp} color={theme.colors.foregroundMuted} />
       ) : null}
 
       {tab ? (
-        <View style={{ gap: titleGap(layout.compact) }}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>{tab === "skills" ? "Skills" : "MCP"}</Text>
+        <Section compact={layout.compact}>
+          <SectionHeader title={tab === "skills" ? m.common.skills : m.common.mcp} colors={theme.colors} compact={layout.compact}>
             {showToggle ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={toggleAction.accessibilityLabel}
-                hitSlop={CONTROL.hitSlop}
+              <IconButton
+                icon={toggleAction.icon}
+                label={toggleAction.accessibilityLabel}
                 onPress={() => setTab(toggleAction.next)}
-                style={styles.titleAction}
-              >
-                <Icon
-                  name={toggleAction.icon}
-                  size={ICON_SIZE.action}
-                  color={theme.colors.foregroundMuted}
-                />
-              </Pressable>
+                color={theme.colors.foregroundMuted}
+              />
             ) : null}
-          </View>
+          </SectionHeader>
           {tab === "skills" ? (
             <View style={styles.panel}>
               {skillItems.map((item, index) => {
@@ -376,11 +364,11 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
                       {title}
                       <FormattedTime
                         iso={item.lastUsedAt}
-                        prefix="Last "
+                        format={m.common.lastUsed}
                         style={styles.listMeta}
                       />
                     </View>
-                    <CountText value={item.total} styles={styles} />
+                    <CountText value={item.total} color={theme.colors.foregroundMuted} />
                   </View>
                 );
               })}
@@ -398,23 +386,23 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
                       {formatDisplayName(`${item.server}.${item.tool}`)}
                     </Text>
                     {item.failures > 0 ? (
-                      <Text style={styles.listMeta}>{item.failures} failed</Text>
+                      <Text style={styles.listMeta}>{m.common.failed(item.failures)}</Text>
                     ) : item.lastUsedAt ? (
                       <FormattedTime
                         iso={item.lastUsedAt}
-                        prefix="Last "
+                        format={m.common.lastUsed}
                         style={styles.listMeta}
                       />
                     ) : (
                       <Text style={styles.listMeta}>—</Text>
                     )}
                   </View>
-                  <CountText value={item.count} styles={styles} />
+                  <CountText value={item.count} color={theme.colors.foregroundMuted} />
                 </View>
               ))}
             </View>
           )}
-        </View>
+        </Section>
       ) : null}
     </ScrollView>
   );

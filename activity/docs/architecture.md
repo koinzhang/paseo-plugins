@@ -28,8 +28,8 @@ Agent Activity      → 单 agent · 工具明细（Skills / MCP）· Pill 快�
 ## 2. 技术分层
 
 ```text
-client/          UI（按 scope）；样式 token 见 design-tokens.ts / docs/design-system.md（065）
-shared/          RPC 契约（zod）+ 聚合纯函数（classify / usage / insights）
+client/          UI（按 scope）；样式 token 见 design-tokens.ts / docs/design-system.md（065）；公共组件 ui.tsx（066）
+shared/          RPC 契约（zod）+ 聚合纯函数（classify / usage / insights）+ 文案表 i18n.ts（066）
 server/          handlers · store · ingest · background-sync · hooks
 ~/.paseo/.../    SQLite：tool_calls · user_messages · agents
 ```

@@ -11,7 +11,9 @@ import type { AgentCreationDay } from "../shared/usage.ts";
 import { creationBarColor } from "./color-mix.ts";
 import { chartColorScheme, creationProviderColors } from "./rank-color.ts";
 import { fixedWindowFrom } from "./range.ts";
-import { RADIUS, TEXT, sectionTitle, titleGap, tooltipSurface } from "./design-tokens.ts";
+import { RADIUS, TEXT, sectionTitle, titleGap } from "./design-tokens.ts";
+import { messagesFor } from "../shared/i18n.ts";
+import { ChartTooltip, InlineEmpty } from "./ui.tsx";
 
 type ThemeColors = {
   accent: string;
@@ -30,10 +32,6 @@ function bucketDate(key: string): Date {
 /** Locale month + day, e.g. `Sep 6` / `9月6日`. */
 function dayLabel(key: string, locale: string): string {
   return bucketDate(key).toLocaleDateString(locale, { month: "short", day: "numeric" });
-}
-
-function agentCountText(count: number): string {
-  return `${count} ${count === 1 ? "agent" : "agents"}`;
 }
 
 /**
@@ -58,7 +56,6 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
   const [hovered, setHovered] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [width, setWidth] = useState(0);
-  const [tooltipSize, setTooltipSize] = useState({ width: 150, height: 0 });
   useEffect(() => {
     setHovered(null);
     setSelected(null);
@@ -75,7 +72,6 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
   const gap = compact ? 2 : 3;
   const slot = buckets.length > 0 ? (width + gap) / buckets.length : 0;
   const anchorX = activeIndex >= 0 ? activeIndex * slot + (slot - gap) / 2 : 0;
-  const tooltipLeft = Math.max(0, Math.min(anchorX - tooltipSize.width / 2, width - tooltipSize.width));
   const scheme = chartColorScheme(colors.surface0);
   const colorByProvider = creationProviderColors(
     providers.map((item) => item.provider),
@@ -85,17 +81,16 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
     ? stackCreationProviders(providers, active.providers)
     : [];
   const first = buckets[0];
+  const m = messagesFor(locale);
 
   return (
     <View style={{ gap: titleGap(compact) }}>
       <Text style={{ ...sectionTitle(compact), color: colors.foreground }}>
-        Agents
+        {m.creations.title}
       </Text>
 
       {total === 0 ? (
-        <Text style={{ ...TEXT.small, color: colors.foregroundMuted }}>
-          No agents created in the last {windowDays} days
-        </Text>
+        <InlineEmpty text={m.creations.empty(windowDays)} color={colors.foregroundMuted} />
       ) : (
         <View style={{ gap: 6 }}>
           <View style={{ position: "relative" }} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
@@ -104,7 +99,7 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
                 <Pressable
                   key={bucket.key}
                   accessibilityRole="button"
-                  accessibilityLabel={`${dayLabel(bucket.key, locale)}: ${agentCountText(bucket.count)}${providerBreakdown(bucket, providers)}`}
+                  accessibilityLabel={`${dayLabel(bucket.key, locale)}: ${m.units.agents(bucket.count)}${providerBreakdown(bucket, providers)}`}
                   accessibilityState={{ selected: activeKey === bucket.key }}
                   onHoverIn={() => setHovered(bucket.key)}
                   onHoverOut={() => setHovered(null)}
@@ -139,52 +134,26 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
               ))}
             </View>
             {active && width > 0 ? (
-              <View
-                pointerEvents="none"
-                onLayout={(event) =>
-                  setTooltipSize({
-                    width: event.nativeEvent.layout.width,
-                    height: event.nativeEvent.layout.height,
-                  })
-                }
-                style={{
-                  position: "absolute",
-                  left: tooltipLeft,
-                  bottom: chartHeight + 6,
-                  zIndex: 10,
-                  ...tooltipSurface(colors),
-                  gap: 4,
-                }}
-              >
-                {tooltipProviders.map((item) => (
-                  <View key={item.provider} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <View
-                      style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: RADIUS.swatch,
-                        backgroundColor: colorByProvider.get(item.provider) ?? colors.accent,
-                      }}
-                    />
-                    <Text style={{ ...TEXT.tooltip, color: colors.foreground }}>
-                      {item.label}: {item.count}
-                    </Text>
-                  </View>
-                ))}
-                <Text
-                  accessibilityLiveRegion="polite"
-                  style={{ ...TEXT.tooltip, color: colors.foregroundMuted, marginTop: 2 }}
-                >
-                  {dayLabel(active.key, locale)}
-                </Text>
-              </View>
+              <ChartTooltip
+                anchorX={anchorX}
+                anchorY={0}
+                containerWidth={width}
+                clampTop={false}
+                title={`${dayLabel(active.key, locale)} · ${m.units.agents(active.count)}`}
+                rows={tooltipProviders.map((item) => ({
+                  label: item.label,
+                  value: item.count.toLocaleString(locale),
+                  color: colorByProvider.get(item.provider) ?? colors.accent,
+                }))}
+                colors={colors}
+              />
             ) : null}
           </View>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             <Text style={{ ...TEXT.meta, color: colors.foregroundMuted }}>
               {first ? dayLabel(first.key, locale) : ""}
             </Text>
-            <Text style={{ ...TEXT.meta, color: colors.foregroundMuted }}>Today</Text>
+            <Text style={{ ...TEXT.meta, color: colors.foregroundMuted }}>{m.common.today}</Text>
           </View>
         </View>
       )}

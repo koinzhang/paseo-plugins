@@ -130,6 +130,13 @@ export const iconButton: ViewStyle = {
   flexShrink: 0,
 };
 
+/** Composer popover content frame, shared by the Activity and Attention pills. */
+export const POPOVER_WIDTH = { min: 300, max: 380 } as const;
+
+export function popoverFrame(compact: boolean): ViewStyle {
+  return compact ? {} : { minWidth: POPOVER_WIDTH.min, maxWidth: POPOVER_WIDTH.max };
+}
+
 /** Floating chart tooltip container (heatmap, creations histogram). */
 export function tooltipSurface(colors: { surface2: string; border: string }): ViewStyle {
   return {

@@ -4,8 +4,39 @@ import { UsagePanel } from "./client/panel.tsx";
 import { contributeAttentionPills } from "./client/attention-pill.tsx";
 import { contributePills } from "./client/pill.tsx";
 import { WorkspaceActivityPanel } from "./client/workspace-panel.tsx";
+import { currentAppLanguage, watchAppLanguage } from "./client/use-app-language.ts";
+import { messagesFor } from "./shared/i18n.ts";
 
 const GLOBAL_SURFACE_ID = "activity";
+
+/** Command titles follow the app language; the host has no update(), so re-register on change. */
+function addScopedCommands(client: PluginClientContext): () => void {
+  const { commands } = messagesFor(currentAppLanguage());
+  const removeAgent = client.addCommandCenterItem({
+    id: "open-usage",
+    title: commands.agentActivity,
+    icon: "Activity",
+    keywords: ["activity", "current", "agent", "tool", "usage", "shell", "skill", "mcp", "stats"],
+    context: "agent",
+    onSelect: ({ openPanel }) => {
+      openPanel("usage");
+    },
+  });
+  const removeWorkspace = client.addCommandCenterItem({
+    id: "open-workspace-activity",
+    title: commands.workspaceActivity,
+    icon: "Activity",
+    keywords: ["activity", "workspace", "explorer", "tool", "usage", "shell", "skill", "mcp", "stats"],
+    context: "workspace",
+    onSelect({ openPanel }) {
+      openPanel("workspace-activity", { location: "explorer" });
+    },
+  });
+  return () => {
+    removeAgent();
+    removeWorkspace();
+  };
+}
 
 export default function contribute(client: PluginClientContext) {
   client.addSurface(GLOBAL_SURFACE_ID, GlobalUsageSurface);
@@ -44,31 +75,17 @@ export default function contribute(client: PluginClientContext) {
     },
   });
 
-  client.addCommandCenterItem({
-    id: "open-usage",
-    title: "Agent Activity",
-    icon: "Activity",
-    keywords: ["activity", "current", "agent", "tool", "usage", "shell", "skill", "mcp", "stats"],
-    context: "agent",
-    onSelect: ({ openPanel }) => {
-      openPanel("usage");
-    },
-  });
-
-  client.addCommandCenterItem({
-    id: "open-workspace-activity",
-    title: "Workspace Activity",
-    icon: "Activity",
-    keywords: ["activity", "workspace", "explorer", "tool", "usage", "shell", "skill", "mcp", "stats"],
-    context: "workspace",
-    onSelect({ openPanel }) {
-      openPanel("workspace-activity", { location: "explorer" });
-    },
+  let removeScopedCommands = addScopedCommands(client);
+  const stopLanguage = watchAppLanguage(() => {
+    removeScopedCommands();
+    removeScopedCommands = addScopedCommands(client);
   });
 
   const stopUsagePills = contributePills(client);
   const stopAttentionPills = contributeAttentionPills(client);
   return () => {
+    stopLanguage();
+    removeScopedCommands();
     stopUsagePills();
     stopAttentionPills();
   };

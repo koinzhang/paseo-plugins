@@ -12,6 +12,7 @@ import {
 import type { AgentAttentionKind, WorkspaceTheme } from "./constants.ts";
 import { RunningIndicator } from "./running-indicator.tsx";
 import { CONTROL, ICON_SIZE } from "../design-tokens.ts";
+import { useMessages } from "../use-app-language.ts";
 
 export type AgentRowStyles = {
   agentListRow: ViewStyle;
@@ -61,6 +62,7 @@ export function AgentRow({
   /** Omit to hide the archive control (attention popover). */
   onArchiveToggle?: () => void;
 }): ReactNode {
+  const m = useMessages();
   const [hovered, setHovered] = useState(false);
   // Web: hover-reveal. Native has no hover — keep the action visible.
   // mouseenter/leave (not nested Pressable hover) so title/action don't flicker.
@@ -82,17 +84,11 @@ export function AgentRow({
           ? theme.colors.statusSuccess
           : theme.colors.foregroundMuted;
   const stateLabels: string[] = [];
-  if (!archived && running) stateLabels.push("running");
-  if (subAgentCount > 0) {
-    stateLabels.push(subAgentCount === 1 ? "1 subagent" : `${subAgentCount} subagents`);
-  }
-  if (permissionCount > 0) {
-    stateLabels.push(
-      permissionCount === 1 ? "1 pending permission" : `${permissionCount} pending permissions`,
-    );
-  }
-  if (!archived && attentionKind === "error") stateLabels.push("failed");
-  if (!archived && attentionKind === "finished") stateLabels.push("turn finished, unread");
+  if (!archived && running) stateLabels.push(m.workspace.state.running);
+  if (subAgentCount > 0) stateLabels.push(m.workspace.state.subagents(subAgentCount));
+  if (permissionCount > 0) stateLabels.push(m.workspace.state.permissions(permissionCount));
+  if (!archived && attentionKind === "error") stateLabels.push(m.workspace.state.failed);
+  if (!archived && attentionKind === "finished") stateLabels.push(m.workspace.state.finished);
   const stateSuffix = stateLabels.length > 0 ? `, ${stateLabels.join(", ")}` : "";
   const showRunning = running && !archived;
   const showSubAgentCount = !showRunning && subAgentCount > 0;
@@ -112,9 +108,7 @@ export function AgentRow({
           </View>
         ) : showSubAgentCount ? (
           <View
-            accessibilityLabel={
-              subAgentCount === 1 ? "1 subagent" : `${subAgentCount} subagents`
-            }
+            accessibilityLabel={m.workspace.state.subagents(subAgentCount)}
             style={styles.subAgentBadge}
           >
             <Text style={styles.subAgentBadgeText}>{subAgentLabel}</Text>
@@ -133,9 +127,7 @@ export function AgentRow({
       </View>
       {permissionCount > 0 ? (
         <View
-          accessibilityLabel={
-            permissionCount === 1 ? "1 pending permission" : `${permissionCount} pending permissions`
-          }
+          accessibilityLabel={m.workspace.state.permissions(permissionCount)}
           style={styles.permissionBadge}
         >
           <Icon name="ShieldAlert" size={ICON_SIZE.badge} color={theme.colors.statusWarning} />
@@ -147,7 +139,7 @@ export function AgentRow({
       {onArchiveToggle ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={archived ? `Unarchive ${label}` : `Archive ${label}`}
+          accessibilityLabel={archived ? m.workspace.unarchive(label) : m.workspace.archive(label)}
           accessibilityState={{ disabled: actionDisabled }}
           disabled={actionDisabled || !showAction}
           hitSlop={CONTROL.hitSlop}
@@ -177,7 +169,7 @@ export function AgentRow({
     return (
       <Pressable
         accessibilityRole="link"
-        accessibilityLabel={`Open conversation ${label}${stateSuffix}`}
+        accessibilityLabel={`${m.common.openConversation(label)}${stateSuffix}`}
         onPress={onOpen}
         style={styles.agentListRow}
         {...hoverProps}
