@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import { VOICE_BUTTON_SELECTORS } from "../shared/composer";
 import {
   BUILTIN_SIDEBAR_NAV_IDS,
   PLUGIN_SIDEBAR_NAV_PREFIX,
@@ -46,6 +47,7 @@ declare class MutationObserver {
 }
 
 const SETTINGS_KEY = "@paseo:app-settings";
+const THEME_ATTRIBUTE = "data-mono-theme";
 const ACTIVE_ATTRIBUTE = "data-mono-nav-active";
 const GROUP_ATTRIBUTE = "data-mono-nav-group";
 const CELL_ATTRIBUTE = "data-mono-nav-cell";
@@ -165,6 +167,8 @@ export function installMonoWeb(): () => void {
       return;
     }
 
+    setDesired(desired, document.documentElement, THEME_ATTRIBUTE, mode);
+
     const buttons = findNavButtons();
 
     // A lone item has no sibling to anchor the group; its wrapper is unverifiable.
@@ -252,6 +256,11 @@ html[${ACTIVE_ATTRIBUTE}] [${BUTTON_ATTRIBUTE}] {
   gap: 0 !important;
 }
 html[${ACTIVE_ATTRIBUTE}] [${BUTTON_ATTRIBUTE}] > :not(:first-child) {
+  display: none !important;
+}
+${VOICE_BUTTON_SELECTORS.map(
+  (selector) => `html[${THEME_ATTRIBUTE}] [data-testid="message-input-root"] ${selector}`,
+).join(",\n")} {
   display: none !important;
 }
 `;
