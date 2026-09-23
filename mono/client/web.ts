@@ -37,7 +37,10 @@ interface DomDocument extends DomParent {
 declare const document: DomDocument;
 declare const window: object;
 declare const localStorage: { getItem(key: string): string | null };
-declare function getComputedStyle(element: DomElement): { borderBottomWidth: string };
+declare function getComputedStyle(element: DomElement): {
+  borderBottomWidth: string;
+  borderRightWidth: string;
+};
 declare class MutationObserver {
   constructor(callback: () => void);
   observe(
@@ -92,6 +95,13 @@ const NAV_SELECTOR = [
 const HEADER_DIVIDER_ATTRIBUTE = "data-mono-header-divider";
 const HEADER_SELECTOR = '[data-testid="composer-dock-header"]';
 const TABS_ROW_SELECTOR = '[data-testid="workspace-tabs-row"]';
+const SIDEBAR_EDGE_ATTRIBUTE = "data-mono-sidebar-edge";
+// ResizeHandle (components/resize-handle.tsx) paints its 1px line as the root's background;
+// the hit area and hover highlight are children, so they keep working.
+const RESIZE_HANDLE_TEST_IDS = [
+  "workspace-explorer-sidebar-resize-handle",
+  "workspace-split-resize-handle",
+] as const;
 
 type DesiredAttributes = Map<DomElement, Map<string, string>>;
 
@@ -197,6 +207,16 @@ export function installMonoWeb(): () => void {
     return footer && footer !== document.documentElement ? footer : null;
   }
 
+  // left-sidebar.tsx draws the right edge on styles.desktopSidebarBorder, an ancestor of the footer.
+  function findSidebarEdge(footer: DomElement | null): DomElement | null {
+    let node = footer?.parentElement ?? null;
+    while (node && node !== document.documentElement) {
+      if (getComputedStyle(node).borderRightWidth !== "0px") return node;
+      node = node.parentElement;
+    }
+    return null;
+  }
+
   // screen-header.tsx draws the divider on its inner row (styles.row), which has no test ID.
   function findHeaderDividers(): DomElement[] {
     const rows: DomElement[] = [];
@@ -264,6 +284,8 @@ export function installMonoWeb(): () => void {
 
     const footer = findSidebarFooter();
     if (footer) setDesired(desired, footer, SIDEBAR_FOOTER_ATTRIBUTE);
+    const sidebarEdge = findSidebarEdge(footer);
+    if (sidebarEdge) setDesired(desired, sidebarEdge, SIDEBAR_EDGE_ATTRIBUTE);
     const explorerDivider = findExplorerTabDivider();
     if (explorerDivider) setDesired(desired, explorerDivider, EXPLORER_DIVIDER_ATTRIBUTE);
     for (const row of findHeaderDividers()) setDesired(desired, row, HEADER_DIVIDER_ATTRIBUTE);
@@ -345,6 +367,12 @@ html[${THEME_ATTRIBUTE}] [${SIDEBAR_HEADER_ATTRIBUTE}] {
 }
 html[${THEME_ATTRIBUTE}] [${SIDEBAR_FOOTER_ATTRIBUTE}] {
   border-top-color: transparent !important;
+}
+html[${THEME_ATTRIBUTE}] [${SIDEBAR_EDGE_ATTRIBUTE}] {
+  border-right-color: transparent !important;
+}
+${RESIZE_HANDLE_TEST_IDS.map((id) => `html[${THEME_ATTRIBUTE}] [data-testid="${id}"]`).join(",\n")} {
+  background-color: transparent !important;
 }
 html[${THEME_ATTRIBUTE}] [${HEADER_DIVIDER_ATTRIBUTE}],
 html[${THEME_ATTRIBUTE}] ${TABS_ROW_SELECTOR} {
