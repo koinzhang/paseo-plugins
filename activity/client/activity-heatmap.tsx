@@ -126,54 +126,63 @@ export function ActivityHeatmap({ days, from, colors, compact, mode }: {
       >
         <View style={{ width: Math.max(0, axisWidth) }}>
           <View style={{ flexDirection: "row", gap }}>
-            {weeks.map((week, i) => (
-              <Animated.View
-                key={i}
-                style={{
-                  gap,
-                  opacity: reveal.interpolate({
-                    inputRange: [i * columnStep, i * columnStep + CHART_MOTION.columnSpan],
-                    outputRange: [floor, 1],
-                    extrapolate: "clamp",
-                  }),
-                }}
-              >
-                {week.map(cell => {
-                  const hidden = cell.future || cell.excluded;
-                  const inMonth = cellInMonth(cell.key, hoveredMonth);
-                  const level = activityLevel(metricValue(cell, metric), max);
-                  const base = palette[level]!;
-                  // Focus = leave target month as-is; gently mute others toward surface2
-                  // (same space as empty cells — preserves activity hue, avoids surface0 parse issues).
-                  const fill =
-                    hidden
-                      ? base
-                      : monthFocus && inMonth
-                        ? mixColor(base, colors.accent, 0.04)
-                        : base;
-                  const opacity = hidden
-                    ? 0
-                    : monthFocus && !inMonth
-                      ? 0.64
-                      : 1;
-                  return (
+            {weeks.map((week, i) => {
+              const cells = week.map(cell => {
+                const hidden = cell.future || cell.excluded;
+                const inMonth = cellInMonth(cell.key, hoveredMonth);
+                const level = activityLevel(metricValue(cell, metric), max);
+                const base = palette[level]!;
+                // Focus = leave target month as-is; gently mute others toward surface2
+                // (same space as empty cells — preserves activity hue, avoids surface0 parse issues).
+                const fill =
+                  hidden
+                    ? base
+                    : monthFocus && inMonth
+                      ? mixColor(base, colors.accent, 0.04)
+                      : base;
+                const opacity = hidden
+                  ? 0
+                  : monthFocus && !inMonth
+                    ? 0.64
+                    : 1;
+                return { cell, hidden, colored: !hidden && level > 0, fill, opacity };
+              });
+              const cellShape = { width: cellSize, height: cellSize, borderRadius: Math.max(2, cellSize / 4) };
+              return (
+                <View key={i} style={{ gap }}>
+                  {/* Static layer: empty cells and every hit target; only colored cells animate. */}
+                  {cells.map(({ cell, hidden, colored, fill, opacity }) => (
                     <Pressable key={cell.key} disabled={hidden} accessibilityRole="button"
                       accessibilityLabel={`${periodLabel(cell.key)}: ${m.units.prompts(cell.messages)}, ${m.units.sessions(cell.agents)}, ${m.units.skills(cell.skills)}, ${m.units.mcp(cell.mcp)}`}
                       accessibilityState={{ selected: activeKey === cell.key }}
                       onHoverIn={() => setHovered(cell.key)} onHoverOut={() => setHovered(null)}
                       onFocus={() => setHovered(cell.key)} onBlur={() => setHovered(null)}
                       onPress={() => setSelected(prev => prev === cell.key ? null : cell.key)}
+                      style={{ ...cellShape, backgroundColor: colored ? "transparent" : fill, opacity }} />
+                  ))}
+                  {cells.some(item => item.colored) ? (
+                    <Animated.View
+                      pointerEvents="none"
                       style={{
-                        width: cellSize,
-                        height: cellSize,
-                        borderRadius: Math.max(2, cellSize / 4),
-                        backgroundColor: fill,
-                        opacity,
-                      }} />
-                  );
-                })}
-              </Animated.View>
-            ))}
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        gap,
+                        opacity: reveal.interpolate({
+                          inputRange: [i * columnStep, i * columnStep + CHART_MOTION.columnSpan],
+                          outputRange: [floor, 1],
+                          extrapolate: "clamp",
+                        }),
+                      }}
+                    >
+                      {cells.map(({ cell, colored, fill, opacity }) => (
+                        <View key={cell.key} style={{ ...cellShape, backgroundColor: colored ? fill : "transparent", opacity }} />
+                      ))}
+                    </Animated.View>
+                  ) : null}
+                </View>
+              );
+            })}
           </View>
           <View style={{ marginTop: 10, flexDirection: "row", justifyContent: "space-between" }}>
             {months.map((item, i) => {

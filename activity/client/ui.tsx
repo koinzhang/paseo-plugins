@@ -1,7 +1,9 @@
 import { Icon } from "@getpaseo/plugin/client/react-native";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   Pressable,
   Text,
   View,
@@ -9,6 +11,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import {
+  CHART_MOTION,
   CONTROL,
   FONT_WEIGHT,
   ICON_SIZE,
@@ -211,25 +214,52 @@ export function MetricStepper({
   colors: TextColors;
 }): ReactNode {
   const m = useMessages().global;
+  const slide = useRef(new Animated.Value(0)).current;
+  const step = (direction: 1 | -1) => {
+    onChange(stepMetric(value, direction));
+    // The new label enters from the side of the pressed arrow.
+    slide.setValue(direction);
+    Animated.timing(slide, {
+      toValue: 0,
+      duration: CHART_MOTION.step,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  };
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
       <IconButton
         icon="ChevronLeft"
         label={m.previousMetric}
-        onPress={() => onChange(stepMetric(value, -1))}
+        onPress={() => step(-1)}
         color={colors.foregroundMuted}
       />
-      <Text
-        accessibilityLiveRegion="polite"
-        style={{ ...TEXT.body, color: colors.foregroundMuted, minWidth: 84, textAlign: "center" }}
-        numberOfLines={1}
-      >
-        {m.metrics[value]}
-      </Text>
+      <View style={{ minWidth: 84, overflow: "hidden" }}>
+        <Animated.Text
+          accessibilityLiveRegion="polite"
+          style={{
+            ...TEXT.body,
+            color: colors.foregroundMuted,
+            textAlign: "center",
+            opacity: slide.interpolate({ inputRange: [-1, 0, 1], outputRange: [0, 1, 0] }),
+            transform: [
+              {
+                translateX: slide.interpolate({
+                  inputRange: [-1, 1],
+                  outputRange: [-CHART_MOTION.stepOffset, CHART_MOTION.stepOffset],
+                }),
+              },
+            ],
+          }}
+          numberOfLines={1}
+        >
+          {m.metrics[value]}
+        </Animated.Text>
+      </View>
       <IconButton
         icon="ChevronRight"
         label={m.nextMetric}
-        onPress={() => onChange(stepMetric(value, 1))}
+        onPress={() => step(1)}
         color={colors.foregroundMuted}
       />
     </View>

@@ -134,9 +134,14 @@ export const iconButton: ViewStyle = {
  * Global chart motion (081): `grow` for bars reaching a new value, `reveal` /
  * `refresh` for the heatmap's first column sweep and later metric / range
  * switches. `refreshFloor` is the lowest column opacity during a refresh.
+ * `disclose` is the ranking Show more / Show less height transition.
+ * `step` / `stepOffset` slide the metric switch label in from the pressed side.
  */
 export const CHART_MOTION = {
   grow: 400,
+  disclose: 250,
+  step: 200,
+  stepOffset: 12,
   reveal: 700,
   refresh: 450,
   refreshFloor: 0.3,
