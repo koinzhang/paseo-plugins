@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import { isChangesRepositoryToolbarEmpty } from "../shared/changes-toolbar";
 import { hiddenVoiceButtonSelectors } from "../shared/composer";
 import { MONO_THEMES } from "../shared/palette";
 import type { MonoSettings } from "../shared/settings";
@@ -61,6 +62,7 @@ declare class MutationObserver {
       subtree?: boolean;
       attributes?: boolean;
       attributeFilter?: string[];
+      characterData?: boolean;
     },
   ): void;
   disconnect(): void;
@@ -79,8 +81,10 @@ const SIDEBAR_FOOTER_ATTRIBUTE = "data-mono-sidebar-footer";
 // First and last children of left-sidebar.tsx's SidebarFooter (styles.sidebarFooter).
 const SIDEBAR_FOOTER_ANCHOR_IDS = ["sidebar-add-project", "sidebar-settings"] as const;
 const EXPLORER_DIVIDER_ATTRIBUTE = "data-mono-explorer-divider";
+const EXPLORER_EMPTY_REPOSITORY_ATTRIBUTE = "data-mono-empty-changes-repository";
 const EXPLORER_SELECTOR = '[data-testid="workspace-explorer-sidebar"]';
 const EXPLORER_TAB_RAIL_SELECTOR = `${EXPLORER_SELECTOR} [data-testid="explorer-sidebar-tab-rail"]`;
+const EXPLORER_REPOSITORY_TOOLBAR_SELECTOR = `${EXPLORER_SELECTOR} [data-testid="changes-repository-header"]`;
 // PaneContentToolbar instances (ui/pane-content-toolbar.tsx) that draw a bottom border.
 const EXPLORER_TOOLBAR_TEST_IDS = [
   "files-pane-header",
@@ -392,6 +396,11 @@ export function installMonoWeb(): () => void {
       if (sidebarEdge) setDesired(desired, sidebarEdge, SIDEBAR_EDGE_ATTRIBUTE);
       const explorerDivider = findExplorerTabDivider();
       if (explorerDivider) setDesired(desired, explorerDivider, EXPLORER_DIVIDER_ATTRIBUTE);
+      for (const toolbar of Array.from(document.querySelectorAll(EXPLORER_REPOSITORY_TOOLBAR_SELECTOR))) {
+        if (isChangesRepositoryToolbarEmpty(toolbar)) {
+          setDesired(desired, toolbar, EXPLORER_EMPTY_REPOSITORY_ATTRIBUTE);
+        }
+      }
       for (const row of findHeaderDividers()) setDesired(desired, row, HEADER_DIVIDER_ATTRIBUTE);
       for (const pill of findPills()) setDesired(desired, pill, PILL_ATTRIBUTE);
     }
@@ -441,6 +450,7 @@ export function installMonoWeb(): () => void {
     subtree: true,
     attributes: true,
     attributeFilter: ["class"],
+    characterData: true,
   });
   const interval = setInterval(schedule, 750);
   reconcile();
@@ -514,7 +524,7 @@ ${EXPLORER_TOOLBAR_TEST_IDS.map(
   border-bottom-color: transparent !important;
 }
 /* Paseo keeps a 36px Changes repository row even when branch, PR, and actions render nothing. */
-html[${CHROME_ATTRIBUTE}] ${EXPLORER_SELECTOR} [data-testid="changes-repository-header"]:not(:has([data-testid], [role="button"], button, a)) {
+html[${CHROME_ATTRIBUTE}] ${EXPLORER_SELECTOR} [${EXPLORER_EMPTY_REPOSITORY_ATTRIBUTE}] {
   display: none !important;
 }
 html[${ACTIVE_ATTRIBUTE}] [${GROUP_ATTRIBUTE}] {

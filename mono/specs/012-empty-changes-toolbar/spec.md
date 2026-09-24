@@ -18,3 +18,8 @@ Explorer 的 Changes 面板有仓库工具栏和 Uncommitted 工具栏。Paseo �
 
 - `npm run typecheck`、`npm test` 通过，插件重载后状态为 `running`。
 - 无分支 / PR / 动作时，Changes 标签下方直接显示 Uncommitted 工具栏；有内容时仓库工具栏仍可见。
+
+## 回归修正
+
+- 原 CSS `:not(:has([data-testid], [role="button"], button, a))` 会误隐藏某些有分支的 workspace 的仓库工具栏。判断必须以工具栏实际文本或可操作控件为准；有分支名时始终保留该行。
+- Uncommitted 与 Committed 两种比较模式使用同一规则。
