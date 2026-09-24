@@ -14,7 +14,7 @@
 |---|---|---|---|
 | Tools | skill / MCP / shell 调用 | `tool_calls` | 001（+002/003/004 UI） |
 | Agents | agent **创建**（及归档元数据） | `agents` | 005（004 热力图口径） |
-| Messages | 用户 **发送** 的对话次数 | `user_messages`（006） | **006** |
+| Prompts（Messages） | 用户 **发送** 的对话次数（070 起 UI 统称 Prompts） | `user_messages`（006） | **006** |
 | Models | 发送时 model（messages 加权） | `user_messages.model`（015） | **015** |
 
 三者（tools / agents / messages）互不替代：有创建无消息、有消息无 skill、有 skill 的 agent 均可独立为 0。Model 挂在 messages 上，不是第四正交事件流。

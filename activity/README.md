@@ -6,8 +6,8 @@ It still answers “how am I using Paseo” (tools, messages, models, habits). W
 
 | Scope | Role |
 |---|---|
-| **Global** | Cross-workspace habits: heatmap, rolling 168-hour activity timeline, provider filter, insights, most-used skills / MCP / models |
-| **Workspace** | Per-workspace agent fleet: ranked list + display prefs + archive; live status (permission / finished / error / running); open Terminals; shell / file / messages KPIs; times via shared `FormattedTime` |
+| **Global** | Cross-workspace habits: KPI vs the previous 7 days, daily heatmap, rolling 168-hour activity timeline, `Provider: All ▾` filter, per-chart Sessions / Prompts / Skill calls / MCP calls switches, Providers / Projects rankings, insights, most-used skills / MCP / models |
+| **Workspace** | Per-workspace agent fleet: ranked list + display prefs + archive; live status (permission / finished / error / running); open Terminals; shell / file / prompt KPIs; times via shared `FormattedTime` |
 | **Agent** | Current session: dense tool KPIs, Skills / MCP header toggle, SKILL.md reader, composer Activity pill; **Needs attention** pill jumps to other same-workspace finished/permission/error sessions |
 
 Architecture notes: [docs/architecture.md](./docs/architecture.md).
@@ -20,14 +20,14 @@ Ingests every agent's Paseo timeline into a local SQLite database. Queries read 
 |---|---|
 | Tools | Skill / MCP / shell / file calls; skills classified into exact / inferred / low confidence tiers |
 | Agents | Every created agent (registry with archive metadata) |
-| Messages | User-sent messages |
+| Prompts | User-sent messages (called **Prompts** in every Activity view) |
 | Models | Model at send time (weighted by messages; global view) |
 
 ## Where it shows up
 
-- **Sidebar Activity** — global view by provider (heatmap, KPIs, insights, most used)
+- **Sidebar Activity** — all-time global view by provider (KPI with prev-7d comparison, heatmap, Last 30 days histogram, 168-hour timeline, Providers / Projects rankings, insights, most used)
 - **Explorer → Activity** — workspace agents as a management list (search / sort / group / status / lifecycle / archive), live attention (permission badge, status colors, running spinner; API-owned directory observation + explicit lifecycle/archive fields + 15s reconciliation), open Terminals (list / preview / close), plus workspace KPIs and Skills / MCP ranked or newest-call timeline views (with agent titles and one shared persisted view choice); usage queries get a best-effort refresh hint when agents leave running
-- **Agent workspace panel** — per-agent tool detail (dense KPI including messages / Skills / MCP toggle / SKILL.md); refreshes on timeline turn terminal events
+- **Agent workspace panel** — per-agent tool detail (dense KPI including prompts / Skills / MCP toggle / SKILL.md); refreshes on timeline turn terminal events
 - **Composer pills** — Activity: current agent's skill / MCP summary (hidden when empty); **Needs attention**: other same-workspace agents with finished / permission / error (hidden when none; click opens shared list)
 - **Command Center** — Activity · Workspace Activity · Agent Activity
 
@@ -71,6 +71,7 @@ paseo plugin ls
 - Analytics and the agent registry are local to each daemon: every machine keeps its own database, and there is no cross-host aggregation.
 - Numbers are reconstructed from the Paseo timeline; items that do not report a model or skill cannot be attributed for that dimension.
 - Skill classification is heuristic (exact / inferred / low confidence); check the tier before trusting a count.
+- Project attribution for the Projects ranking comes from the workspace root recorded while it was listed, or the agent `cwd`; sessions with neither group under **Other**.
 - Workspace Activity focuses on agent operations for the current workspace; heatmap / provider / model breakdowns stay on the global sidebar.
 
 ## Development
@@ -85,7 +86,7 @@ This plugin is spec-driven: read [specs/README.md](./specs/README.md) before cod
 
 ## Publish
 
-Release history: [CHANGELOG.md](./CHANGELOG.md) (current **0.4.0**). npm releases go through a GitHub Release tag `activity-vX.Y.Z` (not push-to-`main` alone). Steps: [CONTRIBUTING.md § Publishing to npm](../CONTRIBUTING.md#publishing-to-npm).
+Release history: [CHANGELOG.md](./CHANGELOG.md) (current **0.6.0**). npm releases go through a GitHub Release tag `activity-vX.Y.Z` (not push-to-`main` alone). Steps: [CONTRIBUTING.md § Publishing to npm](../CONTRIBUTING.md#publishing-to-npm).
 
 ## License
 

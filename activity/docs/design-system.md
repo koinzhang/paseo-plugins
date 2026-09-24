@@ -49,10 +49,11 @@ Global KPI 的上一窗口对比与 label 共用 `label` 12 的字体角色，�
 
 字重只用 `FONT_WEIGHT`：`regular` / `medium`（500）/ `semibold`（600）/ `bold`（700，仅图标角标）。
 
-### 2.3 Tab 两级
+### 2.3 筛选与指标切换
 
-- **筛选 tab**（Global range / provider）：`body` 14，未选 500 muted，选中 600 foreground
-- **图表内 tab**（热力图 Daily / Weekly / Cumulative）：`label` 12，与坐标轴同级（061）
+- **Provider 筛选**（Global，069）：`ProviderDropdown` 触发器 `body` 14（`Provider:` muted + 当前值 semibold + `ChevronDown`），菜单行 `TEXT.menu`
+- **指标切换**（图表 / 排行，070）：`MetricStepper` = `‹ 指标名 ›`，指标名 `body` 14 muted、`minWidth` 84，箭头用 `IconButton`（`ICON_SIZE.action`）
+- `TextTabs`（`filter` / `chart`）保留在 `ui.tsx`；069 之后 Global 已无时间 / 图表模式 tab
 
 ## 3. 布局与间距
 
@@ -104,6 +105,7 @@ Global KPI 的上一窗口对比与 label 共用 `label` 12 的字体角色，�
 - **图表 tooltip**：一律用 `ChartTooltip`（`client/ui.tsx`，066）— 容器 `tooltipSurface(colors)`（padding 10 / 6、`RADIUS.overlay`、`surface2` 底、1px `border`）；标题 medium 字重，行为「色块 · muted label · 等宽数值」；水平居中于指针并夹在图表内，垂直在锚点上方 8px。三个图表都用浮动 tooltip，不再用 readout 行；热力图不加强度图例
 - **composer popover**：宽度 `popoverFrame(compact)` — regular 300–380（`POPOVER_WIDTH`），compact 由宿主铺满
 - **菜单**：宽 `MENU_WIDTH`（232）、`RADIUS.overlay`、`surface1` 底、1px `border`、轻阴影；行高 compact 40 / regular 28
+- **Provider 下拉**（069）：触发器下方浮层，`minWidth` 200、`RADIUS.overlay`、`surface1`；web 用全屏透明 backdrop 点外部关闭；超过 10 行浮层内滚动
 
 ## 7. 状态
 
@@ -117,7 +119,7 @@ Global KPI 的上一窗口对比与 label 共用 `label` 12 的字体角色，�
 
 ## 8. 公共组件（`client/ui.tsx`，066）
 
-优先复用，不要在页面里重写：`IconButton`、`SectionHeader`（标题 + 右侧动作）、`Section`、`LoadingState`、`ErrorState`、`InlineEmpty`、`PageEmpty`、`TextTabs`（`filter` / `chart`）、`CountText`、`ChartTooltip`。
+优先复用，不要在页面里重写：`IconButton`、`SectionHeader`（标题 + 右侧动作）、`Section`、`LoadingState`、`ErrorState`、`InlineEmpty`、`PageEmpty`、`TextTabs`（`filter` / `chart`）、`MetricStepper`（指标切换，070）、`CountText`、`ChartTooltip`。
 
 ## 9. 文案
 

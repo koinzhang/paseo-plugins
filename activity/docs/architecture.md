@@ -12,16 +12,16 @@
 | **Agent** | Agent workspace tab · Composer pills · CC `Agent Activity` | `client/panel.tsx` + `pill.tsx` + `attention-pill.tsx`（040） | 本 agent 工具；同仓其它会话 attention 捷径 | 无（全程） |
 
 ```text
-Global Activity     → 跨 workspace · 习惯 / provider 对比 · KPI（Sessions / Prompts / Top provider · 占比 / Top model · 占比 / Active days，069/070）· 热力图 / 30 天直方图 / 168 小时 Timeline（各自 Sessions·Prompts·Skill·MCP 切换，070）· Providers / Projects 排行（069/070）· Insights / Models
+Global Activity     → 跨 workspace · 习惯 / provider 对比 · KPI 4 格（Sessions / Prompts / Top provider · 占比 / Top model · 占比 + 前 7 天对比，069/070/072/073）· 热力图 / 30 天直方图 / 168 小时 Timeline（各自 Sessions·Prompts·Skill·MCP 切换，070）· Providers / Projects 排行（069/070）· Insights 8 行（072）· Models
 Workspace Activity  → 单 workspace · Agents 运营（排序筛选归档）· KPI · Terminals（host SDK：列表 / 预览 / 关闭）· Top skills/MCP
 Agent Activity      → 单 agent · 工具明细（Skills / MCP）· Pill 快捷入口
 ```
 
 分工原则：
 
-- Global = 习惯与 provider 对比（热力图、Insights、Models）
+- Global = 习惯与 provider 对比（KPI 前 7 天对比 073、热力图 / 直方图 / Timeline 指标切换 070、Providers / Projects 排行 069/070、Insights 072、Models）
 - Workspace = **竖向 Agents 运营页**（列表、搜索、筛选、归档、显示偏好）+ 本仓 KPI + 打开中的 Terminals（032，host SDK 直连：列表 / 预览 / 关闭，不进本地库）+ Agents 行实时 attention（033–036：pending permission 徽标、status 色、running spinner；041：子 agent 数量角标，running 优先；043：`useAgent` 近实时 Closed / attention 字段；目录推送寄生宿主 observation，15s 轮询保证完整与 permissionCount，044 不在 client.paseo 再挂 observation）；**不做**热力图 / provider·model 拆分 / 时间窗（024 / 027）
-- Agent = 当前会话工具明细 + pill；Messages 计入 KPI（031），Models 仍仅全局（015）；UI 时间统一 `FormattedTime`（039）
+- Agent = 当前会话工具明细 + pill；Prompts 计入 KPI（031；070 术语），Models 仍仅全局（015）；UI 时间统一 `FormattedTime`（039）
 
 产品定位已超出「纯统计」：Workspace 面把 activity 数据接到 agent 管理上。对外说明见 [`README.md`](../README.md)。
 
@@ -42,7 +42,9 @@ server/          handlers · store · ingest · background-sync · hooks
 |---|---|---|
 | Tools | `tool_calls` | 001 (+014 shell/file) |
 | Agents（创建） | `agents` | 005 |
-| Messages | `user_messages`（含 model） | 006 / 015 |
+| Prompts（Messages） | `user_messages`（含 model） | 006 / 015（070 起 UI 统称 Prompts） |
+
+**Provider 归一**：按库中原始 provider id 聚合，`normalizeProvider` 不再把 `omp`（Oh My Pi）并入 `pi`（071）；无数据迁移。
 
 ### 过滤轴
 
@@ -58,7 +60,7 @@ server/          handlers · store · ingest · background-sync · hooks
 | `usage.by-provider` | — | ✓ | ✓ | Global |
 | `usage.by-project` | — | — | —（全时段） | Global（Projects 排行，provider 过滤；070） |
 | `usage.agents` | — | ✓ | ✓ | Workspace |
-| `usage.agent-lifetime` | — | — | —（全时段） | Global（最长寿命 + 072 平均会话投入时长，provider 过滤；051 起含活跃 agent） |
+| `usage.agent-lifetime` | — | — | —（全时段） | Global（最长寿命 049；072 加平均会话投入时长 + 多轮会话计数，provider 过滤；051 起含活跃 agent） |
 | `usage.agent-creations` | — | — | ✓ | Global（Agent creations 直方图，日柱 provider 软渐变；051/055） |
 | `usage.host-info` | — | — | — | Workspace（cwd `~` 折叠） |
 | `usage.activity-by-day` | — | ✓ | ✓ | Global |
@@ -80,7 +82,7 @@ server/          handlers · store · ingest · background-sync · hooks
 | Hook | 写入 |
 |---|---|
 | `agent.created` / `agent.archived` / `agent.turn_ended` | agents +（turn）tool_calls / user_messages |
-| background-sync | 静默历史补扫（008）；`agents.list` 须翻页取全；目录同步带 `includeArchived` 补归档元数据（049），归档 entry 不扫 timeline |
+| background-sync | 静默历史补扫（008）；`agents.list` 须翻页取全；目录同步带 `includeArchived` 补归档元数据（049），归档 entry 不扫 timeline；分页 `workspaces.list` 记录活跃 workspace 的 project root（070） |
 
 ## 5. 已知边界与债
 
@@ -94,5 +96,6 @@ server/          handlers · store · ingest · background-sync · hooks
 | 0.8 目录 observation 单 slot | 历史约束，当前不再兼容 | 038 |
 | 0.9 独立 API observation | 每实例自持订阅，按引用计数释放；共享连接不共享监听器 | 047 |
 | project 记录已删除的 agent 不可见 | daemon `collectFetchAgentsEntries` 解析不到 placement 就丢弃（本机 45/498）；插件不读宿主磁盘，由 `usage.agent-lifetime.sampleSize` 暴露基数 | 049 |
+| Projects 归属依赖 cwd / workspace 记录 | 无 `cwd` 且不在已列出 workspace 下的会话归 Other；不回填已删除 agent（070） | 070 |
 
 演进与任务拆解见 [`specs/README.md`](../specs/README.md)；本文件描述稳定架构，细节以编号目录 `spec.md` / `plan.md` 为准。
