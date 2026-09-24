@@ -105,7 +105,7 @@ Global KPI 的上一窗口对比与 label 共用 `label` 12 的字体角色，�
 - **图表 tooltip**：一律用 `ChartTooltip`（`client/ui.tsx`，066）— 容器 `tooltipSurface(colors)`（padding 10 / 6、`RADIUS.overlay`、`surface2` 底、1px `border`）；标题 medium 字重，行为「色块 · muted label · 等宽数值」；水平居中于指针并夹在图表内，垂直在锚点上方 8px。三个图表都用浮动 tooltip，不再用 readout 行；热力图不加强度图例
 - **composer popover**：宽度 `popoverFrame(compact)` — regular 300–380（`POPOVER_WIDTH`），compact 由宿主铺满
 - **菜单**：宽 `MENU_WIDTH`（232）、`RADIUS.overlay`、`surface1` 底、1px `border`、轻阴影；行高 compact 40 / regular 28
-- **Provider 下拉**（069）：触发器下方浮层，`minWidth` 200、`RADIUS.overlay`、`surface1`；web 用全屏透明 backdrop 点外部关闭；超过 10 行浮层内滚动
+- **Provider 下拉**（069 / 077）：触发器右对齐于筛选行；浮层开在触发器下方并右对齐（向左展开），`minWidth` 200、`RADIUS.overlay`、`surface1`；web 用全屏透明 backdrop 点外部关闭；超过 10 行浮层内滚动
 
 ## 7. 状态
 

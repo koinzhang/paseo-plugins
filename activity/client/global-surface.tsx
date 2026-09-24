@@ -522,6 +522,7 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
       filterRow: {
         flexDirection: "row" as const,
         alignItems: "center" as const,
+        justifyContent: "flex-end" as const,
         position: "relative" as const,
         zIndex: 20,
       },

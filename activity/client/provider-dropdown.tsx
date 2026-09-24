@@ -18,7 +18,8 @@ type Colors = {
 
 /**
  * `Provider: All ▾` filter (069). Lists every option; the menu floats under the
- * trigger and a transparent backdrop closes it on outside press.
+ * right-aligned trigger (077) and a transparent backdrop closes it on outside
+ * press.
  */
 export function ProviderDropdown({
   label,
@@ -75,7 +76,7 @@ export function ProviderDropdown({
             style={{
               position: "absolute",
               top: "100%",
-              left: 0,
+              right: 0,
               marginTop: 4,
               minWidth: MENU_MIN_WIDTH,
               borderRadius: RADIUS.overlay,
