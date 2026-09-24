@@ -13,6 +13,7 @@ Paseo 插件 monorepo。所有插件独立目录、独立 `paseo-plugin.json`，
 |---|---|---|
 | [Activity](./activity/) | `activity` | 本地用量分析 **兼** workspace agents 运营（Explorer 列表、实时 attention、终端） |
 | [Mono](./mono/) | `mono` | Neutral 灰阶深色 / 浅色主题 |
+| [Customize](./customize/) | `customize` | 按 provider 展示 instructions / rules / skills / MCP 及自动发现状态的看板 |
 
 ## Activity
 

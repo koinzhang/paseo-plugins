@@ -5,6 +5,8 @@ Paseo 插件仓库。当前包含插件 **Activity**（`activity/`）：本地�
 > 插件 ID / 目录名 / 数据目录：**`activity`**（原 `tool-usage`，见 `activity/specs/007-rename-activity/` Phase 2）。
 > 架构总览：[`activity/docs/architecture.md`](./activity/docs/architecture.md) · 产品 README：[`activity/README.md`](./activity/README.md)
 
+其他插件：**Mono**（`mono/`，主题 + 布局微调）；**Customize**（`customize/`，按 provider / project 展示 instructions、rules、skills、MCP 及自动发现状态；spec 在 `customize/specs/`，各家机制依据见 `customize/specs/001-customize-board/research.md`；UI 复用 Activity design tokens）。命令同上，在对应目录执行、把 `activity` 换成插件 ID。
+
 ## Paseo 源码（查阅用）
 
 本地 Paseo 仓库一般与当前 checkout 同级（`../paseo`），写插件时可直接查证 API / 契约 / daemon 实现：

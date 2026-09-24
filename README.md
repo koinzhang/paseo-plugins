@@ -13,6 +13,7 @@ A monorepo for Paseo plugins. Each plugin lives in its own directory with its ow
 |---|---|---|
 | [Activity](./activity/) | `activity` | Local usage analytics **and** workspace agent ops (Explorer fleet list, live attention, terminals) |
 | [Mono](./mono/) | `mono` | Neutral gray light and dark themes |
+| [Customize](./customize/) | `customize` | Per-provider board of instructions, rules, skills, and MCP servers with auto-discovery status |
 
 ## Activity
 

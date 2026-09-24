@@ -1,0 +1,107 @@
+import type { Category } from "./contracts.ts";
+
+type Paths = { project?: readonly string[]; user?: readonly string[] };
+export type AcpConfig = Record<Category, Paths> & { pluginManifests?: readonly string[] };
+
+/** Only locations backed by the primary sources in specs/003-acp-configurations/research.md. */
+export const ACP_CONFIGS = {
+  cline: {
+    instructions: { project: ["AGENTS.md"], user: [".agents/AGENTS.md"] },
+    rules: { project: [".clinerules", ".cline/rules"], user: [".cline/data/settings/rules", ".cline/rules", "Documents/Cline/Rules"] },
+    skills: { project: [".cline/skills"], user: [".cline/data/settings/skills", ".cline/skills"] },
+    mcp: { project: [".cline/mcp.json"], user: [".cline/mcp.json", ".cline/data/settings/cline_mcp_settings.json"] },
+    commands: {},
+    subagents: { project: [".cline/agents.yaml"] },
+    plugins: { project: [".cline/plugins", ".cline/plugins/_installed"], user: [".cline/plugins", ".cline/plugins/_installed"] },
+    pluginManifests: ["package.json"],
+  },
+  "codebuddy-code": {
+    instructions: { project: ["CODEBUDDY.md", "CODEBUDDY.local.md", ".codebuddy/CODEBUDDY.md"], user: [".codebuddy/CODEBUDDY.md"] },
+    rules: { project: [".codebuddy/rules"], user: [".codebuddy/rules"] },
+    skills: { project: [".codebuddy/skills"], user: [".codebuddy/skills"] },
+    mcp: { project: [".mcp.json"], user: [".codebuddy/.mcp.json"] },
+    commands: { project: [".codebuddy/commands"], user: [".codebuddy/commands"] },
+    subagents: { project: [".codebuddy/agents"], user: [".codebuddy/agents"] },
+    plugins: { project: [".codebuddy-plugin/plugin.json"], user: [".codebuddy/plugins/cache"] },
+    pluginManifests: [".codebuddy-plugin/plugin.json", ".workbuddy-plugin/plugin.json", ".claude-plugin/plugin.json"],
+  },
+  gemini: {
+    instructions: { project: ["GEMINI.md", ".gemini/GEMINI.md"], user: [".gemini/GEMINI.md"] },
+    rules: {},
+    skills: { project: [".gemini/skills", ".agents/skills"], user: [".gemini/skills", ".agents/skills"] },
+    mcp: { project: [".gemini/settings.json"], user: [".gemini/settings.json"] },
+    commands: { project: [".gemini/commands"], user: [".gemini/commands"] },
+    subagents: { project: [".gemini/agents"], user: [".gemini/agents"] },
+    plugins: { user: [".gemini/extensions"] },
+    pluginManifests: ["gemini-extension.json", "plugin.json"],
+  },
+  goose: {
+    instructions: { project: ["AGENTS.md", ".goosehints"], user: [".config/goose/.goosehints", ".config/goose/AGENTS.md"] },
+    rules: {},
+    skills: { project: [".agents/skills", ".goose/skills", ".claude/skills"], user: [".agents/skills", ".claude/skills"] },
+    mcp: { user: [".config/goose/config.yaml"] },
+    commands: { user: [".config/goose/config.yaml"] },
+    subagents: { project: [".agents/agents", ".goose/agents", ".claude/agents"], user: [".agents/agents", ".goose/agents", ".claude/agents"] },
+    plugins: { project: [".agents/plugins"], user: [".config/goose/config.yaml", ".agents/plugins"] },
+    pluginManifests: ["plugin.json"],
+  },
+  grok: {
+    instructions: { project: ["AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"], user: [".grok/AGENTS.md"] },
+    rules: { project: [".grok/rules", ".claude/rules"], user: [".grok/rules", ".claude/rules"] },
+    skills: { project: [".grok/skills", ".agents/skills", ".claude/skills"], user: [".grok/skills", ".agents/skills", ".claude/skills"] },
+    mcp: { project: [".grok/config.toml", ".mcp.json", ".cursor/mcp.json"], user: [".grok/config.toml", ".claude.json"] },
+    commands: { user: [".agents/commands", ".claude/commands"] },
+    subagents: { project: [".grok/agents", ".claude/agents"], user: [".grok/agents", ".claude/agents"] },
+    plugins: { project: [".grok/plugins"], user: [".grok/plugins", ".claude/plugins"] },
+    pluginManifests: [".claude-plugin/plugin.json", "plugin.json"],
+  },
+  kilo: {
+    instructions: { project: ["AGENTS.md", "AGENT.md"], user: [".config/kilo/AGENTS.md"] },
+    rules: { project: [".kilo/rules"], user: [".config/kilo/rules"] },
+    skills: { project: [".kilo/skills", ".agents/skills", ".claude/skills"], user: [".kilo/skills", ".agents/skills", ".claude/skills"] },
+    mcp: { project: ["kilo.jsonc"], user: [".config/kilo/kilo.jsonc"] },
+    commands: { project: [".kilo/commands"], user: [".config/kilo/commands"] },
+    subagents: { project: [".kilo/agents"], user: [".config/kilo/agents"] },
+    plugins: {},
+  },
+  kiro: {
+    instructions: { project: ["AGENTS.md"], user: [".kiro/steering/AGENTS.md"] },
+    rules: { project: [".kiro/steering"], user: [".kiro/steering"] },
+    skills: { project: [".kiro/skills"], user: [".kiro/skills"] },
+    mcp: { project: [".kiro/settings/mcp.json"], user: [".kiro/settings/mcp.json"] },
+    commands: {},
+    subagents: { project: [".kiro/agents"], user: [".kiro/agents"] },
+    plugins: { user: [".kiro/powers"] },
+  },
+  kimi: {
+    instructions: { project: ["AGENTS.md", ".kimi-code/AGENTS.md"], user: [".kimi-code/AGENTS.md", ".agents/AGENTS.md", ".kimi-code/SYSTEM.md"] },
+    rules: {},
+    skills: { project: [".kimi-code/skills", ".agents/skills"], user: [".kimi-code/skills", ".agents/skills"] },
+    mcp: { project: [".kimi-code/mcp.json"], user: [".kimi-code/mcp.json"] },
+    commands: { user: [".kimi-code/plugins/managed"] },
+    subagents: { project: [".kimi-code/agents", ".agents/agents"], user: [".kimi-code/agents", ".agents/agents"] },
+    plugins: { user: [".kimi-code/plugins/managed", ".kimi-code/plugins/installed.json"] },
+    pluginManifests: ["kimi.plugin.json"],
+  },
+  "qwen-code": {
+    instructions: { project: ["QWEN.md"], user: [".qwen/QWEN.md"] },
+    rules: { project: [".qwen/rules"], user: [".qwen/rules"] },
+    skills: { project: [".qwen/skills"], user: [".qwen/skills"] },
+    mcp: { project: [".qwen/settings.json"], user: [".qwen/settings.json"] },
+    commands: { project: [".qwen/commands"], user: [".qwen/commands"] },
+    subagents: { project: [".qwen/agents"], user: [".qwen/agents"] },
+    plugins: { user: [".qwen/extensions"] },
+    pluginManifests: ["qwen-extension.json"],
+  },
+  traecli: {
+    instructions: { project: ["AGENTS.md"] },
+    rules: { project: [".trae/rules"], user: [".trae-cn/rules"] },
+    skills: { project: [".traecli/skills", ".trae/skills"], user: [".traecli/skills", ".trae-cn/skills"] },
+    mcp: { project: [".trae/mcp.json"], user: ["Library/Application Support/trae_cli/trae_cli.yaml"] },
+    commands: { project: [".traecli/commands"] },
+    subagents: { project: [".traecli/agents", ".trae/agents"], user: [".trae-cn/agents"] },
+    plugins: {},
+  },
+} as const satisfies Record<string, AcpConfig>;
+
+export type AcpProviderId = keyof typeof ACP_CONFIGS;

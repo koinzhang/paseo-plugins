@@ -1,0 +1,28 @@
+# 001 — Tasks
+
+- [x] T1 脚手架：`paseo-plugin.json`（id `customize`）、`package.json`、`tsconfig.json`、README / CHANGELOG / LICENSE
+  - 验证：`npm install` + `npm run typecheck` 通过
+- [x] T2 shared：RPC 契约、provider 列表、机制说明、i18n
+  - 验证：typecheck；`client/entries.test.ts` 覆盖 `resolveAppLanguage`
+- [x] T3 server 解析器：frontmatter / TOML / YAML-lite / JSONC / glob（含单测）
+  - 验证：`server/parsers.test.ts`
+- [x] T4 server scan-kit：skills 根扫描（一层 / 递归）、rules 目录、嵌套索引、上级目录链
+  - 验证：`server/providers.test.ts`（claude 一层不递归、codex / cursor / pi 递归）
+- [x] T5 provider scanners：claude / codex / cursor / opencode / copilot / pi / omp（含单测）
+  - 验证：`server/providers.test.ts` 临时 home + project fixture 覆盖各家状态判定；本机真实数据 smoke（7 家均出结果，claude 41 / codex 165 / cursor 317 / pi 312 条）
+- [x] T6 preview（白名单 + 截断 + MCP 打码）与 open / reveal
+  - 验证：`server/parsers.test.ts` 打码用例；本机 smoke 28 个 MCP 预览无 token 泄漏，`/etc/passwd` 预览 / 打开均被白名单拒绝
+- [x] T7 client：侧栏导航项 + surface、Command Center、看板（provider / project 下拉、类别 tab、分组列表、机制说明、预览框）
+  - 验证：typecheck；DOM 审计（`rg "document\.|window\.|localStorage|navigator\.|className=|onClick=" client/`）仅 `client/web.ts` 命中
+- [ ] T8 design token 守卫测试、typecheck、安装与 reload、实机验证
+  - [x] `client/design-tokens.test.ts` 通过；`paseo plugin install "$PWD"` → `customize running`，`paseo plugin reload customize` 日志 `Plugin ready`
+  - [ ] Paseo App 内目视验收（侧栏 Customize → 看板、默认 project = 最后停留的 workspace、切 provider / project、预览框、中英文）
+- [x] T9 仓库接入：根 README / README.zh-CN / AGENTS.md / CI matrix（`[activity, mono, customize]`）
+- [x] T10 入口改为左上角侧栏导航（用户反馈：与 New workspace / History / Search / Schedules 同组），移除 workspace header 按钮与 workspace panel
+  - 验证：typecheck；`client/entries.test.ts` 覆盖 `workspaceIdFromPath`（普通 / URL 编码 / `b64_` / 非 workspace 路由）；`paseo plugin reload customize` → `Plugin ready`
+- [x] T11 移除看板内容中的 Customize 标题，将筛选区层级提升到搜索栏等后续内容之上
+  - 验证：`npm run typecheck`；`npm test`（18 项通过）
+- [x] T12 窄屏 Provider 菜单改为左对齐，避免向屏幕左侧溢出
+  - 验证：`npm run typecheck`；`npm test`
+- [x] T13 将 Provider / Project 选择保存在 host 级插件设置，重新打开后恢复
+  - 验证：设置默认值与「No project」区分测试；`npm run typecheck`；`npm test`

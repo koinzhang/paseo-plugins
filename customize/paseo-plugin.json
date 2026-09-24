@@ -1,0 +1,6 @@
+{
+  "id": "customize",
+  "requirements": {
+    "paseo": ">=0.9.0"
+  }
+}
