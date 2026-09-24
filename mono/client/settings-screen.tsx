@@ -23,6 +23,10 @@ function DisplayControls({ settings }: { settings: ReadySettings }) {
     (value: boolean) => change("compactSidebarNav", value),
     [change],
   );
+  const changeMinimalChrome = useCallback(
+    (value: boolean) => change("minimalChrome", value),
+    [change],
+  );
   const changeHideThinking = useCallback((value: boolean) => change("hideThinking", value), [change]);
   const changeHideDictation = useCallback(
     (value: boolean) => change("hideDictation", value),
@@ -42,6 +46,13 @@ function DisplayControls({ settings }: { settings: ReadySettings }) {
             value={settings.values.compactSidebarNav}
             disabled={settings.saving}
             onValueChange={changeCompactSidebarNav}
+          />
+          <SettingsSwitch
+            label="Hide dividers and borders"
+            hint="Remove pane dividers and composer / pill outlines; popovers keep a hairline. Web and desktop only."
+            value={settings.values.minimalChrome}
+            disabled={settings.saving}
+            onValueChange={changeMinimalChrome}
           />
           <SettingsSwitch
             label="Hide Thinking in timeline"

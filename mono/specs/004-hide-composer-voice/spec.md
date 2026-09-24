@@ -13,7 +13,7 @@
 - 两个按钮都没有 `testID`，`accessibilityLabel` 随语言变化，因此用 CSS `:has()` 匹配图标 SVG path（lucide-react-native 0.546）：
   - 听写：`M19 10v2a7 7 0 0 1-14 0v-2`
   - 语音模式：同时包含 `M10 3v18` 与 `M22 10v3`
-- 主题标记 `html[data-mono-theme]` 由 `client/web.ts` 在选中 Mono 主题时设置，与侧栏横排解耦
+- 主题标记 `html[data-mono-theme]` 由 `client/web.ts` 在选中 Mono 主题时设置，与侧栏横排解耦（009 起语音按钮不再依赖主题，仅由设置开关控制）
 
 ## 行为
 

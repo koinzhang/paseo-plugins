@@ -60,7 +60,9 @@ declare class MutationObserver {
 }
 
 const SETTINGS_KEY = "@paseo:app-settings";
+// Only selects Mono palette colors; every layout tweak is gated by its own setting instead.
 const THEME_ATTRIBUTE = "data-mono-theme";
+const CHROME_ATTRIBUTE = "data-mono-chrome";
 const ACTIVE_ATTRIBUTE = "data-mono-nav-active";
 const GROUP_ATTRIBUTE = "data-mono-nav-group";
 const CELL_ATTRIBUTE = "data-mono-nav-cell";
@@ -149,8 +151,8 @@ export function installMonoWeb(): () => void {
   }
 
   const style = document.createElement("style");
-  style.setAttribute("data-mono-owned", "compact-sidebar-nav");
-  style.textContent = COMPACT_NAV_CSS;
+  style.setAttribute("data-mono-owned", "layout");
+  style.textContent = LAYOUT_CSS;
   document.head.append(style);
 
   const voiceStyle = document.createElement("style");
@@ -327,22 +329,21 @@ export function installMonoWeb(): () => void {
     if (disposed) return;
 
     const desired: DesiredAttributes = new Map();
+    const settings = getMonoSettings();
     const mode = selectedMonoTheme();
-    if (!mode) {
-      apply(desired);
-      return;
+    if (mode) setDesired(desired, document.documentElement, THEME_ATTRIBUTE, mode);
+
+    if (settings.minimalChrome) {
+      setDesired(desired, document.documentElement, CHROME_ATTRIBUTE);
+      const footer = findSidebarFooter();
+      if (footer) setDesired(desired, footer, SIDEBAR_FOOTER_ATTRIBUTE);
+      const sidebarEdge = findSidebarEdge(footer);
+      if (sidebarEdge) setDesired(desired, sidebarEdge, SIDEBAR_EDGE_ATTRIBUTE);
+      const explorerDivider = findExplorerTabDivider();
+      if (explorerDivider) setDesired(desired, explorerDivider, EXPLORER_DIVIDER_ATTRIBUTE);
+      for (const row of findHeaderDividers()) setDesired(desired, row, HEADER_DIVIDER_ATTRIBUTE);
+      for (const pill of findPills()) setDesired(desired, pill, PILL_ATTRIBUTE);
     }
-
-    setDesired(desired, document.documentElement, THEME_ATTRIBUTE, mode);
-
-    const footer = findSidebarFooter();
-    if (footer) setDesired(desired, footer, SIDEBAR_FOOTER_ATTRIBUTE);
-    const sidebarEdge = findSidebarEdge(footer);
-    if (sidebarEdge) setDesired(desired, sidebarEdge, SIDEBAR_EDGE_ATTRIBUTE);
-    const explorerDivider = findExplorerTabDivider();
-    if (explorerDivider) setDesired(desired, explorerDivider, EXPLORER_DIVIDER_ATTRIBUTE);
-    for (const row of findHeaderDividers()) setDesired(desired, row, HEADER_DIVIDER_ATTRIBUTE);
-    for (const pill of findPills()) setDesired(desired, pill, PILL_ATTRIBUTE);
 
     const buttons = findNavButtons();
 
@@ -352,9 +353,9 @@ export function installMonoWeb(): () => void {
       apply(desired);
       return;
     }
-    setDesired(desired, group, SIDEBAR_HEADER_ATTRIBUTE);
+    if (settings.minimalChrome) setDesired(desired, group, SIDEBAR_HEADER_ATTRIBUTE);
 
-    if (!getMonoSettings().compactSidebarNav) {
+    if (!settings.compactSidebarNav) {
       apply(desired);
       return;
     }
@@ -365,7 +366,7 @@ export function installMonoWeb(): () => void {
       return;
     }
 
-    setDesired(desired, document.documentElement, ACTIVE_ATTRIBUTE, mode);
+    setDesired(desired, document.documentElement, ACTIVE_ATTRIBUTE);
     setDesired(desired, group, GROUP_ATTRIBUTE);
     for (const { button, cell } of cells) {
       setDesired(desired, cell!, CELL_ATTRIBUTE);
@@ -408,52 +409,52 @@ function voiceCss(settings: MonoSettings): string {
   const selectors = hiddenVoiceButtonSelectors(settings);
   if (selectors.length === 0) return "";
   return `${selectors
-    .map((selector) => `html[${THEME_ATTRIBUTE}] [data-testid="message-input-root"] ${selector}`)
+    .map((selector) => `[data-testid="message-input-root"] ${selector}`)
     .join(",\n")} {
   display: none !important;
 }
 `;
 }
 
-const COMPACT_NAV_CSS = `
-html[${THEME_ATTRIBUTE}] [${SIDEBAR_HEADER_ATTRIBUTE}] {
+const LAYOUT_CSS = `
+html[${CHROME_ATTRIBUTE}] [${SIDEBAR_HEADER_ATTRIBUTE}] {
   border-bottom-color: transparent !important;
 }
-html[${THEME_ATTRIBUTE}] [${SIDEBAR_FOOTER_ATTRIBUTE}],
-html[${THEME_ATTRIBUTE}] ${WORKTREE_CALLOUT_SELECTOR} {
+html[${CHROME_ATTRIBUTE}] [${SIDEBAR_FOOTER_ATTRIBUTE}],
+html[${CHROME_ATTRIBUTE}] ${WORKTREE_CALLOUT_SELECTOR} {
   border-top-color: transparent !important;
 }
-html[${THEME_ATTRIBUTE}] [data-testid="message-input-root"] > *,
-html[${THEME_ATTRIBUTE}] [${PILL_ATTRIBUTE}] {
+html[${CHROME_ATTRIBUTE}] [data-testid="message-input-root"] > *,
+html[${CHROME_ATTRIBUTE}] [${PILL_ATTRIBUTE}] {
   border-color: transparent !important;
 }
-${POPOVER_SELECTORS.map((selector) => `html[${THEME_ATTRIBUTE}] ${selector}`).join(",\n")} {
+${POPOVER_SELECTORS.map((selector) => `html[${CHROME_ATTRIBUTE}] ${selector}`).join(",\n")} {
   border-width: ${HAIRLINE_PX}px !important;
 }
 ${MONO_THEMES.map(
   (theme) => `${POPOVER_SELECTORS.map(
-    (selector) => `html[${THEME_ATTRIBUTE}="${theme.appearance}"] ${selector}`,
+    (selector) => `html[${CHROME_ATTRIBUTE}][${THEME_ATTRIBUTE}="${theme.appearance}"] ${selector}`,
   ).join(",\n")} {
   border-color: color-mix(in srgb, ${theme.colors.border} ${POPOVER_BORDER_OPACITY_PERCENT}%, transparent) !important;
 }`,
 ).join("\n")}
-html[${THEME_ATTRIBUTE}] [${SIDEBAR_EDGE_ATTRIBUTE}] {
+html[${CHROME_ATTRIBUTE}] [${SIDEBAR_EDGE_ATTRIBUTE}] {
   border-right-color: transparent !important;
 }
-${RESIZE_HANDLE_TEST_IDS.map((id) => `html[${THEME_ATTRIBUTE}] [data-testid="${id}"]`).join(",\n")} {
+${RESIZE_HANDLE_TEST_IDS.map((id) => `html[${CHROME_ATTRIBUTE}] [data-testid="${id}"]`).join(",\n")} {
   background-color: transparent !important;
 }
-${MODEL_PICKER_BORDER_SELECTORS.map((selector) => `html[${THEME_ATTRIBUTE}] ${selector}`).join(",\n")},
-html[${THEME_ATTRIBUTE}] [${HEADER_DIVIDER_ATTRIBUTE}],
-html[${THEME_ATTRIBUTE}] ${TABS_ROW_SELECTOR} {
+${MODEL_PICKER_BORDER_SELECTORS.map((selector) => `html[${CHROME_ATTRIBUTE}] ${selector}`).join(",\n")},
+html[${CHROME_ATTRIBUTE}] [${HEADER_DIVIDER_ATTRIBUTE}],
+html[${CHROME_ATTRIBUTE}] ${TABS_ROW_SELECTOR} {
   border-bottom-color: transparent !important;
 }
-${PROVIDER_SEPARATOR_SELECTORS.map((selector) => `html[${THEME_ATTRIBUTE}] ${selector}`).join(",\n")},
-html[${THEME_ATTRIBUTE}] [${EXPLORER_DIVIDER_ATTRIBUTE}] {
+${PROVIDER_SEPARATOR_SELECTORS.map((selector) => `html[${CHROME_ATTRIBUTE}] ${selector}`).join(",\n")},
+html[${CHROME_ATTRIBUTE}] [${EXPLORER_DIVIDER_ATTRIBUTE}] {
   background-color: transparent !important;
 }
 ${EXPLORER_TOOLBAR_TEST_IDS.map(
-  (id) => `html[${THEME_ATTRIBUTE}] ${EXPLORER_SELECTOR} [data-testid="${id}"]`,
+  (id) => `html[${CHROME_ATTRIBUTE}] ${EXPLORER_SELECTOR} [data-testid="${id}"]`,
 ).join(",\n")} {
   border-bottom-color: transparent !important;
 }

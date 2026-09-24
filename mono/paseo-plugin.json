@@ -1,6 +1,6 @@
 {
   "id": "mono",
   "requirements": {
-    "paseo": ">=0.9.1"
+    "paseo": ">=0.9.0"
   }
 }

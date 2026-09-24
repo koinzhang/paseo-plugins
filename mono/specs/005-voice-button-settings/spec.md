@@ -21,7 +21,7 @@
 - 订阅者：
   - Thinking：按 `hideThinking` 注册 / 移除 timeline transformer；宿主在注册变化时发布新 registry 快照，时间线重新投影，无需重载
   - 侧栏：`reconcile` 在 `compactSidebarNav` 关闭时只保留主题标记，不标记导航分组
-  - 语音按钮：独立 `<style>`，只包含开启隐藏的选择器；仍需 Mono 主题（`html[data-mono-theme]`）
+  - 语音按钮：独立 `<style>`，只包含开启隐藏的选择器；不再依赖 Mono 主题（见 009）
 
 ## 非目标
 

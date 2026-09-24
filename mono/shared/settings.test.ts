@@ -14,6 +14,7 @@ test("no models are hidden by default", () => {
 test("every tweak is enabled by default", () => {
   assert.deepEqual(DEFAULT_MONO_SETTINGS, {
     compactSidebarNav: true,
+    minimalChrome: true,
     hideThinking: true,
     hideDictation: true,
     hideVoiceMode: true,
@@ -23,6 +24,7 @@ test("every tweak is enabled by default", () => {
 test("each setting is stored independently", () => {
   assert.deepEqual(MONO_SETTINGS.schema.parse({ hideThinking: false, hideDictation: false }), {
     compactSidebarNav: true,
+    minimalChrome: true,
     hideThinking: false,
     hideDictation: false,
     hideVoiceMode: true,

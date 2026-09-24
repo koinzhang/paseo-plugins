@@ -57,3 +57,7 @@ Web / Electron 下，选中 Mono Light 或 Mono Dark 时，隐藏以下分割线
 - Mono 主题下 Explorer 标签栏下方与 Files / Changes 工具栏下方分割线消失
 - Mono 主题下中部 header 与工作区标签栏下方分割线消失
 - Mono 主题下左 / 中 / 右之间的竖线消失，拖拽调整宽度仍可用，悬停仍有高亮
+
+## 与主题解耦
+
+- 自 009 起不再要求选中 Mono 主题，由设置页开关控制，见 `specs/009-decouple-layout-from-theme/`

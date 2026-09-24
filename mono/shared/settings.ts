@@ -7,6 +7,7 @@ export const MONO_SETTINGS = defineSettings({
   version: 1,
   schema: z.object({
     compactSidebarNav: z.boolean().default(true),
+    minimalChrome: z.boolean().default(true),
     hideThinking: z.boolean().default(true),
     hideDictation: z.boolean().default(true),
     hideVoiceMode: z.boolean().default(true),

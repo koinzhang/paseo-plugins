@@ -37,3 +37,7 @@ Web / Electron 下，选中 Mono Light 或 Mono Dark 时：
 - `npm run typecheck`、`npm test` 通过
 - `paseo plugin reload mono` 后状态为 `running`
 - Mono 主题下 composer、composer 上方 pill 无边框；模型选择器等弹层为发丝线边框
+
+## 与主题解耦
+
+- 自 009 起不再要求选中 Mono 主题，由设置页开关控制，见 `specs/009-decouple-layout-from-theme/`

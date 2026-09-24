@@ -1,6 +1,6 @@
 # 001 · Tasks
 
-- [x] 插件骨架：`paseo-plugin.json`（id `mono`，当前 Web 适配要求 `paseo >=0.9.1`）、`package.json`、`tsconfig.json` — 验证：`npm run typecheck`
+- [x] 插件骨架：`paseo-plugin.json`（id `mono`，要求 `paseo >=0.9.0`（0.9.1 无插件 API 变更））、`package.json`、`tsconfig.json` — 验证：`npm run typecheck`
 - [x] 调色板 `shared/palette.ts`（冷纸 / 墨色）+ `index.client.ts` 注册两个主题 — 验证：`npm test`
 - [x] CI matrix 加入 `mono` — 验证：`.github/workflows/ci.yml`
 - [x] 本地安装 — 验证：`paseo plugin install "$PWD"` 后 `paseo plugin ls` 为 running

@@ -9,7 +9,7 @@
 - 按钮尺寸对齐 Explorer 的 Files / Changes 标签：高 26px、左右内边距 8px、圆角 6px、间距 4px、距边缘 6px
 - 宽度 ≥ 720px（Unistyles `md`）时，导航组最小高度 36px（`HEADER_INNER_HEIGHT`，含底边框）、去掉上下内边距并垂直居中，使底边框与中间栏顶栏对齐；换行时随内容增高
 - 保留宿主原生按钮、图标、点击行为、hover / active 状态和 accessibility label
-- 使用 Paseo 0.9.1 的稳定 `data-testid` 定位，不依赖界面语言或可见文案
+- 使用 Paseo 0.9.x 的稳定 `data-testid` 定位，不依赖界面语言或可见文案
 - 插件停用、切换非 Mono 主题或 React 重建节点时，完整恢复宿主布局
 
 ## 定位
@@ -44,3 +44,7 @@
 ## 设置
 
 - 可在 Settings → Plugins → mono → Settings 关闭（默认开启），见 `specs/005-voice-button-settings/`
+
+## 与主题解耦
+
+- 自 009 起不再要求选中 Mono 主题，由设置页开关控制，见 `specs/009-decouple-layout-from-theme/`
