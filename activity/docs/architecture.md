@@ -83,6 +83,8 @@ server/          handlers · store · ingest · background-sync · hooks
 |---|---|
 | `agent.created` / `agent.archived` / `agent.turn_ended` | agents +（turn）tool_calls / user_messages |
 | background-sync | 静默历史补扫（008）；`agents.list` 须翻页取全；目录同步带 `includeArchived` 补归档元数据（049），归档 entry 不扫 timeline；分页 `workspaces.list` 记录活跃 workspace 的 project root（070） |
+| store upsert（SQLite / JSONL） | 事件时间只变早：取更早 `ts`，拒绝晚于首次入库 `ingested_at` 的新值；启动时幂等清空晚于 `ingested_at` 的 `ts`（074） |
+| 扫描后 / 启动时 | prompt 回放副本去重：同 agent 内删除 provider 回放行（与实时行相差 ≤ 2s）与匿名 `canonical:` 批次，保留实时行（075） |
 
 ## 5. 已知边界与债
 
@@ -97,5 +99,7 @@ server/          handlers · store · ingest · background-sync · hooks
 | 0.9 独立 API observation | 每实例自持订阅，按引用计数释放；共享连接不共享监听器 | 047 |
 | project 记录已删除的 agent 不可见 | daemon `collectFetchAgentsEntries` 解析不到 placement 就丢弃（本机 45/498）；插件不读宿主磁盘，由 `usage.agent-lifetime.sampleSize` 暴露基数 | 049 |
 | Projects 归属依赖 cwd / workspace 记录 | 无 `cwd` 且不在已列出 workspace 下的会话归 Other；不回填已删除 agent（070） | 070 |
+| 首次即以回放时间入库的行 | 未经 live 观察的行无信息源恢复真实时间，保持回放时刻（074 非目标） | 074 |
+| prompt 去重只依据库内字段 | 不处理 provider 未持久化 / 无时间的实时行，不改 RPC 与 Prompts 计数口径（075 非目标） | 075 |
 
 演进与任务拆解见 [`specs/README.md`](../specs/README.md)；本文件描述稳定架构，细节以编号目录 `spec.md` / `plan.md` 为准。

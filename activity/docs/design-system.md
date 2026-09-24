@@ -54,6 +54,7 @@ Global KPI 的上一窗口对比与 label 共用 `label` 12 的字体角色，�
 - **Provider 筛选**（Global，069）：`ProviderDropdown` 触发器 `body` 14（`Provider:` muted + 当前值 semibold + `ChevronDown`），菜单行 `TEXT.menu`
 - **指标切换**（图表 / 排行，070）：`MetricStepper` = `‹ 指标名 ›`，指标名 `body` 14 muted、`minWidth` 84，箭头用 `IconButton`（`ICON_SIZE.action`）
 - `TextTabs`（`filter` / `chart`）保留在 `ui.tsx`；069 之后 Global 已无时间 / 图表模式 tab
+- **排行展开 / 收起**（078）：行尾右对齐按钮，`body` 14 `foregroundMuted` + `ChevronUp` / `ChevronDown`（`ICON_SIZE.inline`），`ROW_PADDING.dense`；不新增 token
 
 ## 3. 布局与间距
 
