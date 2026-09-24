@@ -347,7 +347,7 @@ export function WorkspaceActivityPanel({
         minHeight: 0,
         minWidth: 0,
         overflow: "hidden" as const,
-        backgroundColor: theme.colors.surface0,
+        backgroundColor: "transparent",
       },
       scroll: {
         flex: 1,
