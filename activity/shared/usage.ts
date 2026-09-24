@@ -1,6 +1,6 @@
 import { defineRpc } from "@getpaseo/plugin";
 import { z } from "zod";
-import { CategorySchema, ConfidenceSchema, brandProviderId, normalizeProvider } from "./classify.ts";
+import { CategorySchema, ConfidenceSchema, normalizeProvider } from "./classify.ts";
 import { formatDisplayName } from "./format.ts";
 
 export const usageSummaryRpc = defineRpc({
@@ -311,8 +311,72 @@ export const usageAgentLifetimeRpc = defineRpc({
     longest: AgentLifetimeItemSchema.nullable(),
     /** Rows compared after the provider filter (registry sample). */
     sampleSize: z.number().int().nonnegative(),
+    /** Mean engaged time per session (072); null when no session has events. */
+    averageEngagedMs: z.number().int().nonnegative().nullable(),
+    /** Sessions with ≥1 prompt (072); denominator of the multi-turn share. */
+    promptedSessions: z.number().int().nonnegative(),
+    /** Sessions with ≥2 prompts (072). */
+    multiTurnSessions: z.number().int().nonnegative(),
   }),
 });
+
+/** Sessions with ≥1 / ≥2 prompts among `agents` (072); prompts of unknown agents are ignored. */
+export function countMultiTurnSessions(
+  agents: ReadonlyArray<{ agentId: string }>,
+  messages: ReadonlyArray<{ agentId: string }>,
+): { promptedSessions: number; multiTurnSessions: number } {
+  const prompts = new Map<string, number>(agents.map((agent) => [agent.agentId, 0]));
+  for (const message of messages) {
+    const count = prompts.get(message.agentId);
+    if (count !== undefined) prompts.set(message.agentId, count + 1);
+  }
+  let promptedSessions = 0;
+  let multiTurnSessions = 0;
+  for (const count of prompts.values()) {
+    if (count >= 1) promptedSessions += 1;
+    if (count >= 2) multiTurnSessions += 1;
+  }
+  return { promptedSessions, multiTurnSessions };
+}
+
+/** Gaps longer than this between a session's events count as idle, not engaged (072). */
+export const SESSION_IDLE_GAP_MS = 30 * 60_000;
+
+/**
+ * Mean engaged time per session (072): sum of gaps between consecutive events
+ * (creation, prompts, tool calls), skipping idle gaps over `idleGapMs`, so a
+ * session resumed days later is not counted as days long. Sessions without any
+ * prompt / tool call are excluded.
+ */
+export function averageEngagedSessionMs(
+  agents: ReadonlyArray<{ agentId: string; createdAt?: string | null }>,
+  events: ReadonlyArray<{ agentId: string; ts: string | null; ingestedAt: string }>,
+  idleGapMs = SESSION_IDLE_GAP_MS,
+): number | null {
+  const times = new Map<string, number[]>();
+  for (const agent of agents) {
+    const created = agent.createdAt ? Date.parse(agent.createdAt) : Number.NaN;
+    times.set(agent.agentId, Number.isFinite(created) ? [created] : []);
+  }
+  const withEvents = new Set<string>();
+  for (const event of events) {
+    const list = times.get(event.agentId);
+    if (!list) continue;
+    const t = Date.parse(event.ts ?? event.ingestedAt);
+    if (!Number.isFinite(t)) continue;
+    list.push(t);
+    withEvents.add(event.agentId);
+  }
+  let total = 0;
+  for (const agentId of withEvents) {
+    const list = times.get(agentId)!.sort((a, b) => a - b);
+    for (let i = 1; i < list.length; i++) {
+      const gap = list[i]! - list[i - 1]!;
+      if (gap <= idleGapMs) total += gap;
+    }
+  }
+  return withEvents.size > 0 ? Math.round(total / withEvents.size) : null;
+}
 
 /**
  * Longest-lived agent. Archived agents use their archive time; active agents
@@ -410,7 +474,7 @@ export function aggregateAgentCreations(
     if (options.to && agent.createdAt > options.to) continue;
     const day = localDayKey(agent.createdAt);
     if (!day) continue;
-    const id = brandProviderId(agent.provider);
+    const id = normalizeProvider(agent.provider);
     const counts = byDay.get(day) ?? new Map<string, number>();
     counts.set(id, (counts.get(id) ?? 0) + 1);
     byDay.set(day, counts);

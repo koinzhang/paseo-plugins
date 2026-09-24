@@ -118,21 +118,14 @@ export function normalizeProvider(provider: string): string {
   if (head === "claude" || head.startsWith("claude")) return "claude";
   if (head === "opencode") return "opencode";
   if (head === "codex") return "codex";
-  if (head === "pi" || head === "omp") return "pi";
+  if (head === "pi") return "pi";
+  // Oh My Pi is its own Paseo provider (manifest id `omp`), not a Pi alias (071).
+  if (head === "omp") return "omp";
   if (head === "cursor") return "cursor";
   if (head === "codebuddy" || head === "codebuddy-code") return "codebuddy";
   return head;
 }
 
-/**
- * Chart / brand colour identity. Same as `normalizeProvider`, except Oh My Pi
- * (`omp`) stays distinct from Pi so the creations histogram can colour them apart.
- */
-export function brandProviderId(provider: string): string {
-  const head = (provider.split("/")[0] ?? provider).toLowerCase();
-  if (head === "omp") return "omp";
-  return normalizeProvider(provider);
-}
 
 function expandHome(path: string, homeDir?: string): string {
   if (homeDir && path.startsWith("~/")) {

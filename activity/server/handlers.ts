@@ -18,6 +18,8 @@ import {
   isFileWrite,
   isShellCall,
   pickLongestAgentLifetime,
+  averageEngagedSessionMs,
+  countMultiTurnSessions,
   usageActivityByDayRpc,
   usageActivityByHourRpc,
   usageAgentCreationsRpc,
@@ -312,14 +314,16 @@ export function createAgentsHandler(store: UsageStore) {
   };
 }
 
-/** Longest created→archived agent from the registry alone (049) — no tool-call join. */
+/** Longest created→archived agent (049) plus engaged time and multi-turn counts (072). */
 export function createAgentLifetimeHandler(store: UsageStore) {
   return async (
     input: RpcInput<typeof usageAgentLifetimeRpc>,
   ): Promise<RpcOutput<typeof usageAgentLifetimeRpc>> => {
-    return pickLongestAgentLifetime(store.selectAgents({ provider: input.provider }), {
-      provider: input.provider,
-    });
+    const agents = store.selectAgents({ provider: input.provider });
+    const lifetime = pickLongestAgentLifetime(agents, { provider: input.provider });
+    const messages = store.selectUserMessages();
+    const averageEngagedMs = averageEngagedSessionMs(agents, [...store.select(), ...messages]);
+    return { ...lifetime, averageEngagedMs, ...countMultiTurnSessions(agents, messages) };
   };
 }
 

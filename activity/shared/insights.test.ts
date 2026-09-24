@@ -33,9 +33,9 @@ describe("buildActivityInsights", () => {
     { date: "2026-03-09", skills: 0, mcp: 0, agents: 0, messages: 10, total: 0 },
   ];
 
-  it("returns calendar → volume → structure 8 rows (069)", () => {
+  it("returns the 8 habit / average rows (072)", () => {
     const rows = buildActivityInsights({
-      days,
+      days: [...days, { date: "2026-03-10", skills: 0, mcp: 1, agents: 0, messages: 0, total: 1 }],
       summary: {
         skills: 2,
         mcp: 3,
@@ -45,7 +45,8 @@ describe("buildActivityInsights", () => {
         chatAgents: 1,
       },
       workspaces: 7,
-      longestSession: { durationMs: 277.7 * 3_600_000, active: false },
+      averageSessionMs: 18 * 60_000 + 20_000,
+      multiTurn: { multiTurnSessions: 2, promptedSessions: 3 },
       locale: "en",
     });
 
@@ -53,54 +54,50 @@ describe("buildActivityInsights", () => {
     assert.deepEqual(
       rows.map((r) => r.label),
       [
+        "Active days",
         "Busiest day",
-        "Peak weekday",
         "Workspaces",
-        "Skill calls",
-        "MCP calls",
-        "Prompts per session",
-        "Longest session",
         "Coding vs chat",
+        "Longest streak",
+        "Peak weekday",
+        "Multi-turn sessions",
+        "Avg session duration",
       ],
     );
-    assert.equal(rows[0]?.value, "Mar 9 · 10 prompts");
-    assert.equal(rows[1]?.value, "Mon");
-    assert.equal(rows[2]?.value, "7");
-    assert.equal(rows[3]?.value, "2");
-    assert.equal(rows[4]?.value, "3");
-    assert.equal(rows[5]?.value, "2.8");
-    assert.equal(rows[6]?.value, "11.6 days");
-    // 3 coding / (3+1) active → 75%
-    assert.equal(rows[7]?.value, "75% coding");
+    assert.deepEqual(
+      rows.map((r) => r.value),
+      // 3 coding / (3+1) active → 75%; Mar 9–10 streak; 2 of 3 prompted sessions multi-turn.
+      ["3", "Mar 9 · 10 prompts", "7", "75% coding", "2 days", "Monday", "67%", "18 min"],
+    );
   });
 
-  it("uses dashes for zero denominators and falls back busiest day", () => {
+  it("uses dashes for empty data and falls back busiest day", () => {
     const rows = buildActivityInsights({
       days: [{ date: "2026-03-08", skills: 3, mcp: 1, agents: 2, messages: 0, total: 4 }],
       summary: { skills: 3, mcp: 1, agents: 2, messages: 0, codingAgents: 0, chatAgents: 0 },
       workspaces: 0,
       locale: "en",
     });
-    assert.equal(rows.find((r) => r.label === "Busiest day")?.value, "Mar 8 · 4 calls");
-    assert.equal(rows.find((r) => r.label === "Peak weekday")?.value, "Sun");
-    assert.equal(rows.find((r) => r.label === "Prompts per session")?.value, "0");
-    assert.equal(rows.find((r) => r.label === "Longest session")?.value, "—");
-    assert.equal(rows.find((r) => r.label === "Coding vs chat")?.value, "—");
-    assert.equal(rows.find((r) => r.label === "Workspaces")?.value, "0");
-  });
+    const value = (label: string) => rows.find((r) => r.label === label)?.value;
+    assert.equal(value("Busiest day"), "Mar 8 · 4 calls");
+    assert.equal(value("Peak weekday"), "Sunday");
+    assert.equal(value("Longest streak"), "1 day");
+    assert.equal(value("Multi-turn sessions"), "—");
+    assert.equal(value("Avg session duration"), "—");
+    assert.equal(value("Coding vs chat"), "—");
+    assert.equal(value("Workspaces"), "0");
 
-  it("marks the longest session as active while it is still open (051)", () => {
-    const rows = buildActivityInsights({
+    const empty = buildActivityInsights({
       days: [],
-      summary: { skills: 12345, mcp: 0, agents: 1, messages: 0 },
+      summary: { skills: 0, mcp: 0, agents: 0, messages: 0 },
       workspaces: 0,
-      longestSession: { durationMs: 26 * 3_600_000, active: true },
+      averageSessionMs: null,
       locale: "en",
     });
-    assert.equal(rows.find((r) => r.label === "Longest session")?.value, "26 h · active");
-    assert.equal(rows.find((r) => r.label === "Skill calls")?.value, "12,345");
-    assert.equal(rows.find((r) => r.label === "Busiest day")?.value, "—");
-    assert.equal(rows.find((r) => r.label === "Peak weekday")?.value, "—");
+    assert.deepEqual(
+      empty.map((r) => r.value),
+      ["0", "—", "0", "—", "—", "—", "—", "—"],
+    );
   });
 });
 
@@ -120,17 +117,10 @@ describe("buildActivityKpi", () => {
     messageCount: 4,
     models: [{ model: "opus", count: 4 }],
   });
-  const days = [
-    { date: "2026-03-07", skills: 2, mcp: 0, agents: 1, messages: 4, total: 2 },
-    { date: "2026-03-09", skills: 0, mcp: 0, agents: 0, messages: 10, total: 0 },
-    { date: "2026-03-10", skills: 0, mcp: 0, agents: 0, messages: 0, total: 0 },
-  ];
-
-  it("shows sessions, prompts, shares and active days (069 / 070)", () => {
+  it("shows sessions, prompts and shares (069 / 070 / 072)", () => {
     const rows = buildActivityKpi({
       sessions: 12345,
       messages: 1605,
-      days,
       locale: "en",
       providers: [codex, claude],
       allProviders: [codex, claude],
@@ -138,22 +128,20 @@ describe("buildActivityKpi", () => {
     });
     assert.deepEqual(
       rows.map((r) => r.label),
-      ["Sessions", "Prompts", "Top provider", "Top model", "Active days"],
+      ["Sessions", "Prompts", "Top provider", "Top model"],
     );
     assert.equal(rows[0]?.value, "12,345");
     assert.equal(rows[1]?.value, "1,605");
     assert.equal(rows[2]?.value, "Codex · 75%");
     // gpt-5.4 9 of 16 model messages → 56%
     assert.equal(rows[3]?.value, "Gpt 5.4 · 56%");
-    assert.equal(rows[4]?.value, "2");
-    assert.equal(rows.length, 5);
+    assert.equal(rows.length, 4);
   });
 
   it("scopes shares to the selected provider", () => {
     const rows = buildActivityKpi({
       sessions: 0,
       messages: 4,
-      days,
       locale: "en",
       providers: [claude],
       allProviders: [codex, claude],
@@ -167,7 +155,6 @@ describe("buildActivityKpi", () => {
     const empty = buildActivityKpi({
       sessions: 0,
       messages: 0,
-      days: [],
       locale: "en",
       providers: [],
       allProviders: [],
@@ -176,6 +163,5 @@ describe("buildActivityKpi", () => {
     assert.equal(empty[0]?.value, "0");
     assert.equal(empty[2]?.value, "—");
     assert.equal(empty[3]?.value, "—");
-    assert.equal(empty[4]?.value, "0");
   });
 });

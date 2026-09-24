@@ -1,4 +1,4 @@
-import { brandProviderId, normalizeProvider } from "../shared/classify.ts";
+import { normalizeProvider } from "../shared/classify.ts";
 
 export type ChartColorScheme = "light" | "dark";
 
@@ -45,7 +45,7 @@ const CHART_PALETTE: Record<ChartColorScheme, readonly string[]> = {
  * Known Paseo provider ids (builtin + ACP catalog + normalize aliases).
  * Sources: `packages/protocol/src/provider-manifest.ts` builtins,
  * `packages/app/src/data/acp-provider-catalog.ts`, and `normalizeProvider`
- * aliases (`codebuddy-code` → `codebuddy`, `omp` → `pi`).
+ * aliases (`codebuddy-code` → `codebuddy`).
  */
 const KNOWN_PROVIDER_IDS = [
   "agoragentic-acp",
@@ -250,7 +250,7 @@ export function providerColor(provider: string, scheme: ChartColorScheme): strin
 
 /** Brand fill for a known provider, or `null` when it falls back to the soft palette. */
 export function brandColor(provider: string, scheme: ChartColorScheme): string | null {
-  return PROVIDER_BRAND[brandProviderId(provider)]?.[scheme] ?? null;
+  return PROVIDER_BRAND[normalizeProvider(provider)]?.[scheme] ?? null;
 }
 
 /**

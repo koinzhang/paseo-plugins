@@ -18,6 +18,8 @@ import {
   isFileWrite,
   isShellCall,
   pickLongestAgentLifetime,
+  averageEngagedSessionMs,
+  countMultiTurnSessions,
   shellCommandHead,
   shellLooksMutating,
 } from "./usage.ts";
@@ -1007,6 +1009,38 @@ describe("aggregateAgents (024)", () => {
   });
 });
 
+describe("countMultiTurnSessions (072)", () => {
+  it("counts prompted and ≥2-prompt sessions among known agents", () => {
+    const agents = [{ agentId: "a" }, { agentId: "b" }, { agentId: "empty" }];
+    const messages = [{ agentId: "a" }, { agentId: "a" }, { agentId: "b" }, { agentId: "gone" }, { agentId: "gone" }];
+    assert.deepEqual(countMultiTurnSessions(agents, messages), { promptedSessions: 2, multiTurnSessions: 1 });
+  });
+});
+
+describe("averageEngagedSessionMs (072)", () => {
+  const min = 60_000;
+  const at = (offsetMin: number) => new Date(Date.parse("2026-09-19T00:00:00.000Z") + offsetMin * min).toISOString();
+  it("sums gaps between events, skips idle gaps, excludes sessions without events", () => {
+    const agents = [
+      { agentId: "a", createdAt: at(0) },
+      { agentId: "b", createdAt: at(0) },
+      { agentId: "idle", createdAt: at(0) },
+    ];
+    const events = [
+      { agentId: "a", ts: at(5), ingestedAt: at(99) },
+      { agentId: "a", ts: null, ingestedAt: at(20) },
+      // 3-day gap: resumed later, counts only the 4 min after resuming.
+      { agentId: "a", ts: at(3 * 1440), ingestedAt: at(3 * 1440) },
+      { agentId: "a", ts: at(3 * 1440 + 4), ingestedAt: at(3 * 1440 + 4) },
+      { agentId: "b", ts: at(10), ingestedAt: at(10) },
+      { agentId: "unknown", ts: at(1), ingestedAt: at(1) },
+    ];
+    // a: 5 + 15 + 4 = 24 min; b: 10 min → mean 17 min.
+    assert.equal(averageEngagedSessionMs(agents, events), 17 * min);
+    assert.equal(averageEngagedSessionMs(agents, []), null);
+  });
+});
+
 describe("pickLongestAgentLifetime (049 / 051)", () => {
   const agent = (
     agentId: string,
@@ -1106,6 +1140,26 @@ describe("aggregateAgentCreations (051)", () => {
       { provider: "omp", label: "Oh My Pi", count: 2 },
       { provider: "pi", label: "Pi", count: 1 },
     ]);
+    assert.deepEqual(aggregateAgentCreations([agent("omp", "2026-09-19T02:00:00.000Z"), agent("pi", "2026-09-19T01:00:00.000Z")], { provider: "omp" })[0]?.total, 1);
+  });
+
+  it("keeps Oh My Pi (omp) and Pi as separate providers (071)", () => {
+    const result = aggregateByProvider(
+      [],
+      [
+        { agentId: "a", provider: "pi" },
+        { agentId: "b", provider: "omp" },
+        { agentId: "c", provider: "omp" },
+      ],
+      [{ agentId: "b", provider: "omp" }],
+    );
+    assert.deepEqual(
+      result.providers.map((item) => [item.provider, item.label, item.agentCount, item.messageCount]),
+      [
+        ["omp", "Oh My Pi", 2, 1],
+        ["pi", "Pi", 1, 0],
+      ],
+    );
   });
 
   it("honours provider, from and to filters and skips invalid timestamps", () => {

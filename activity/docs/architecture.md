@@ -58,7 +58,7 @@ server/          handlers · store · ingest · background-sync · hooks
 | `usage.by-provider` | — | ✓ | ✓ | Global |
 | `usage.by-project` | — | — | —（全时段） | Global（Projects 排行，provider 过滤；070） |
 | `usage.agents` | — | ✓ | ✓ | Workspace |
-| `usage.agent-lifetime` | — | — | —（全时段） | Global（最长寿命，provider 过滤；051 起含活跃 agent） |
+| `usage.agent-lifetime` | — | — | —（全时段） | Global（最长寿命 + 072 平均会话投入时长，provider 过滤；051 起含活跃 agent） |
 | `usage.agent-creations` | — | — | ✓ | Global（Agent creations 直方图，日柱 provider 软渐变；051/055） |
 | `usage.host-info` | — | — | — | Workspace（cwd `~` 折叠） |
 | `usage.activity-by-day` | — | ✓ | ✓ | Global |

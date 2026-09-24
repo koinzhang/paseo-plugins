@@ -434,12 +434,8 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
         chatAgents: summary.chatAgents,
       },
       workspaces: summary.workspaces,
-      longestSession: lifetimeQuery.data?.longest
-        ? {
-            durationMs: lifetimeQuery.data.longest.durationMs,
-            active: lifetimeQuery.data.longest.archivedAt == null,
-          }
-        : null,
+      averageSessionMs: lifetimeQuery.data?.averageEngagedMs,
+      multiTurn: lifetimeQuery.data,
       locale,
     });
   }, [activityQuery.data?.days, lifetimeQuery.data, locale, summary]);
@@ -449,14 +445,12 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
       buildActivityKpi({
         sessions: summary.agents,
         messages: summary.messages,
-        days: activityQuery.data?.days ?? [],
         locale,
         providers: filteredProviders,
         allProviders: providers,
         providerFilter,
       }),
     [
-      activityQuery.data?.days,
       filteredProviders,
       locale,
       providerFilter,

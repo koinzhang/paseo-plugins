@@ -16,15 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Activity insights now show Active days, Busiest day, Workspaces, Coding vs chat, Longest streak, Peak weekday (full name), Multi-turn sessions (share of prompted sessions with 2+ prompts) and Avg session duration (engaged time, idle gaps over 30 min skipped). Skill / MCP calls, Prompts per session and Longest session were removed.
 - Global Activity says **Sessions** wherever it counts agent conversations (KPI, Insights, creations histogram, timeline, heatmap tooltip, empty state). Workspace / Agent Agents lists are unchanged.
 - Global filter bar: the range chips are gone (the page is all-time) and provider chips became a `Provider: All ▾` dropdown listing every provider instead of the top 5.
-- Global KPI: Sessions, Prompts, Top provider · share, Top model · share, Active days. Peak weekday and Longest session moved into Insights; Active days and Prompts left it; Longest streak is gone.
+- Global KPI: Sessions, Prompts, Top provider · share, Top model · share. Active days, Peak weekday and Longest streak moved into Insights.
 - User-sent messages are called **Prompts** in every Activity view; the Workspace "Show → Prompt" preview is now "Latest prompt".
 - Most used models lists every model; skills / MCP stay capped at 8.
 - The heatmap no longer shows the Daily / Weekly / Cumulative switch (always daily).
 
 ### Fixed
 
+- Oh My Pi (`omp`) is counted as its own provider everywhere instead of being merged into Pi; stored data is unchanged.
 - KPI fit-to-width accounts for the tile divider, so values that just fit no longer ellipsize by a pixel.
 
 ## [0.6.0] - 2026-09-22

@@ -97,6 +97,8 @@
 | [068-workspace-panel-background](./068-workspace-panel-background/) | 已实现，页面验收待完成 | Workspace Activity 面板透出 Explorer 底色，与 Files、Changes 一致 |
 | [069-global-sessions-refresh](./069-global-sessions-refresh/) | 已实现，页面验收待完成 | Global：会话统称 Sessions；移除 range chips；`Provider: All ▾` 下拉列全部 provider；KPI 重构（占比 / Active days）；热力图隐藏模式切换；新增 Providers 排行 |
 | [070-metric-switch-projects](./070-metric-switch-projects/) | 已实现，页面验收待完成 | KPI 5 格（去 Longest streak）；热力图 / 30 天直方图 / Timeline 右上角 Sessions·Prompts·Skill·MCP 切换；Messages → Prompts；Providers 下方 Projects 排行（`usage.by-project`，agents 记录 cwd / project_root） |
+| [071-omp-provider-split](./071-omp-provider-split/) | 已实现，页面验收待完成 | Oh My Pi（`omp`）不再并入 Pi，所有视图独立统计；删除 `brandProviderId` |
+| [072-insights-habits](./072-insights-habits/) | 已实现，页面验收待完成 | Insights 8 行重排（Active days、Longest streak、多轮会话占比、平均会话投入时长等）；`usage.agent-lifetime` 加 `averageEngagedMs` / 多轮会话计数 |
 ## 约定
 
 每个编号目录通常含：

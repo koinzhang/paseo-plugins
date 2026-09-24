@@ -1,5 +1,5 @@
 import type { ActivityDay, ProviderUsageItem } from "./usage.ts";
-import { isActiveDay } from "./activity.ts";
+import { computeStreaks, isActiveDay } from "./activity.ts";
 import { formatCount, formatDisplayName, formatDuration } from "./format.ts";
 import { messagesFor } from "./i18n.ts";
 
@@ -18,13 +18,6 @@ export type InsightSummary = {
 
 /** Shared cap for Activity insights and Most used skills / MCP / models. */
 export const ACTIVITY_LIST_LIMIT = 8;
-
-function formatRatio(numerator: number, denominator: number): string {
-  if (denominator <= 0) return "—";
-  const value = numerator / denominator;
-  if (Number.isInteger(value)) return String(value);
-  return value.toFixed(1).replace(/\.0$/, "");
-}
 
 function formatDayLabel(dateKey: string, locale: string): string {
   const [y, m, d] = dateKey.split("-").map(Number);
@@ -137,7 +130,7 @@ function codingVsChatValue(codingAgents: number, chatAgents: number, locale: str
   return messagesFor(locale).insights.codingShare(pct);
 }
 
-/** Weekday with the highest activity volume among active days. */
+/** Weekday with the highest activity volume among active days (full name, 072). */
 function peakWeekdayValue(days: readonly ActivityDay[], locale: string): string {
   const volumes = [0, 0, 0, 0, 0, 0, 0];
   for (const day of days) {
@@ -155,68 +148,72 @@ function peakWeekdayValue(days: readonly ActivityDay[], locale: string): string 
     }
   }
   if (bestDow < 0 || bestVol <= 0) return "—";
-  // 2026-03-08 was a Sunday — use a known Sunday + offset for locale short name.
+  // 2026-03-08 was a Sunday — use a known Sunday + offset for the locale name.
   const probe = new Date(2026, 2, 8 + bestDow);
-  return probe.toLocaleDateString(locale, { weekday: "short" });
+  return probe.toLocaleDateString(locale, { weekday: "long" });
 }
 
-type LongestSession = { durationMs: number; active: boolean } | null;
-
-function longestSessionValue(longest: LongestSession, locale: string): string {
-  if (!longest) return "—";
-  const m = messagesFor(locale).insights;
-  return `${formatDuration(longest.durationMs, locale)}${longest.active ? ` · ${m.stillActive}` : ""}`;
+/** Share of prompted sessions with ≥2 prompts (072); empty creations excluded. */
+function multiTurnValue(
+  multiTurn: { multiTurnSessions: number; promptedSessions: number } | null,
+): string {
+  if (!multiTurn || multiTurn.promptedSessions <= 0) return "—";
+  return `${Math.round((multiTurn.multiTurnSessions / multiTurn.promptedSessions) * 100)}%`;
 }
 
 /**
- * Fixed 8-row insights: calendar habit → volume → structure (050 / 054). 069
- * moved Active days / Messages up to the KPI row and Peak weekday / Longest
- * session down from it.
+ * Fixed 8-row insights (072): habit (active days, busiest day, workspaces,
+ * coding share, streak, weekday) → session shape (multi-turn share, engaged time).
  */
 export function buildActivityInsights(input: {
   days: readonly ActivityDay[];
   summary: InsightSummary;
   /** Distinct workspaces among sessions (011). */
   workspaces: number;
-  /** Longest created→(archived | now) span from the registry (049 / 051). */
-  longestSession?: LongestSession;
+  /** Mean engaged time per session from `usage.agent-lifetime` (072). */
+  averageSessionMs?: number | null;
+  /** Sessions with ≥2 / ≥1 prompts from `usage.agent-lifetime` (072). */
+  multiTurn?: { multiTurnSessions: number; promptedSessions: number } | null;
   locale?: string;
+  today?: Date;
 }): InsightRow[] {
   const locale = input.locale ?? "en";
   const busiest = pickBusiestDay(input.days);
+  const activeDays = input.days.filter(isActiveDay).length;
+  const { longest } = computeStreaks(input.days, input.today);
   const codingAgents = input.summary.codingAgents ?? 0;
   const chatAgents = input.summary.chatAgents ?? 0;
-  const m = messagesFor(locale).insights;
+  const { insights: m, units } = messagesFor(locale);
+  const averageSessionMs = input.averageSessionMs;
 
   return [
+    { label: m.activeDays, value: activeDays.toLocaleString(locale) },
     {
       label: m.busiestDay,
       value: busiest ? formatBusiest(busiest, locale) : "—",
     },
-    { label: m.peakWeekday, value: peakWeekdayValue(input.days, locale) },
     { label: m.workspaces, value: formatCount(input.workspaces) },
-    { label: m.skillCalls, value: input.summary.skills.toLocaleString(locale) },
-    { label: m.mcpCalls, value: input.summary.mcp.toLocaleString(locale) },
-    {
-      label: m.promptsPerSession,
-      value: formatRatio(input.summary.messages, input.summary.agents),
-    },
-    { label: m.longestSession, value: longestSessionValue(input.longestSession ?? null, locale) },
     {
       label: m.codingVsChat,
       value: codingVsChatValue(codingAgents, chatAgents, locale),
+    },
+    { label: m.longestStreak, value: longest > 0 ? units.days(longest) : "—" },
+    { label: m.peakWeekday, value: peakWeekdayValue(input.days, locale) },
+    { label: m.multiTurnSessions, value: multiTurnValue(input.multiTurn ?? null) },
+    {
+      label: m.avgSessionDuration,
+      value: averageSessionMs == null ? "—" : formatDuration(averageSessionMs, locale),
     },
   ];
 }
 
 /**
- * Fixed 5-tile KPI row (069 / 070): sessions, prompts, top provider · share,
- * top model · share, active days.
+ * Fixed 4-tile KPI row (069 / 070 / 072): sessions, prompts, top provider ·
+ * share, top model · share. Active days lives in Insights.
  */
 export function buildActivityKpi(input: {
   sessions: number;
   messages: number;
-  days: readonly ActivityDay[];
   locale?: string;
   /** Provider rows after the provider filter. */
   providers: readonly ProviderUsageItem[];
@@ -237,6 +234,5 @@ export function buildActivityKpi(input: {
       label: m.topModel,
       value: topModelValue(input.providers, input.providerFilter),
     },
-    { label: m.activeDays, value: input.days.filter(isActiveDay).length.toLocaleString(locale) },
   ];
 }

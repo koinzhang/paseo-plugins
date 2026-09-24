@@ -4,7 +4,6 @@ import {
   classifyToolCall,
   matchSkillFile,
   normalizeProvider,
-  brandProviderId,
 } from "./classify.ts";
 
 describe("normalizeProvider", () => {
@@ -13,17 +12,9 @@ describe("normalizeProvider", () => {
     assert.equal(normalizeProvider("opencode"), "opencode");
     assert.equal(normalizeProvider("codex"), "codex");
     assert.equal(normalizeProvider("pi"), "pi");
-    assert.equal(normalizeProvider("omp"), "pi");
+    assert.equal(normalizeProvider("omp"), "omp");
     assert.equal(normalizeProvider("cursor"), "cursor");
     assert.equal(normalizeProvider("codebuddy-code"), "codebuddy");
-  });
-});
-
-describe("brandProviderId", () => {
-  it("keeps omp distinct from pi for chart colour", () => {
-    assert.equal(brandProviderId("omp"), "omp");
-    assert.equal(brandProviderId("pi"), "pi");
-    assert.equal(brandProviderId("claude/opus"), "claude");
   });
 });
 
