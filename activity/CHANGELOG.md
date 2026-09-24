@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Rescans no longer overwrite an event's real time with the later replay time: upserts keep the earliest timestamp, an event time can never be later than its first ingest, and existing rows are repaired on startup.
 - Oh My Pi (`omp`) is counted as its own provider everywhere instead of being merged into Pi; stored data is unchanged.
 - KPI fit-to-width accounts for the tile divider, so values that just fit no longer ellipsize by a pixel.
 

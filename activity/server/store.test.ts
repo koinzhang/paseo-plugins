@@ -289,4 +289,68 @@ for (const driver of ["sqlite", "jsonl"] as const) {
     assert.deepEqual([...store.terminalCallIds("agent-2")], ["z"]);
     store.close();
   });
+
+  test(`${driver}: rescans keep the earliest event time, never after first ingest (074)`, () => {
+    const store = createUsageStore({ dir: tempDir(), driver });
+    const ts = (callId: string) => store.getRow("agent-1", callId)?.ts ?? null;
+    store.upsertMany([
+      row({ callId: "known", ts: "2026-09-18T10:00:00.000Z" }),
+      row({ callId: "live", ts: null }),
+      row({ callId: "live-real", ts: null }),
+    ]);
+    store.upsertMany([
+      row({ callId: "known", ts: "2026-09-20T08:00:00.000Z", ingestedAt: "2026-09-20T08:00:01.000Z" }),
+      row({ callId: "live", ts: "2026-09-20T08:00:00.000Z", ingestedAt: "2026-09-20T08:00:01.000Z" }),
+      row({ callId: "live-real", ts: "2026-09-18T11:30:00.000Z" }),
+    ]);
+    assert.equal(ts("known"), "2026-09-18T10:00:00.000Z");
+    assert.equal(ts("live"), null);
+    assert.equal(ts("live-real"), "2026-09-18T11:30:00.000Z");
+    store.upsertMany([row({ callId: "known", ts: "2026-09-18T09:00:00.000Z" }), row({ callId: "known", ts: null })]);
+    assert.equal(ts("known"), "2026-09-18T09:00:00.000Z");
+
+    const message = {
+      agentId: "agent-1",
+      messageId: "m1",
+      workspaceId: "ws",
+      provider: "cursor",
+      model: null,
+      turnId: null,
+      seq: 1,
+      ts: null,
+      ingestedAt: "2026-09-18T12:00:00.000Z",
+    };
+    store.upsertUserMessages([message]);
+    store.upsertUserMessages([{ ...message, ts: "2026-09-20T08:00:00.000Z", ingestedAt: "2026-09-20T08:00:01.000Z" }]);
+    assert.equal(store.selectUserMessages({ agentId: "agent-1" })[0]?.ts, null);
+    store.upsertUserMessages([{ ...message, ts: "2026-09-18T11:00:00.000Z" }]);
+    assert.equal(store.selectUserMessages({ agentId: "agent-1" })[0]?.ts, "2026-09-18T11:00:00.000Z");
+    store.close();
+  });
+
+  test(`${driver}: reopening clears event times later than first ingest (074)`, () => {
+    const dir = tempDir();
+    const store = createUsageStore({ dir, driver });
+    store.upsertMany([
+      row({ callId: "stamped", ts: "2026-09-20T08:00:00.000Z" }),
+      row({ callId: "fine", ts: "2026-09-18T11:00:00.000Z" }),
+    ]);
+    store.upsertUserMessages([{
+      agentId: "agent-1",
+      messageId: "m1",
+      workspaceId: "ws",
+      provider: "cursor",
+      model: null,
+      turnId: null,
+      seq: 1,
+      ts: "2026-09-20T08:00:00.000Z",
+      ingestedAt: "2026-09-18T12:00:00.000Z",
+    }]);
+    store.close();
+    const reopened = createUsageStore({ dir, driver });
+    assert.equal(reopened.getRow("agent-1", "stamped")?.ts, null);
+    assert.equal(reopened.getRow("agent-1", "fine")?.ts, "2026-09-18T11:00:00.000Z");
+    assert.equal(reopened.selectUserMessages({ agentId: "agent-1" })[0]?.ts, null);
+    reopened.close();
+  });
 }

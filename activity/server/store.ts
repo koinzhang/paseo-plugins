@@ -212,6 +212,34 @@ CREATE INDEX IF NOT EXISTS idx_agents_created  ON agents(created_at);
 CREATE INDEX IF NOT EXISTS idx_agents_provider ON agents(provider);
 `;
 
+// Replayed history (ACP / OpenCode / Pi) is stamped at replay time, which is never
+// earlier than the real event, and no event happens after it was first ingested (074).
+function mergedTsSql(table: string): string {
+  return `CASE
+                    WHEN julianday(excluded.ts) IS NULL THEN ${table}.ts
+                    WHEN ${table}.ts IS NULL THEN
+                      CASE WHEN julianday(excluded.ts) <= julianday(${table}.ingested_at)
+                        THEN excluded.ts END
+                    WHEN julianday(excluded.ts) < julianday(${table}.ts) THEN excluded.ts
+                    ELSE ${table}.ts
+                  END`;
+}
+
+function mergeTs(previous: string | null, next: string | null, ingestedAt: string): string | null {
+  const nextTime = next == null ? Number.NaN : Date.parse(next);
+  if (Number.isNaN(nextTime)) return previous;
+  if (previous == null) return nextTime <= Date.parse(ingestedAt) ? next : null;
+  return nextTime < Date.parse(previous) ? next : previous;
+}
+
+function clampTs(ts: string | null, ingestedAt: string): string | null {
+  return ts != null && Date.parse(ts) > Date.parse(ingestedAt) ? null : ts;
+}
+
+const CLAMP_TS_SQL = ["tool_calls", "user_messages"].map(table =>
+  `UPDATE ${table} SET ts = NULL WHERE ts IS NOT NULL AND julianday(ts) > julianday(ingested_at);`,
+).join("\n");
+
 const UPSERT_SQL = `
 INSERT INTO tool_calls (
   agent_id, call_id, workspace_id, provider, turn_id, name, detail_type,
@@ -261,7 +289,7 @@ ON CONFLICT(agent_id, call_id) DO UPDATE SET
                   END,
   error_message = COALESCE(excluded.error_message, tool_calls.error_message),
   seq           = COALESCE(excluded.seq, tool_calls.seq),
-  ts            = COALESCE(excluded.ts, tool_calls.ts)
+  ts            = ${mergedTsSql("tool_calls")}
 `;
 
 const UPSERT_MESSAGE_SQL = `
@@ -273,7 +301,7 @@ ON CONFLICT(agent_id, message_id) DO UPDATE SET
   model = COALESCE(user_messages.model, excluded.model),
   turn_id = COALESCE(excluded.turn_id, user_messages.turn_id),
   seq = COALESCE(excluded.seq, user_messages.seq),
-  ts = COALESCE(excluded.ts, user_messages.ts)
+  ts = ${mergedTsSql("user_messages")}
 `;
 
 function messageMatchesFilter(row: UserMessageRow, filter: UserMessageFilter): boolean {
@@ -291,7 +319,7 @@ function mergeMessage(previous: UserMessageRow, next: UserMessageRow): UserMessa
     model: previous.model ?? next.model,
     turnId: next.turnId ?? previous.turnId,
     seq: next.seq ?? previous.seq,
-    ts: next.ts ?? previous.ts,
+    ts: mergeTs(previous.ts, next.ts, previous.ingestedAt),
     ingestedAt: previous.ingestedAt,
   };
 }
@@ -537,7 +565,7 @@ function mergeRow(previous: ToolCallRow, next: ToolCallRow): ToolCallRow {
     status,
     errorMessage: next.errorMessage ?? previous.errorMessage,
     seq: next.seq ?? previous.seq,
-    ts: next.ts ?? previous.ts,
+    ts: mergeTs(previous.ts, next.ts, previous.ingestedAt),
     ingestedAt: previous.ingestedAt,
   };
 }
@@ -668,6 +696,7 @@ class SqliteUsageStore implements UsageStore {
     this.db.exec(SCHEMA_SQL);
     ensureUserMessageModelColumn(this.db);
     ensureAgentProjectColumns(this.db);
+    this.db.exec(CLAMP_TS_SQL);
     this.insert = this.db.prepare(UPSERT_SQL);
     this.insertAgent = this.db.prepare(UPSERT_AGENT_SQL);
     this.insertMessage = this.db.prepare(UPSERT_MESSAGE_SQL);
@@ -912,6 +941,7 @@ class JsonlUsageStore implements UsageStore {
             this.messages.set(rowKey(row.agentId, row.messageId), {
               ...row,
               model: normalizeStoredModel(row.model),
+              ts: clampTs(row.ts, row.ingestedAt),
             });
           }
         } catch { /* Ignore incomplete lines, as with the other JSONL stores. */ }
@@ -929,7 +959,7 @@ class JsonlUsageStore implements UsageStore {
           }
           const row = parsed as ToolCallRow;
           if (!row.agentId || !row.callId) continue;
-          this.rows.set(rowKey(row.agentId, row.callId), row);
+          this.rows.set(rowKey(row.agentId, row.callId), { ...row, ts: clampTs(row.ts, row.ingestedAt) });
         } catch {
           continue;
         }

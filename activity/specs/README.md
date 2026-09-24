@@ -100,6 +100,7 @@
 | [071-omp-provider-split](./071-omp-provider-split/) | 已实现，页面验收待完成 | Oh My Pi（`omp`）不再并入 Pi，所有视图独立统计；删除 `brandProviderId` |
 | [072-insights-habits](./072-insights-habits/) | 已实现，页面验收待完成 | Insights 8 行重排（Active days、Longest streak、多轮会话占比、平均会话投入时长等）；`usage.agent-lifetime` 加 `averageEngagedMs` / 多轮会话计数 |
 | [073-global-kpi-comparison](./073-global-kpi-comparison/) | 已实现，页面验收待完成 | Global 四格 KPI 增加相邻 7 日对比；Top provider / model 显示上一窗口榜首名称 |
+| [074-timestamp-preservation](./074-timestamp-preservation/) | 已实现 | 重扫不再用回放时间覆盖事件时间：取更早且不晚于首次入库；启动时修复存量 |
 ## 约定
 
 每个编号目录通常含：
