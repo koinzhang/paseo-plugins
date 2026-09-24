@@ -40,7 +40,7 @@
 | [013-pill-modal](./013-pill-modal/) | 已回滚 | 双层 popover 判定为宿主缺陷；记录排查与结论，插件侧不绕行 |
 | [014-shell-file-ops](./014-shell-file-ops/) | 已实现 | Shell / File reads·writes KPI；互斥口径（low-skill 不计 Shell） |
 | [015-model-usage](./015-model-usage/) | 已实现 | user_message 打 model 戳；Most used models / Top model |
-| [016-provider-filter-limit](./016-provider-filter-limit/) | 已实现 | Provider 筛选栏最多 5 个，按 agent / message 数排名 |
+| [016-provider-filter-limit](./016-provider-filter-limit/) | 已实现（069 取消上限） | Provider 筛选栏最多 5 个，按 agent / message 数排名 |
 | [017-insights-reorder](./017-insights-reorder/) | 已实现 | 恢复 Top provider；去掉 Tools per message；日历→偏好→结构重排 |
 | [018-coding-vs-chat-agents](./018-coding-vs-chat-agents/) | 已实现 | Coding vs chat 按 agent 会话二分；空会话排除 |
 | [019-coding-mutating-ops](./019-coding-mutating-ops/) | 已实现 | Coding = 写/改文件或写盘 shell（白名单启发式） |
@@ -95,6 +95,8 @@
 | [066-shared-ui-i18n](./066-shared-ui-i18n/) | 已实现，页面验收待完成 | 公共组件 `client/ui.tsx`；三图统一浮动 `ChartTooltip`（Timeline 去 readout）；文案随 Paseo app 语言（en / zh-CN）；两 popover 宽度统一 |
 | [067-workspace-header-button](./067-workspace-header-button/) | 已实现，页面验收待完成 | 每个 workspace header 增加 Activity 图标按钮，点击在 Explorer 打开 Workspace Activity；面板挂载时隐藏，宿主 tab 缓存上限见 plan |
 | [068-workspace-panel-background](./068-workspace-panel-background/) | 已实现，页面验收待完成 | Workspace Activity 面板透出 Explorer 底色，与 Files、Changes 一致 |
+| [069-global-sessions-refresh](./069-global-sessions-refresh/) | 已实现，页面验收待完成 | Global：会话统称 Sessions；移除 range chips；`Provider: All ▾` 下拉列全部 provider；KPI 重构（占比 / Active days）；热力图隐藏模式切换；新增 Providers 排行 |
+| [070-metric-switch-projects](./070-metric-switch-projects/) | 已实现，页面验收待完成 | KPI 5 格（去 Longest streak）；热力图 / 30 天直方图 / Timeline 右上角 Sessions·Prompts·Skill·MCP 切换；Messages → Prompts；Providers 下方 Projects 排行（`usage.by-project`，agents 记录 cwd / project_root） |
 ## 约定
 
 每个编号目录通常含：
@@ -106,3 +108,13 @@
 | `tasks.md` | 任务与验证勾选 |
 | `research.md` | 源码依据与开放问题（按需） |
 | `contracts/` | schema / RPC 草稿（zod 为运行时真相源） |
+
+## 上游源码版本锚点
+
+插件 API 结论以**上游源码 + 已安装运行时**为依据，不以 `main` HEAD 为准（HEAD 常领先于已发布契约）。
+
+- 刷新本地只读参考 checkout：`./scripts/sync-paseo.sh`（同级 `../paseo`，fetch + fast-forward；`--clone` 首次浅克隆）
+- 仓库**不引入 git submodule**：jj 不支持，submodule 内容不会出现在工作副本里，等于查不到源码
+- 凡 `research.md` 中「已验证」的 API / 契约结论，同时记录锚点——上游 commit + 当时 `paseo --version`（脚本末尾输出可复制块）
+- 锚点与运行时冲突时，以 `paseo-plugin.json` 的 `requirements.paseo` 与实机行为为准
+- 脚本只在 checkout 正好等于 `origin/main` 时给出锚点；有本地提交 / 在其他分支时报错退出，避免把非上游 commit 当成依据

@@ -68,20 +68,32 @@ function pickBusiestDay(days: readonly ActivityDay[]): ActivityDay | null {
 function formatBusiest(day: ActivityDay, locale: string): string {
   const label = formatDayLabel(day.date, locale);
   const { units } = messagesFor(locale);
-  if (day.messages > 0) return `${label} · ${units.messages(day.messages)}`;
+  if (day.messages > 0) return `${label} · ${units.prompts(day.messages)}`;
   const calls = day.skills + day.mcp;
   if (calls > 0) return `${label} · ${units.calls(calls)}`;
-  if (day.agents > 0) return `${label} · ${units.agents(day.agents)}`;
+  if (day.agents > 0) return `${label} · ${units.sessions(day.agents)}`;
   return label;
 }
 
-/** Messages-weighted top provider (050); label only — no share (052 follow-up). */
+/** `label · pct%`; `—` when there is no label or no denominator (069). */
+function withShare(label: string | undefined, count: number, total: number): string {
+  if (!label || total <= 0) return "—";
+  return `${label} · ${Math.round((count / total) * 100)}%`;
+}
+
+/**
+ * Messages-weighted top provider (050) with its share of all providers' messages
+ * (069). A selected provider is shown with its own share.
+ */
 function topProviderValue(
   providers: readonly ProviderUsageItem[],
+  allProviders: readonly ProviderUsageItem[],
   providerFilter: string,
 ): string {
+  const total = allProviders.reduce((sum, p) => sum + p.messageCount, 0);
   if (providerFilter !== "all") {
-    return providers.find((p) => p.provider === providerFilter)?.label ?? "—";
+    const selected = providers.find((p) => p.provider === providerFilter);
+    return withShare(selected?.label, selected?.messageCount ?? 0, total);
   }
   const ranked = [...providers]
     .filter((p) => p.messageCount > 0)
@@ -89,10 +101,11 @@ function topProviderValue(
       (a, b) =>
         b.messageCount - a.messageCount || a.provider.localeCompare(b.provider),
     );
-  return ranked[0]?.label ?? "—";
+  const top = ranked[0];
+  return withShare(top?.label, top?.messageCount ?? 0, total);
 }
 
-/** Messages-weighted top model (050); label only — no share (052 follow-up). */
+/** Messages-weighted top model (050) with its share of in-filter model messages (069). */
 function topModelValue(
   providers: readonly ProviderUsageItem[],
   providerFilter: string,
@@ -112,7 +125,8 @@ function topModelValue(
   );
   const top = ranked[0];
   if (!top || top[1] <= 0) return "—";
-  return formatDisplayName(top[0]);
+  const total = ranked.reduce((sum, [, count]) => sum + count, 0);
+  return withShare(formatDisplayName(top[0]), top[1], total);
 }
 
 /** Share of active agents that are coding (018); empty creations excluded. */
@@ -146,38 +160,48 @@ function peakWeekdayValue(days: readonly ActivityDay[], locale: string): string 
   return probe.toLocaleDateString(locale, { weekday: "short" });
 }
 
+type LongestSession = { durationMs: number; active: boolean } | null;
+
+function longestSessionValue(longest: LongestSession, locale: string): string {
+  if (!longest) return "—";
+  const m = messagesFor(locale).insights;
+  return `${formatDuration(longest.durationMs, locale)}${longest.active ? ` · ${m.stillActive}` : ""}`;
+}
+
 /**
- * Fixed 8-row insights: calendar habit → in-window volume → structure (050;
- * Workspaces moved in from the KPI row in 054).
+ * Fixed 8-row insights: calendar habit → volume → structure (050 / 054). 069
+ * moved Active days / Messages up to the KPI row and Peak weekday / Longest
+ * session down from it.
  */
 export function buildActivityInsights(input: {
   days: readonly ActivityDay[];
   summary: InsightSummary;
-  /** Distinct workspaces among in-window agents (011); was KPI tile 3 before 054. */
+  /** Distinct workspaces among sessions (011). */
   workspaces: number;
+  /** Longest created→(archived | now) span from the registry (049 / 051). */
+  longestSession?: LongestSession;
   locale?: string;
 }): InsightRow[] {
   const locale = input.locale ?? "en";
-  const activeDays = input.days.filter(isActiveDay).length;
   const busiest = pickBusiestDay(input.days);
   const codingAgents = input.summary.codingAgents ?? 0;
   const chatAgents = input.summary.chatAgents ?? 0;
   const m = messagesFor(locale).insights;
 
   return [
-    { label: m.activeDays, value: String(activeDays) },
     {
       label: m.busiestDay,
       value: busiest ? formatBusiest(busiest, locale) : "—",
     },
+    { label: m.peakWeekday, value: peakWeekdayValue(input.days, locale) },
     { label: m.workspaces, value: formatCount(input.workspaces) },
-    { label: m.messages, value: input.summary.messages.toLocaleString(locale) },
     { label: m.skillCalls, value: input.summary.skills.toLocaleString(locale) },
     { label: m.mcpCalls, value: input.summary.mcp.toLocaleString(locale) },
     {
-      label: m.messagesPerAgent,
+      label: m.promptsPerSession,
       value: formatRatio(input.summary.messages, input.summary.agents),
     },
+    { label: m.longestSession, value: longestSessionValue(input.longestSession ?? null, locale) },
     {
       label: m.codingVsChat,
       value: codingVsChatValue(codingAgents, chatAgents, locale),
@@ -186,42 +210,33 @@ export function buildActivityInsights(input: {
 }
 
 /**
- * Fixed 6-tile KPI row (050): agents, longest agent, top provider, top model,
- * peak weekday (054), longest streak.
+ * Fixed 5-tile KPI row (069 / 070): sessions, prompts, top provider · share,
+ * top model · share, active days.
  */
 export function buildActivityKpi(input: {
-  agents: number;
-  /** Active days drive the peak-weekday tile (054); was an insights row before. */
+  sessions: number;
+  messages: number;
   days: readonly ActivityDay[];
   locale?: string;
-  longestStreak: number;
-  /** Longest created→(archived | now) span from the registry (049 / 051). */
-  longestAgent: { durationMs: number; active: boolean } | null;
+  /** Provider rows after the provider filter. */
   providers: readonly ProviderUsageItem[];
+  /** Every provider; denominator of the top-provider share. */
+  allProviders: readonly ProviderUsageItem[];
   providerFilter: string;
 }): InsightRow[] {
-  const streak = input.longestStreak;
-  const longest = input.longestAgent;
   const locale = input.locale ?? "en";
-  const messages = messagesFor(locale);
-  const m = messages.kpi;
+  const m = messagesFor(locale).kpi;
   return [
-    { label: m.agents, value: formatCount(input.agents) },
-    {
-      label: m.longestAgent,
-      value: longest
-        ? `${formatDuration(longest.durationMs, locale)}${longest.active ? ` · ${m.stillActive}` : ""}`
-        : "—",
-    },
+    { label: m.sessions, value: input.sessions.toLocaleString(locale) },
+    { label: m.prompts, value: input.messages.toLocaleString(locale) },
     {
       label: m.topProvider,
-      value: topProviderValue(input.providers, input.providerFilter),
+      value: topProviderValue(input.providers, input.allProviders, input.providerFilter),
     },
     {
       label: m.topModel,
       value: topModelValue(input.providers, input.providerFilter),
     },
-    { label: m.peakWeekday, value: peakWeekdayValue(input.days, locale) },
-    { label: m.longestStreak, value: messages.units.days(streak) },
+    { label: m.activeDays, value: input.days.filter(isActiveDay).length.toLocaleString(locale) },
   ];
 }

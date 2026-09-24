@@ -7,12 +7,12 @@
 
 | Scope | 入口 | 主组件 | 聚合轴 | 时间窗 |
 |---|---|---|---|---|
-| **Global** | Sidebar `Activity` · Command Center `Activity` | `client/global-surface.tsx` | Provider | All / Today / 7D / 30D |
+| **Global** | Sidebar `Activity` · Command Center `Activity` | `client/global-surface.tsx` | Provider 下拉（069） | 全部时间（069 移除 range chips） |
 | **Workspace** | Explorer panel · CC `Workspace Activity` | `client/workspace-panel.tsx`（`client/workspace/`） | Agent | 固定 All（027：不恢复时间 chips） |
 | **Agent** | Agent workspace tab · Composer pills · CC `Agent Activity` | `client/panel.tsx` + `pill.tsx` + `attention-pill.tsx`（040） | 本 agent 工具；同仓其它会话 attention 捷径 | 无（全程） |
 
 ```text
-Global Activity     → 跨 workspace · 习惯 / provider 对比 · KPI（Agents / Longest agent / Top provider / Top model / Peak weekday / Longest streak，050/054）· 热力图 · Agent creations 直方图（固定 30 天）· 最近 168 小时活动时间线（059）· Insights / Models
+Global Activity     → 跨 workspace · 习惯 / provider 对比 · KPI（Sessions / Prompts / Top provider · 占比 / Top model · 占比 / Active days，069/070）· 热力图 / 30 天直方图 / 168 小时 Timeline（各自 Sessions·Prompts·Skill·MCP 切换，070）· Providers / Projects 排行（069/070）· Insights / Models
 Workspace Activity  → 单 workspace · Agents 运营（排序筛选归档）· KPI · Terminals（host SDK：列表 / 预览 / 关闭）· Top skills/MCP
 Agent Activity      → 单 agent · 工具明细（Skills / MCP）· Pill 快捷入口
 ```
@@ -56,12 +56,13 @@ server/          handlers · store · ingest · background-sync · hooks
 | `usage.recent-mcp-calls` | — | 必填 | — | Workspace MCP 时间线 |
 | `usage.mcp-by-tool` | ✓ | ✓ | ✓ | 三层 |
 | `usage.by-provider` | — | ✓ | ✓ | Global |
+| `usage.by-project` | — | — | —（全时段） | Global（Projects 排行，provider 过滤；070） |
 | `usage.agents` | — | ✓ | ✓ | Workspace |
 | `usage.agent-lifetime` | — | — | —（全时段） | Global（最长寿命，provider 过滤；051 起含活跃 agent） |
 | `usage.agent-creations` | — | — | ✓ | Global（Agent creations 直方图，日柱 provider 软渐变；051/055） |
 | `usage.host-info` | — | — | — | Workspace（cwd `~` 折叠） |
 | `usage.activity-by-day` | — | ✓ | ✓ | Global |
-| `usage.activity-by-hour` | — | — | 固定 168h | Global（059；provider 过滤，range chips 不参与） |
+| `usage.activity-by-hour` | — | — | 固定 168h | Global（059；provider 过滤） |
 | `usage.list` / `usage.export` | ✓ | — | ✓ | 无 UI（契约保留） |
 
 ## 3. 注册入口（`index.client.tsx`）

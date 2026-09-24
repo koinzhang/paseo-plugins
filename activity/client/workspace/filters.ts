@@ -27,7 +27,7 @@ export function formatAgentMeta(
   const { units } = messagesFor(locale);
   if (showFields.has("provider")) parts.push(providerLabel(item.provider));
   if (showFields.has("calls")) parts.push(units.calls(item.callCount));
-  if (showFields.has("messages")) parts.push(units.messages(item.messageCount));
+  if (showFields.has("messages")) parts.push(units.prompts(item.messageCount));
   if (showFields.has("updated")) {
     const at = agentUpdatedAt(item, byId);
     if (at) parts.push(formatActivityTime(at, locale));

@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PanResponder, Pressable, ScrollView, Text, View } from "react-native";
 import type { ActivityHour } from "../shared/usage.ts";
+import { metricValue, type ActivityMetric } from "../shared/activity.ts";
 import { useMeasuredWidth } from "./measured-width.ts";
 import { mixColor } from "./color-mix.ts";
 import { TEXT, sectionTitle, titleGap } from "./design-tokens.ts";
 import { messagesFor } from "../shared/i18n.ts";
-import { ChartTooltip, InlineEmpty } from "./ui.tsx";
+import { ChartTooltip, InlineEmpty, MetricStepper } from "./ui.tsx";
 
 type ThemeColors = {
   accent: string;
@@ -48,7 +49,6 @@ function AreaSeries({
   slot,
   stroke,
   fill,
-  flip,
 }: {
   values: readonly number[];
   max: number;
@@ -56,8 +56,6 @@ function AreaSeries({
   slot: number;
   stroke: string;
   fill: string;
-  /** Mirror the series below the axis. */
-  flip?: boolean;
 }) {
   // Leave room for the stroke band so the peak is never clipped.
   const usable = Math.max(1, height - STROKE - 1);
@@ -69,7 +67,6 @@ function AreaSeries({
         height,
         flexDirection: "row",
         overflow: "hidden",
-        transform: flip ? [{ scaleY: -1 }] : undefined,
       }}
     >
       {values.slice(0, -1).map((value, index) => {
@@ -127,11 +124,10 @@ export function HourlyActivityTimeline({
   const [width, widthRef, onWidthLayout] = useMeasuredWidth("global:timeline");
   const [hovered, setHovered] = useState<string | null>(null);
   const [plotTop, setPlotTop] = useState(0);
+  const [metric, setMetric] = useState<ActivityMetric>("sessions");
   const m = messagesFor(locale);
 
-  const topHeight = compact ? 44 : 58;
-  const bottomHeight = compact ? 22 : 30;
-  const plotHeight = topHeight + 1 + bottomHeight;
+  const plotHeight = compact ? 67 : 89;
   const gaps = Math.max(1, hours.length - 1);
   const slot = width > 0 ? width / VISIBLE_HOURS : 0;
   const contentWidth = slot > 0 ? gaps * slot : 0;
@@ -174,16 +170,10 @@ export function HourlyActivityTimeline({
     scrollRef.current?.scrollToEnd({ animated: false });
   }, [resetKey]);
 
-  const { messages, agents, messagePeak, agentPeak } = useMemo(() => {
-    const messages = hours.map((hour) => hour.messages);
-    const agents = hours.map((hour) => hour.agents);
-    return {
-      messages,
-      agents,
-      messagePeak: messages.reduce((peak, value) => Math.max(peak, value), 0),
-      agentPeak: agents.reduce((peak, value) => Math.max(peak, value), 0),
-    };
-  }, [hours]);
+  const { values, peak } = useMemo(() => {
+    const values = hours.map((hour) => metricValue(hour, metric));
+    return { values, peak: values.reduce((max, value) => Math.max(max, value), 0) };
+  }, [hours, metric]);
 
   /** Local midnights become axis ticks. */
   const dayTicks = useMemo(
@@ -205,9 +195,6 @@ export function HourlyActivityTimeline({
   const active = activeIndex >= 0 ? hours[activeIndex] : undefined;
 
   const fill = mixColor(colors.surface2, colors.accent, 0.22);
-  const agentStroke = mixColor(colors.surface2, colors.accent, 0.68);
-  const skillSwatch = mixColor(colors.surface2, colors.accent, 0.46);
-  const mcpSwatch = mixColor(colors.surface2, colors.accent, 0.3);
   // Softened toward the surface so the hover cursor reads grey, not near-black.
   const cursorColor = mixColor(colors.surface2, colors.foregroundMuted, 0.55);
 
@@ -215,39 +202,11 @@ export function HourlyActivityTimeline({
   const series = useMemo(
     () => (
       <>
-        <AreaSeries
-          values={messages}
-          max={messagePeak}
-          height={topHeight}
-          slot={slot}
-          stroke={colors.accent}
-          fill={fill}
-        />
+        <AreaSeries values={values} max={peak} height={plotHeight} slot={slot} stroke={colors.accent} fill={fill} />
         <View style={{ height: 1, backgroundColor: colors.border }} />
-        <AreaSeries
-          values={agents}
-          max={agentPeak}
-          height={bottomHeight}
-          slot={slot}
-          stroke={agentStroke}
-          fill={fill}
-          flip
-        />
       </>
     ),
-    [
-      messages,
-      agents,
-      messagePeak,
-      agentPeak,
-      topHeight,
-      bottomHeight,
-      slot,
-      colors.accent,
-      colors.border,
-      fill,
-      agentStroke,
-    ],
+    [values, peak, plotHeight, slot, colors.accent, colors.border, fill],
   );
 
   const hotspots = useMemo(
@@ -268,7 +227,7 @@ export function HourlyActivityTimeline({
           <Pressable
             key={hour.key}
             focusable
-            accessibilityLabel={`${hourRangeLabel(hour.start, locale)}: ${m.units.messages(hour.messages)}, ${m.units.agents(hour.agents)}, ${m.units.skills(hour.skills)}, ${m.units.mcp(hour.mcp)}`}
+            accessibilityLabel={`${hourRangeLabel(hour.start, locale)}: ${m.units.sessions(hour.agents)}, ${m.units.prompts(hour.messages)}, ${m.units.skills(hour.skills)}, ${m.units.mcp(hour.mcp)}`}
             onHoverIn={() => setHovered(hour.key)}
             onHoverOut={() => setHovered(null)}
             onFocus={() => setHovered(hour.key)}
@@ -305,10 +264,7 @@ export function HourlyActivityTimeline({
         <Text style={{ ...sectionTitle(compact), color: colors.foreground }}>
           {m.timeline.title}
         </Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-          <Text style={{ ...TEXT.meta, color: colors.accent }}>{m.timeline.legendMessages}</Text>
-          <Text style={{ ...TEXT.meta, color: agentStroke }}>{m.timeline.legendAgents}</Text>
-        </View>
+        <MetricStepper value={metric} onChange={setMetric} colors={colors} />
       </View>
 
       {hours.length === 0 || slot === 0 ? (
@@ -393,12 +349,18 @@ export function HourlyActivityTimeline({
           containerWidth={width}
           clampTop={false}
           title={hourRangeLabel(active.start, locale)}
-          rows={[
-            { label: m.common.messages, value: active.messages.toLocaleString(locale), color: colors.accent },
-            { label: m.common.agents, value: active.agents.toLocaleString(locale), color: agentStroke },
-            { label: m.common.skills, value: active.skills.toLocaleString(locale), color: skillSwatch },
-            { label: m.common.mcp, value: active.mcp.toLocaleString(locale), color: mcpSwatch },
-          ]}
+          rows={(
+            [
+              ["sessions", m.common.sessions],
+              ["prompts", m.common.prompts],
+              ["skills", m.common.skills],
+              ["mcp", m.common.mcp],
+            ] as const
+          ).map(([id, label]) => ({
+            label,
+            value: metricValue(active, id).toLocaleString(locale),
+            color: id === metric ? colors.accent : undefined,
+          }))}
           colors={colors}
         />
       ) : null}

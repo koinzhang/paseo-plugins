@@ -314,7 +314,7 @@ export function WorkspaceActivityPanel({
     { label: m.kpi.shellCalls, value: (summary.data?.shellCalls ?? 0).toLocaleString(locale) },
     { label: m.kpi.fileReads, value: (summary.data?.fileReads ?? 0).toLocaleString(locale) },
     { label: m.kpi.fileWrites, value: (summary.data?.fileWrites ?? 0).toLocaleString(locale) },
-    { label: m.kpi.messages, value: (summary.data?.messageCount ?? 0).toLocaleString(locale) },
+    { label: m.kpi.prompts, value: (summary.data?.messageCount ?? 0).toLocaleString(locale) },
   ];
   const retry = () => {
     for (const query of [summary, agents, skills, recentSkillCalls, mcp, recentMcpCalls]) {

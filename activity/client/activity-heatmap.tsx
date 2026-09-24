@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import type { ActivityDay } from "../shared/usage.ts";
-import { activityLevel, buildActivityCalendar, type HeatmapMode } from "../shared/activity.ts";
+import { activityLevel, buildActivityCalendar, metricValue, type ActivityMetric, type HeatmapMode } from "../shared/activity.ts";
 import { useAppLanguage } from "./use-app-language.ts";
 import { useMeasuredWidth } from "./measured-width.ts";
 import { ACTIVITY_MIX_STEPS, mixColor } from "./color-mix.ts";
 export { computeStreaks, type HeatmapMode } from "../shared/activity.ts";
 import { FONT_SIZE, sectionTitle, titleGap } from "./design-tokens.ts";
 import { messagesFor } from "../shared/i18n.ts";
-import { ChartTooltip, TextTabs } from "./ui.tsx";
+import { ChartTooltip, MetricStepper } from "./ui.tsx";
 
 type ThemeColors = {
   accent: string; border: string; foreground: string; foregroundMuted: string;
@@ -17,8 +17,7 @@ type ThemeColors = {
 
 type HoveredMonth = { year: number; month: number };
 
-// Month-axis labels and the mode tabs share the label size: both are secondary labels
-// under the section title, so a separate 13 / 15 scale made the tabs outrank the axis.
+// Month-axis labels stay at the secondary label size under the section title.
 const LABEL_FONT_SIZE = FONT_SIZE.label;
 
 function cellInMonth(dateKey: string, hovered: HoveredMonth | null): boolean {
@@ -27,11 +26,11 @@ function cellInMonth(dateKey: string, hovered: HoveredMonth | null): boolean {
   return year === hovered.year && month === hovered.month + 1;
 }
 
-export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChange, modeOptions }: {
+export function ActivityHeatmap({ days, from, colors, compact, mode }: {
   days: readonly ActivityDay[]; from?: string; colors: ThemeColors; compact?: boolean;
-  mode: HeatmapMode; onModeChange: (mode: HeatmapMode) => void;
-  modeOptions: ReadonlyArray<{ id: HeatmapMode; label: string }>;
+  mode: HeatmapMode;
 }) {
+  const [metric, setMetric] = useState<ActivityMetric>("sessions");
   const locale = useAppLanguage();
   const [width, widthRef, onWidthLayout] = useMeasuredWidth("global:heatmap");
   const [gridTop, setGridTop] = useState(0);
@@ -44,7 +43,16 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
     setHovered(null);
     setHoveredMonth(null);
   }, [from, mode, days]);
-  const { weeks, months, max } = useMemo(() => buildActivityCalendar(days, mode, from, new Date(), locale), [days, mode, from, locale]);
+  const { weeks, months } = useMemo(() => buildActivityCalendar(days, mode, from, new Date(), locale), [days, mode, from, locale]);
+  // Intensity follows the selected metric only (070), not the four-metric total.
+  const max = useMemo(
+    () =>
+      weeks.flat().reduce(
+        (peak, cell) => (cell.future || cell.excluded ? peak : Math.max(peak, metricValue(cell, metric))),
+        0,
+      ),
+    [weeks, metric],
+  );
   const gap = compact ? 2 : 3;
   // Fit the full year into the measured width (no min floor — avoid horizontal overflow).
   const cellSize =
@@ -70,8 +78,8 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
     mode === "weekly" ? m.heatmap.weekContaining(date) : mode === "cumulative" ? m.heatmap.through(date) : date;
   const tooltipRows = active
     ? [
-        { label: m.common.messages, value: active.messages.toLocaleString(locale) },
-        { label: m.common.agents, value: active.agents.toLocaleString(locale) },
+        { label: m.common.sessions, value: active.agents.toLocaleString(locale) },
+        { label: m.common.prompts, value: active.messages.toLocaleString(locale) },
         { label: m.common.skills, value: active.skills.toLocaleString(locale) },
         { label: m.common.mcp, value: active.mcp.toLocaleString(locale) },
       ]
@@ -86,7 +94,7 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
     >
       <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <Text style={{ ...sectionTitle(compact), color: colors.foreground }}>{m.heatmap.title}</Text>
-        <TextTabs options={modeOptions} value={mode} onChange={onModeChange} colors={colors} variant="chart" gap={compact ? 14 : 20} />
+        <MetricStepper value={metric} onChange={setMetric} colors={colors} />
       </View>
       <ScrollView
         horizontal
@@ -103,7 +111,7 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
                 {week.map(cell => {
                   const hidden = cell.future || cell.excluded;
                   const inMonth = cellInMonth(cell.key, hoveredMonth);
-                  const level = activityLevel(cell.total, max);
+                  const level = activityLevel(metricValue(cell, metric), max);
                   const base = palette[level]!;
                   // Focus = leave target month as-is; gently mute others toward surface2
                   // (same space as empty cells — preserves activity hue, avoids surface0 parse issues).
@@ -120,7 +128,7 @@ export function ActivityHeatmap({ days, from, colors, compact, mode, onModeChang
                       : 1;
                   return (
                     <Pressable key={cell.key} disabled={hidden} accessibilityRole="button"
-                      accessibilityLabel={`${periodLabel(cell.key)}: ${m.units.messages(cell.messages)}, ${m.units.agents(cell.agents)}, ${m.units.skills(cell.skills)}, ${m.units.mcp(cell.mcp)}`}
+                      accessibilityLabel={`${periodLabel(cell.key)}: ${m.units.prompts(cell.messages)}, ${m.units.sessions(cell.agents)}, ${m.units.skills(cell.skills)}, ${m.units.mcp(cell.mcp)}`}
                       accessibilityState={{ selected: activeKey === cell.key }}
                       onHoverIn={() => setHovered(cell.key)} onHoverOut={() => setHovered(null)}
                       onFocus={() => setHovered(cell.key)} onBlur={() => setHovered(null)}

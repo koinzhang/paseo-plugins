@@ -70,7 +70,7 @@ function StatTile({ item, colors, dense, compact, bordered }: {
 }) {
   const [width, setWidth] = useState(0);
   const padding = dense ? 8 : 12;
-  const available = Math.max(0, width - padding * 2);
+  const available = Math.max(0, width - padding * 2 - (bordered ? 1 : 0));
   return (
     <View
       onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
@@ -91,6 +91,7 @@ function StatTile({ item, colors, dense, compact, bordered }: {
         text={item.value}
         available={available}
         base={FONT_SIZE.metric}
+        min={FONT_SIZE.caption}
         lineHeight={22}
         color={colors.foreground}
         weight={FONT_WEIGHT.medium}

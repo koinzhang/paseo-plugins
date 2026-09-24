@@ -7,6 +7,7 @@ import {
   createAgentCreationsHandler,
   createAgentLifetimeHandler,
   createAgentsHandler,
+  createByProjectHandler,
   createByProviderHandler,
   createExportHandler,
   createListHandler,
@@ -30,6 +31,7 @@ import {
   usageAgentLifetimeRpc,
   usageAgentsRpc,
   usageAgentUnarchiveRpc,
+  usageByProjectRpc,
   usageByProviderRpc,
   usageExportRpc,
   usageHostInfoRpc,
@@ -75,6 +77,7 @@ export default function contribute(server: PluginServerContext) {
   );
   server.handle(usageMcpByToolRpc, read(usageMcpByToolRpc, createMcpByToolHandler(store)));
   server.handle(usageByProviderRpc, read(usageByProviderRpc, createByProviderHandler(store)));
+  server.handle(usageByProjectRpc, read(usageByProjectRpc, createByProjectHandler(store)));
   server.handle(usageAgentsRpc, read(usageAgentsRpc, createAgentsHandler(store)));
   server.handle(usageAgentUnarchiveRpc, createUnarchiveAgentHandler(store));
   server.handle(usageActivityByDayRpc, read(usageActivityByDayRpc, createActivityByDayHandler(store)));

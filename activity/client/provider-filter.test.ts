@@ -1,10 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import {
-  PROVIDER_FILTER_LIMIT,
-  selectProviderOptions,
-  type ProviderFilterCandidate,
-} from "./provider-filter.ts";
+import { selectProviderOptions, type ProviderFilterCandidate } from "./provider-filter.ts";
+
+const LIMIT = 5;
 
 function candidate(
   provider: string,
@@ -14,8 +12,14 @@ function candidate(
   return { provider, label: provider.toUpperCase(), agentCount, messageCount };
 }
 
-test("PROVIDER_FILTER_LIMIT is 5", () => {
-  assert.equal(PROVIDER_FILTER_LIMIT, 5);
+test("lists every provider by default (069)", () => {
+  const providers = ["a", "b", "c", "d", "e", "f", "g"].map((id, index) =>
+    candidate(id, 7 - index, 0),
+  );
+  assert.deepEqual(
+    selectProviderOptions(providers, "all").map((item) => item.id),
+    ["a", "b", "c", "d", "e", "f", "g"],
+  );
 });
 
 test("ranks by agent count, then message count", () => {
@@ -40,12 +44,12 @@ test("breaks ties by provider id", () => {
   );
 });
 
-test("caps the list at the limit", () => {
+test("caps the list at an explicit limit", () => {
   const providers = ["a", "b", "c", "d", "e", "f", "g"].map((id, index) =>
     candidate(id, 7 - index, 0),
   );
-  const options = selectProviderOptions(providers, "all");
-  assert.equal(options.length, PROVIDER_FILTER_LIMIT);
+  const options = selectProviderOptions(providers, "all", LIMIT);
+  assert.equal(options.length, LIMIT);
   assert.deepEqual(
     options.map((item) => item.id),
     ["a", "b", "c", "d", "e"],
@@ -56,8 +60,8 @@ test("keeps a selected provider that fell out of the top list", () => {
   const providers = ["a", "b", "c", "d", "e", "f"].map((id, index) =>
     candidate(id, 6 - index, 0),
   );
-  const options = selectProviderOptions(providers, "f");
-  assert.equal(options.length, PROVIDER_FILTER_LIMIT);
+  const options = selectProviderOptions(providers, "f", LIMIT);
+  assert.equal(options.length, LIMIT);
   assert.deepEqual(
     options.map((item) => item.id),
     ["a", "b", "c", "d", "f"],
@@ -68,7 +72,7 @@ test("keeps order when the selected provider is already in the top list", () => 
   const providers = ["a", "b", "c", "d", "e", "f"].map((id, index) =>
     candidate(id, 6 - index, 0),
   );
-  const options = selectProviderOptions(providers, "b");
+  const options = selectProviderOptions(providers, "b", LIMIT);
   assert.deepEqual(
     options.map((item) => item.id),
     ["a", "b", "c", "d", "e"],

@@ -1,6 +1,3 @@
-/** Max provider chips shown in the global Activity filter bar (excludes All). */
-export const PROVIDER_FILTER_LIMIT = 5;
-
 export type ProviderFilterCandidate = {
   provider: string;
   label: string;
@@ -9,14 +6,15 @@ export type ProviderFilterCandidate = {
 };
 
 /**
- * Rank provider chips for the global filter bar: most agents first, then most
- * messages, then provider id. Caps the list at `limit`; a selected provider that
- * fell out of the top `limit` replaces the last entry so the filter stays visible.
+ * Rank provider options for the global filter dropdown: most sessions first,
+ * then most messages, then provider id. Uncapped by default (069); with a
+ * `limit`, a selected provider that fell out of the top `limit` replaces the
+ * last entry so the filter stays visible.
  */
 export function selectProviderOptions(
   providers: ReadonlyArray<ProviderFilterCandidate>,
   selected: string,
-  limit = PROVIDER_FILTER_LIMIT,
+  limit = Number.POSITIVE_INFINITY,
 ): Array<{ id: string; label: string }> {
   const capped = Math.max(0, limit);
   const ranked = [...providers].sort(

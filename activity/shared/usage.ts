@@ -1338,3 +1338,128 @@ export function aggregateActivityByHour(
   return buckets;
 }
 
+
+export const ProjectUsageItemSchema = z.object({
+  /** Project root path; `OTHER_PROJECT_KEY` groups agents without a resolvable project. */
+  key: z.string(),
+  /** Paseo project display name, else the root's basename; empty for Other (client localizes). */
+  label: z.string(),
+  agentCount: z.number().int().nonnegative(),
+  messageCount: z.number().int().nonnegative(),
+  /** Exact + inferred skill calls (low excluded, same as provider KPI). */
+  skillCalls: z.number().int().nonnegative(),
+  mcpCalls: z.number().int().nonnegative(),
+});
+export type ProjectUsageItem = z.infer<typeof ProjectUsageItemSchema>;
+
+/** Sessions / prompts / skill / MCP per project (070). */
+export const usageByProjectRpc = defineRpc({
+  name: "usage.by-project",
+  input: z.object({
+    /** Normalized provider id; omit / empty = all providers. */
+    provider: z.string().optional(),
+  }),
+  output: z.object({ projects: z.array(ProjectUsageItemSchema) }),
+});
+
+export const OTHER_PROJECT_KEY = "__other__";
+
+export type ProjectRef = { root: string; name: string };
+
+function trimSlash(path: string): string {
+  return path.length > 1 ? path.replace(/\/+$/, "") : path;
+}
+
+function basename(path: string): string {
+  const parts = trimSlash(path).split("/");
+  return parts[parts.length - 1] || path;
+}
+
+/** `<paseo-home>/worktrees/<hash>/<slug>[/…]` → `<hash>` (070). */
+function worktreeHash(cwd: string): string | null {
+  return /\/worktrees\/([^/]+)\/[^/]+(?:\/|$)/.exec(cwd)?.[1] ?? null;
+}
+
+/**
+ * Agent → project root (070). Order: the workspace project root recorded while
+ * the workspace was listed; the longest known project root containing `cwd`;
+ * a sibling in the same Paseo worktree bucket that resolved; the `cwd` itself
+ * (non-worktree only). Unresolved agents map to `OTHER_PROJECT_KEY`.
+ */
+export function resolveAgentProjects(
+  agents: ReadonlyArray<{ agentId: string; cwd?: string | null; projectRoot?: string | null }>,
+  projects: readonly ProjectRef[],
+): Map<string, string> {
+  const roots = [...new Set(projects.map((project) => trimSlash(project.root)))].sort(
+    (a, b) => b.length - a.length,
+  );
+  const containing = (cwd: string) =>
+    roots.find((root) => cwd === root || cwd.startsWith(`${root}/`)) ?? null;
+  const resolved = new Map<string, string>();
+  const byHash = new Map<string, string>();
+  const pending: Array<{ agentId: string; cwd: string | null; hash: string | null }> = [];
+  for (const agent of agents) {
+    const cwd = agent.cwd?.trim() ? trimSlash(agent.cwd.trim()) : null;
+    const hash = cwd ? worktreeHash(cwd) : null;
+    const root = agent.projectRoot?.trim()
+      ? trimSlash(agent.projectRoot.trim())
+      : cwd
+        ? containing(cwd)
+        : null;
+    if (root) {
+      resolved.set(agent.agentId, root);
+      if (hash && !byHash.has(hash)) byHash.set(hash, root);
+    } else {
+      pending.push({ agentId: agent.agentId, cwd, hash });
+    }
+  }
+  for (const agent of pending) {
+    const root = agent.hash ? byHash.get(agent.hash) : agent.cwd;
+    resolved.set(agent.agentId, root ?? OTHER_PROJECT_KEY);
+  }
+  return resolved;
+}
+
+export function aggregateByProject(
+  agents: ReadonlyArray<{ agentId: string; provider: string; cwd?: string | null; projectRoot?: string | null }>,
+  rows: ReadonlyArray<{ agentId: string; provider: string; category: string; confidence: string | null }>,
+  messages: ReadonlyArray<{ agentId: string; provider: string }>,
+  projects: readonly ProjectRef[],
+  options: { provider?: string } = {},
+): ProjectUsageItem[] {
+  const provider = options.provider?.trim() ? normalizeProvider(options.provider) : undefined;
+  const matches = (value: string) => !provider || normalizeProvider(value) === provider;
+  const projectOf = resolveAgentProjects(agents, projects);
+  const names = new Map(projects.map((project) => [trimSlash(project.root), project.name]));
+  const map = new Map<string, ProjectUsageItem>();
+  const ensure = (agentId: string) => {
+    const key = projectOf.get(agentId) ?? OTHER_PROJECT_KEY;
+    let item = map.get(key);
+    if (!item) {
+      item = {
+        key,
+        label: key === OTHER_PROJECT_KEY ? "" : (names.get(key) ?? basename(key)),
+        agentCount: 0,
+        messageCount: 0,
+        skillCalls: 0,
+        mcpCalls: 0,
+      };
+      map.set(key, item);
+    }
+    return item;
+  };
+  for (const agent of agents) {
+    if (matches(agent.provider)) ensure(agent.agentId).agentCount += 1;
+  }
+  for (const message of messages) {
+    if (matches(message.provider)) ensure(message.agentId).messageCount += 1;
+  }
+  for (const row of rows) {
+    if (!matches(row.provider)) continue;
+    if (row.category === "skill" && row.confidence !== "low") ensure(row.agentId).skillCalls += 1;
+    else if (row.category === "mcp") ensure(row.agentId).mcpCalls += 1;
+  }
+  return [...map.values()].sort(
+    (a, b) => b.agentCount - a.agentCount || b.messageCount - a.messageCount || a.key.localeCompare(b.key),
+  );
+}

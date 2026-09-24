@@ -15,24 +15,23 @@ import {
   usageActivityByDayRpc,
   usageAgentCreationsRpc,
   usageAgentLifetimeRpc,
+  usageByProjectRpc,
   usageByProviderRpc,
+  OTHER_PROJECT_KEY,
   type ProviderUsageItem,
 } from "../shared/usage.ts";
 import { formatDisplayName } from "../shared/format.ts";
-import {
-  ActivityHeatmap,
-  computeStreaks,
-  type HeatmapMode,
-} from "./activity-heatmap.tsx";
+import { ActivityHeatmap } from "./activity-heatmap.tsx";
 import { AgentCreations } from "./agent-creations.tsx";
 import { HourlyActivityTimeline } from "./hourly-activity-timeline.tsx";
-
+import { ProviderDropdown } from "./provider-dropdown.tsx";
+import { RankingBars, type RankingEntry } from "./ranking-bars.tsx";
 import { UsageStats } from "./usage-stats.tsx";
-import { chartColorScheme, entityColor } from "./rank-color.ts";
+import { chartColorScheme, entityColor, providerColor } from "./rank-color.ts";
 import { selectProviderOptions } from "./provider-filter.ts";
 import { useAppLanguage } from "./use-app-language.ts";
 import { buildActivityInsights, buildActivityKpi, ACTIVITY_LIST_LIMIT } from "../shared/insights.ts";
-import { fixedWindowFrom, rangeFrom, RANGE_OPTIONS, type RangeId } from "./range.ts";
+import { fixedWindowFrom } from "./range.ts";
 import { useRegisterOpenAgent } from "./open-agent.ts";
 import { ICON_SIZE, ROW_PADDING, TEXT, pageLayout, titleGap } from "./design-tokens.ts";
 import { messagesFor, type Messages } from "../shared/i18n.ts";
@@ -43,17 +42,16 @@ import {
   LoadingState,
   PageEmpty,
   SectionHeader,
-  TextTabs,
 } from "./ui.tsx";
 
 /** Max rows for Activity insights and Most used skills / MCP. */
 const LIST_LIMIT = ACTIVITY_LIST_LIMIT;
 
-/** Fixed width of the creations histogram, independent of the range chips (050). */
+/** Fixed width of the creations histogram (050). */
 const CREATIONS_WINDOW_DAYS = 30;
 const HOURLY_WINDOW_HOURS = 7 * 24;
 
-/** Zeroed provider row when the chip exists all-time but the time window has no rows. */
+/** Zeroed provider row when a selected provider has no usage row. */
 function emptyProviderUsage(provider: string, label?: string): ProviderUsageItem {
   return {
     provider,
@@ -88,7 +86,7 @@ type RankItem = {
   count: number;
   kind: RankKind;
   server?: string;
-  unit?: "messages";
+  unit?: "prompts";
 };
 
 const RANK_CYCLE: RankKind[] = ["skills", "mcp", "models"];
@@ -168,7 +166,7 @@ function RankList({
               {item.label}
             </Text>
             <Text style={styles.rankMeta}>
-              {item.unit === "messages" ? units.messages(item.count) : units.calls(item.count)}
+              {item.unit === "prompts" ? units.prompts(item.count) : units.calls(item.count)}
             </Text>
           </View>
         ))
@@ -179,52 +177,37 @@ function RankList({
 
 export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceProps) {
   useRegisterOpenAgent(navigation?.openAgent);
-  const [range, setRange] = useState<RangeId>("all");
   const [providerFilter, setProviderFilter] = useState<string>("all");
-  const [heatmapMode, setHeatmapMode] = useState<HeatmapMode>("daily");
   const [rankKind, setRankKind] = useState<RankKind>("skills");
   const locale = useAppLanguage();
   const m = messagesFor(locale);
-  // Recompute on each render so today / rolling windows refresh after midnight (poll-driven).
-  const from = rangeFrom(range);
 
   const page = pageLayout("surface", layout.compact);
   const byProvider = useRpc(usageByProviderRpc);
+  const byProject = useRpc(usageByProjectRpc);
   const activityByDay = useRpc(usageActivityByDayRpc);
   const activityByHour = useRpc(usageActivityByHourRpc);
   const agentLifetime = useRpc(usageAgentLifetimeRpc);
   const agentCreations = useRpc(usageAgentCreationsRpc);
 
-  const filter = from ? { from } : {};
-
-  /** All-time providers for filter chips (agents / skills / messages / …). */
-  const catalogQuery = useQuery({
+  // The page is all-time (069): one by-provider query feeds the dropdown, KPI,
+  // lists and the provider ranking.
+  const query = useQuery({
     refetchInterval: 15_000,
     retry: false,
     queryKey: ["activity", "by-provider", "all"],
     queryFn: () => byProvider({}),
   });
 
-  const query = useQuery({
-    refetchInterval: 15_000,
-    retry: false,
-    // Shares cache with catalogQuery when range === "all".
-    queryKey: ["activity", "by-provider", from ?? "all"],
-    queryFn: () => byProvider(filter),
-    // Keep prior window while range chips change so KPI/lists do not collapse.
-    placeholderData: keepPreviousData,
-  });
-
   const activityQuery = useQuery({
     refetchInterval: 15_000,
     retry: false,
-    queryKey: ["activity", "activity-by-day", range, from ?? "all", providerFilter],
+    queryKey: ["activity", "activity-by-day", "all", providerFilter],
     queryFn: () =>
       activityByDay({
-        ...filter,
         provider: providerFilter === "all" ? undefined : providerFilter,
       }),
-    // Keep prior heatmap while provider / range switches — avoids spinner pushing layout.
+    // Keep prior heatmap while the provider switches — avoids spinner pushing layout.
     placeholderData: keepPreviousData,
   });
 
@@ -241,7 +224,7 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
   const histogramQuery = useQuery({
     refetchInterval: 15_000,
     retry: false,
-    // Fixed window (050): the creations histogram ignores the range chips.
+    // Fixed 30-day window (050).
     queryKey: ["activity", "agent-creations", "last30", providerFilter],
     queryFn: () =>
       agentCreations({
@@ -251,10 +234,19 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
     placeholderData: keepPreviousData,
   });
 
+  const projectQuery = useQuery({
+    refetchInterval: 15_000,
+    retry: false,
+    queryKey: ["activity", "by-project", providerFilter],
+    queryFn: () =>
+      byProject({ provider: providerFilter === "all" ? undefined : providerFilter }),
+    placeholderData: keepPreviousData,
+  });
+
   const hourlyQuery = useQuery({
     refetchInterval: 15_000,
     retry: false,
-    // Independent fixed window (059): range chips do not affect the hourly stream.
+    // Fixed 168-hour window (059).
     queryKey: ["activity", "activity-by-hour", "last168", providerFilter],
     queryFn: () =>
       activityByHour({
@@ -264,32 +256,28 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
     placeholderData: keepPreviousData,
   });
 
-  const providers = query.data?.providers ?? [];
-  const catalogProviders = catalogQuery.data?.providers ?? providers;
+  const providers = useMemo(() => query.data?.providers ?? [], [query.data]);
 
   const providerOptions = useMemo(
     () => [
       { id: "all", label: m.global.allProviders },
-      ...selectProviderOptions(catalogProviders, providerFilter),
+      ...selectProviderOptions(providers, providerFilter),
     ],
-    [catalogProviders, providerFilter, m],
+    [providers, providerFilter, m],
   );
 
   useEffect(() => {
-    if (providerFilter === "all") return;
-    if (!catalogProviders.some((item) => item.provider === providerFilter)) {
+    if (providerFilter === "all" || !query.data) return;
+    if (!providers.some((item) => item.provider === providerFilter)) {
       setProviderFilter("all");
     }
-  }, [catalogProviders, providerFilter]);
+  }, [providers, providerFilter, query.data]);
 
   const filteredProviders = useMemo(() => {
     if (providerFilter === "all") return providers;
-    const inWindow = providers.filter((item) => item.provider === providerFilter);
-    if (inWindow.length > 0) return inWindow;
-    const catalog = catalogProviders.find((item) => item.provider === providerFilter);
-    if (!catalog) return [];
-    return [emptyProviderUsage(catalog.provider, catalog.label)];
-  }, [catalogProviders, providerFilter, providers]);
+    const selected = providers.find((item) => item.provider === providerFilter);
+    return selected ? [selected] : [emptyProviderUsage(providerFilter)];
+  }, [providerFilter, providers]);
 
   const lists = useMemo(() => {
     if (providerFilter === "all") {
@@ -351,7 +339,7 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
           label: formatDisplayName(model),
           count,
           kind: "models" as const,
-          unit: "messages" as const,
+          unit: "prompts" as const,
         }))
         .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 
@@ -388,7 +376,7 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
         label: formatDisplayName(item.model),
         count: item.count,
         kind: "models" as const,
-        unit: "messages" as const,
+        unit: "prompts" as const,
       }))
       .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 
@@ -434,11 +422,6 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
     };
   }, [filteredProviders, providerFilter, query.data?.totals.workspaceCount]);
 
-  const streaks = useMemo(
-    () => computeStreaks(activityQuery.data?.days ?? []),
-    [activityQuery.data],
-  );
-
   const insights = useMemo(() => {
     return buildActivityInsights({
       days: activityQuery.data?.days ?? [],
@@ -451,35 +434,65 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
         chatAgents: summary.chatAgents,
       },
       workspaces: summary.workspaces,
+      longestSession: lifetimeQuery.data?.longest
+        ? {
+            durationMs: lifetimeQuery.data.longest.durationMs,
+            active: lifetimeQuery.data.longest.archivedAt == null,
+          }
+        : null,
       locale,
     });
-  }, [activityQuery.data?.days, locale, summary]);
+  }, [activityQuery.data?.days, lifetimeQuery.data, locale, summary]);
 
   const kpi = useMemo(
     () =>
       buildActivityKpi({
-        agents: summary.agents,
+        sessions: summary.agents,
+        messages: summary.messages,
         days: activityQuery.data?.days ?? [],
         locale,
-        longestStreak: streaks.longest,
-        longestAgent: lifetimeQuery.data?.longest
-          ? {
-              durationMs: lifetimeQuery.data.longest.durationMs,
-              active: lifetimeQuery.data.longest.archivedAt == null,
-            }
-          : null,
         providers: filteredProviders,
+        allProviders: providers,
         providerFilter,
       }),
     [
       activityQuery.data?.days,
       filteredProviders,
-      lifetimeQuery.data,
       locale,
       providerFilter,
-      streaks.longest,
+      providers,
       summary.agents,
+      summary.messages,
     ],
+  );
+
+  const scheme = chartColorScheme(theme.colors.surface0);
+  const providerEntries = useMemo<RankingEntry[]>(
+    () =>
+      providers.map((item) => ({
+        key: item.provider,
+        label: item.label,
+        color: providerColor(item.provider, scheme),
+        agents: item.agentCount,
+        messages: item.messageCount,
+        skills: item.skillCalls.exact + item.skillCalls.inferred,
+        mcp: item.mcpCalls,
+      })),
+    [providers, scheme],
+  );
+  const projectEntries = useMemo<RankingEntry[]>(
+    () =>
+      (projectQuery.data?.projects ?? []).map((item) => ({
+        key: item.key,
+        label: item.key === OTHER_PROJECT_KEY ? m.global.projectRanking.other : item.label,
+        color:
+          item.key === OTHER_PROJECT_KEY ? theme.colors.foregroundMuted : entityColor(item.key, scheme),
+        agents: item.agentCount,
+        messages: item.messageCount,
+        skills: item.skillCalls,
+        mcp: item.mcpCalls,
+      })),
+    [projectQuery.data, scheme, m, theme.colors.foregroundMuted],
   );
 
   const styles = useMemo(
@@ -495,10 +508,9 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
       },
       filterRow: {
         flexDirection: "row" as const,
-        flexWrap: "wrap" as const,
         alignItems: "center" as const,
-        justifyContent: "space-between" as const,
-        gap: layout.compact ? 12 : 16,
+        position: "relative" as const,
+        zIndex: 20,
       },
       columns: {
         flexDirection: layout.compact ? ("column" as const) : ("row" as const),
@@ -565,26 +577,19 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <View style={styles.filterRow}>
-        <TextTabs
-          options={RANGE_OPTIONS.map((option) => ({ id: option.id, label: m.global.ranges[option.id] }))}
-          value={range}
-          onChange={setRange}
-          colors={theme.colors}
-          variant="filter"
-          gap={layout.compact ? 12 : 16}
-        />
-        {providerOptions.length > 1 ? (
-          <TextTabs
+      {providerOptions.length > 1 ? (
+        <View style={styles.filterRow}>
+          <ProviderDropdown
+            label={m.global.providerLabel}
             options={providerOptions}
             value={providerFilter}
             onChange={setProviderFilter}
             colors={theme.colors}
-            variant="filter"
-            gap={layout.compact ? 12 : 16}
+            triggerLabel={m.global.selectProvider}
+            closeLabel={m.global.closeProviderMenu}
           />
-        ) : null}
-      </View>
+        </View>
+      ) : null}
 
       {loading ? <LoadingState color={theme.colors.accent} /> : null}
       {error ? <ErrorState error={error} onRetry={retry} colors={theme.colors} /> : null}
@@ -600,22 +605,16 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
       {showContent ? (
         <ActivityHeatmap
           days={activityQuery.data?.days ?? []}
-          from={from}
           colors={theme.colors}
           compact={layout.compact}
-          mode={heatmapMode}
-          onModeChange={setHeatmapMode}
-          modeOptions={[
-            { id: "daily", label: m.global.heatmapModes.daily },
-            { id: "weekly", label: m.global.heatmapModes.weekly },
-            { id: "cumulative", label: m.global.heatmapModes.cumulative },
-          ]}
+          mode="daily"
         />
       ) : null}
 
       {showContent ? (
         <AgentCreations
           days={histogramQuery.data?.days ?? []}
+          activityDays={activityQuery.data?.days ?? []}
           windowDays={CREATIONS_WINDOW_DAYS}
           colors={theme.colors}
           compact={layout.compact}
@@ -630,6 +629,29 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
           compact={layout.compact}
           locale={locale}
           resetKey={providerFilter}
+        />
+      ) : null}
+
+      {showContent ? (
+        <RankingBars
+          title={m.global.providerRanking.title}
+          empty={m.global.providerRanking.empty}
+          entries={providerEntries}
+          highlight={providerFilter === "all" ? undefined : providerFilter}
+          colors={theme.colors}
+          compact={layout.compact}
+          locale={locale}
+        />
+      ) : null}
+
+      {showContent ? (
+        <RankingBars
+          title={m.global.projectRanking.title}
+          empty={m.global.projectRanking.empty}
+          entries={projectEntries}
+          colors={theme.colors}
+          compact={layout.compact}
+          locale={locale}
         />
       ) : null}
 
@@ -654,13 +676,13 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
           <View style={styles.column}>
             <RankList
               title={m.global.rankTitle[rankKind]}
-              items={(
+              items={
                 rankKind === "skills"
-                  ? lists.skills
+                  ? lists.skills.slice(0, LIST_LIMIT)
                   : rankKind === "mcp"
-                    ? lists.mcp
+                    ? lists.mcp.slice(0, LIST_LIMIT)
                     : lists.models
-              ).slice(0, LIST_LIMIT)}
+              }
               empty={m.global.rankEmpty[rankKind]}
               styles={styles}
               colors={theme.colors}

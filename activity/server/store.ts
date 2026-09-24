@@ -72,6 +72,10 @@ export type AgentRow = {
   createdAt: string;
   archivedAt: string | null;
   updatedAt: string;
+  /** Agent working directory (070); null when never observed. */
+  cwd?: string | null;
+  /** Project root of the agent's workspace while it was listed (070); covers worktrees. */
+  projectRoot?: string | null;
 };
 
 export type AgentQueryFilter = {
@@ -199,7 +203,9 @@ CREATE TABLE IF NOT EXISTS agents (
   title            TEXT,
   created_at       TEXT NOT NULL,
   archived_at      TEXT,
-  updated_at       TEXT NOT NULL
+  updated_at       TEXT NOT NULL,
+  cwd              TEXT,
+  project_root     TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_agents_created  ON agents(created_at);
@@ -317,6 +323,17 @@ export function ensureUserMessageModelColumn(
   db.exec("ALTER TABLE user_messages ADD COLUMN model TEXT");
 }
 
+/** Ensure upgraded DBs gain `agents.cwd` / `agents.project_root` (070). */
+export function ensureAgentProjectColumns(
+  db: InstanceType<SqliteModule["DatabaseSync"]>,
+): void {
+  const cols = new Set(
+    (db.prepare("PRAGMA table_info(agents)").all() as Array<{ name?: string }>).map((col) => col.name),
+  );
+  if (!cols.has("cwd")) db.exec("ALTER TABLE agents ADD COLUMN cwd TEXT");
+  if (!cols.has("project_root")) db.exec("ALTER TABLE agents ADD COLUMN project_root TEXT");
+}
+
 export function defaultDataDir(): string {
   return resolveActivityDataDir().dir;
 }
@@ -392,6 +409,8 @@ export function mergeAgentRow(previous: AgentRow, next: AgentRow): AgentRow {
     createdAt: previous.createdAt <= next.createdAt ? previous.createdAt : next.createdAt,
     archivedAt: next.archivedAt,
     updatedAt: next.updatedAt >= previous.updatedAt ? next.updatedAt : previous.updatedAt,
+    cwd: next.cwd ?? previous.cwd ?? null,
+    projectRoot: next.projectRoot ?? previous.projectRoot ?? null,
   };
 }
 
@@ -450,8 +469,8 @@ function rowKey(agentId: string, callId: string): string {
 const UPSERT_AGENT_SQL = `
 INSERT INTO agents (
   agent_id, workspace_id, parent_agent_id, provider, title,
-  created_at, archived_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  created_at, archived_at, updated_at, cwd, project_root
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(agent_id) DO UPDATE SET
   workspace_id    = COALESCE(excluded.workspace_id, agents.workspace_id),
   parent_agent_id = COALESCE(excluded.parent_agent_id, agents.parent_agent_id),
@@ -462,7 +481,9 @@ ON CONFLICT(agent_id) DO UPDATE SET
                       ELSE agents.created_at
                     END,
   archived_at     = excluded.archived_at,
-  updated_at      = excluded.updated_at
+  updated_at      = excluded.updated_at,
+  cwd             = COALESCE(excluded.cwd, agents.cwd),
+  project_root    = COALESCE(excluded.project_root, agents.project_root)
 `;
 
 function agentValues(row: AgentRow): Array<string | null> {
@@ -475,6 +496,8 @@ function agentValues(row: AgentRow): Array<string | null> {
     row.createdAt,
     row.archivedAt,
     row.updatedAt,
+    row.cwd ?? null,
+    row.projectRoot ?? null,
   ];
 }
 
@@ -488,6 +511,8 @@ function agentFromRecord(record: Record<string, unknown>): AgentRow {
     createdAt: String(record.created_at),
     archivedAt: record.archived_at == null ? null : String(record.archived_at),
     updatedAt: String(record.updated_at),
+    cwd: record.cwd == null ? null : String(record.cwd),
+    projectRoot: record.project_root == null ? null : String(record.project_root),
   };
 }
 
@@ -642,6 +667,7 @@ class SqliteUsageStore implements UsageStore {
     this.db.exec("PRAGMA journal_mode = WAL");
     this.db.exec(SCHEMA_SQL);
     ensureUserMessageModelColumn(this.db);
+    ensureAgentProjectColumns(this.db);
     this.insert = this.db.prepare(UPSERT_SQL);
     this.insertAgent = this.db.prepare(UPSERT_AGENT_SQL);
     this.insertMessage = this.db.prepare(UPSERT_MESSAGE_SQL);

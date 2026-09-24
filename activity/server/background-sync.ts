@@ -27,6 +27,21 @@ async function listAllAgents(paseo: PaseoApi) {
   });
 }
 
+/** Active workspace id → project root; archived workspaces are not listed (070). */
+async function listWorkspaceProjectRoots(paseo: PaseoApi): Promise<Map<string, string>> {
+  const roots = new Map<string, string>();
+  let cursor: string | undefined;
+  for (let pages = 0; pages < 100; pages++) {
+    const page = await paseo.workspaces.list({
+      page: { limit: AGENT_LIST_PAGE_LIMIT, ...(cursor ? { cursor } : {}) },
+    });
+    for (const workspace of page.entries) roots.set(workspace.id, workspace.projectRootPath);
+    if (!page.pageInfo.hasMore || !page.pageInfo.nextCursor) break;
+    cursor = page.pageInfo.nextCursor;
+  }
+  return roots;
+}
+
 export function createBackgroundSync(store: UsageStore, options: {
   path?: string;
   version?: number;
@@ -60,9 +75,17 @@ export function createBackgroundSync(store: UsageStore, options: {
 
   async function check(paseo: PaseoApi) {
     const listedEntries = await listAllAgents(paseo);
+    const projectRoots = await listWorkspaceProjectRoots(paseo).catch((error) => {
+      console.error("[activity] workspace project roots unavailable", error);
+      return new Map<string, string>();
+    });
     if (controller.signal.aborted) return;
     // Directory synchronization belongs to the background task, never a UI read.
-    store.upsertAgents(listedEntries.map(({ agent }) => agentRowFromSnapshot(agent)));
+    store.upsertAgents(
+      listedEntries.map(({ agent }) =>
+        agentRowFromSnapshot(agent, agent.workspaceId ? projectRoots.get(agent.workspaceId) : null),
+      ),
+    );
     const known = new Set(store.selectAgents().map(agent => agent.agentId));
     store.upsertAgents(
       agentsFromActivitySpans(store.agentActivitySpans()).filter(agent => !known.has(agent.agentId)),

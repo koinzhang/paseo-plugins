@@ -301,7 +301,7 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
         { label: m.kpi.shellCalls, value: (usageSummary.data?.shellCalls ?? 0).toLocaleString(locale) },
         { label: m.kpi.fileReads, value: (usageSummary.data?.fileReads ?? 0).toLocaleString(locale) },
         { label: m.kpi.fileWrites, value: (usageSummary.data?.fileWrites ?? 0).toLocaleString(locale) },
-        { label: m.kpi.messages, value: (usageSummary.data?.messageCount ?? 0).toLocaleString(locale) },
+        { label: m.kpi.prompts, value: (usageSummary.data?.messageCount ?? 0).toLocaleString(locale) },
         { label: m.kpi.toolsExplored, value: String(skillItems.length + mcpItems.length) },
       ]} /> : null}
 

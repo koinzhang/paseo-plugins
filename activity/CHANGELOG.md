@@ -5,6 +5,28 @@ All notable changes to `@koinzhang/paseo-plugin-activity` are documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Global Activity **Providers** ranking: one bar per provider, cycling Sessions / Prompts / Skill calls / MCP calls from the section header; a selected provider stays highlighted while the others dim.
+- Global Activity **Projects** ranking under Providers, with the same metric switch and provider filter. Projects resolve from the workspace's project root (recorded while the workspace is listed), the agent `cwd` under a known project, or a sibling in the same Paseo worktree; the rest group under Other.
+- `usage.by-project` RPC; the agent registry now records `cwd` and `project_root`.
+- Heatmap, Last 30 days histogram and Timeline each get a Sessions / Prompts / Skill calls / MCP calls switch (default Sessions); the timeline draws a single series for the chosen metric.
+
+### Changed
+
+- Global Activity says **Sessions** wherever it counts agent conversations (KPI, Insights, creations histogram, timeline, heatmap tooltip, empty state). Workspace / Agent Agents lists are unchanged.
+- Global filter bar: the range chips are gone (the page is all-time) and provider chips became a `Provider: All ▾` dropdown listing every provider instead of the top 5.
+- Global KPI: Sessions, Prompts, Top provider · share, Top model · share, Active days. Peak weekday and Longest session moved into Insights; Active days and Prompts left it; Longest streak is gone.
+- User-sent messages are called **Prompts** in every Activity view; the Workspace "Show → Prompt" preview is now "Latest prompt".
+- Most used models lists every model; skills / MCP stay capped at 8.
+- The heatmap no longer shows the Daily / Weekly / Cumulative switch (always daily).
+
+### Fixed
+
+- KPI fit-to-width accounts for the tile divider, so values that just fit no longer ellipsize by a pixel.
+
 ## [0.6.0] - 2026-09-22
 
 Requires Paseo **>= 0.9.0-beta.2**.

@@ -4,7 +4,10 @@ import {
   activityLevel,
   buildActivityCalendar,
   buildAgentCreationBuckets,
+  buildDailyMetricBuckets,
   computeStreaks,
+  metricValue,
+  stepMetric,
   rankCreationProviders,
   stackCreationProviders,
 } from "./activity.ts";
@@ -208,6 +211,39 @@ describe("agent creation buckets (051)", () => {
     assert.deepEqual(
       stackCreationProviders(ranked, buckets[2]!.providers).map((s) => s.provider),
       ["claude", "amp"],
+    );
+  });
+});
+
+describe("activity metrics (070)", () => {
+  it("reads each metric and cycles in both directions", () => {
+    const value = { agents: 1, messages: 2, skills: 3, mcp: 4 };
+    assert.deepEqual(
+      (["sessions", "prompts", "skills", "mcp"] as const).map((metric) => metricValue(value, metric)),
+      [1, 2, 3, 4],
+    );
+    assert.equal(stepMetric("sessions", 1), "prompts");
+    assert.equal(stepMetric("mcp", 1), "sessions");
+    assert.equal(stepMetric("sessions", -1), "mcp");
+  });
+
+  it("buckets daily activity by metric over the fixed window", () => {
+    const today = new Date(2026, 2, 9);
+    const buckets = buildDailyMetricBuckets(
+      [
+        { date: "2026-03-06", skills: 9, mcp: 0, agents: 9, messages: 9, total: 27 },
+        { date: "2026-03-08", skills: 2, mcp: 1, agents: 1, messages: 5, total: 9 },
+      ],
+      "prompts",
+      { from: new Date(2026, 2, 7).toISOString(), today },
+    );
+    assert.deepEqual(
+      buckets.map((bucket) => [bucket.key, bucket.count, bucket.providers.length]),
+      [
+        ["2026-03-07", 0, 0],
+        ["2026-03-08", 5, 0],
+        ["2026-03-09", 0, 0],
+      ],
     );
   });
 });

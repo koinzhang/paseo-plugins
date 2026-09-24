@@ -32,6 +32,26 @@ function addDays(date: Date, days: number): Date {
 
 export type HeatmapMode = "daily" | "weekly" | "cumulative";
 
+/** Chart metric switch (070); `sessions` = agent creations, `prompts` = user messages. */
+export type ActivityMetric = "sessions" | "prompts" | "skills" | "mcp";
+
+export const ACTIVITY_METRICS: readonly ActivityMetric[] = ["sessions", "prompts", "skills", "mcp"];
+
+export function metricValue(
+  value: { agents: number; messages: number; skills: number; mcp: number },
+  metric: ActivityMetric,
+): number {
+  if (metric === "sessions") return value.agents;
+  if (metric === "prompts") return value.messages;
+  return metric === "skills" ? value.skills : value.mcp;
+}
+
+/** Next / previous metric in `ACTIVITY_METRICS`, wrapping around. */
+export function stepMetric(metric: ActivityMetric, delta: number): ActivityMetric {
+  const count = ACTIVITY_METRICS.length;
+  return ACTIVITY_METRICS[(ACTIVITY_METRICS.indexOf(metric) + delta + count * 2) % count] ?? "sessions";
+}
+
 export function buildActivityCalendar(days: readonly ActivityDay[], mode: HeatmapMode, _from?: string, today = new Date(), locale = "en") {
   const end = startOfLocalDay(today);
   // 52 natural weeks (Sunday-start) ending with the week containing today (058):
@@ -234,6 +254,23 @@ export function buildAgentCreationBuckets(
     });
   }
   return buckets;
+}
+
+/**
+ * One bucket per local day over the same window as `buildAgentCreationBuckets`,
+ * valued by `metric` from `usage.activity-by-day` (070). No provider slices:
+ * only session creations carry a per-provider breakdown.
+ */
+export function buildDailyMetricBuckets(
+  days: readonly ActivityDay[],
+  metric: ActivityMetric,
+  options: { from: string; today?: Date },
+): CreationBucket[] {
+  const byDay = new Map(days.map((day) => [day.date, metricValue(day, metric)]));
+  return buildAgentCreationBuckets([], options).map((bucket) => ({
+    ...bucket,
+    count: byDay.get(bucket.key) ?? 0,
+  }));
 }
 
 /**

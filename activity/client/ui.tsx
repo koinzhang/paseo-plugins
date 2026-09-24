@@ -20,6 +20,7 @@ import {
   tooltipSurface,
 } from "./design-tokens.ts";
 import { useMessages } from "./use-app-language.ts";
+import { stepMetric, type ActivityMetric } from "../shared/activity.ts";
 
 /**
  * Shared Activity UI building blocks (066). Styling comes from design tokens;
@@ -192,6 +193,45 @@ export function TextTabs<T extends string>({
           </Pressable>
         );
       })}
+    </View>
+  );
+}
+
+/**
+ * `‹ Sessions ›` metric switch for Global chart headers (070): cycles
+ * Sessions → Prompts → Skill calls → MCP calls.
+ */
+export function MetricStepper({
+  value,
+  onChange,
+  colors,
+}: {
+  value: ActivityMetric;
+  onChange: (metric: ActivityMetric) => void;
+  colors: TextColors;
+}): ReactNode {
+  const m = useMessages().global;
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+      <IconButton
+        icon="ChevronLeft"
+        label={m.previousMetric}
+        onPress={() => onChange(stepMetric(value, -1))}
+        color={colors.foreground}
+      />
+      <Text
+        accessibilityLiveRegion="polite"
+        style={{ ...TEXT.body, color: colors.foregroundMuted, minWidth: 84, textAlign: "center" }}
+        numberOfLines={1}
+      >
+        {m.metrics[value]}
+      </Text>
+      <IconButton
+        icon="ChevronRight"
+        label={m.nextMetric}
+        onPress={() => onChange(stepMetric(value, 1))}
+        color={colors.foreground}
+      />
     </View>
   );
 }

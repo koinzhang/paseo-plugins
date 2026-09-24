@@ -2,18 +2,20 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import {
   buildAgentCreationBuckets,
+  buildDailyMetricBuckets,
   rankCreationProviders,
   stackCreationProviders,
   type CreationBucket,
+  type ActivityMetric,
   type CreationProviderSlice,
 } from "../shared/activity.ts";
-import type { AgentCreationDay } from "../shared/usage.ts";
+import type { ActivityDay, AgentCreationDay } from "../shared/usage.ts";
 import { creationBarColor } from "./color-mix.ts";
 import { chartColorScheme, creationProviderColors } from "./rank-color.ts";
 import { fixedWindowFrom } from "./range.ts";
 import { RADIUS, TEXT, sectionTitle, titleGap } from "./design-tokens.ts";
 import { messagesFor } from "../shared/i18n.ts";
-import { ChartTooltip, InlineEmpty } from "./ui.tsx";
+import { ChartTooltip, InlineEmpty, MetricStepper } from "./ui.tsx";
 
 type ThemeColors = {
   accent: string;
@@ -35,22 +37,28 @@ function dayLabel(key: string, locale: string): string {
 }
 
 /**
- * Agent creations per local day over a fixed window (051 / 057): the last
- * `windowDays` days ending today, independent of the range chips. Each day is
- * one accent-intensity bar (057); hovering shows a provider breakdown card
- * (nonzero that day only, 056) with brand-coloured chips and the date.
+ * Daily bars over a fixed window (051 / 057): the last `windowDays` days
+ * ending today. Each day is one accent-intensity bar (057). The header switch
+ * (070) picks the metric; Sessions hovers show a provider breakdown card
+ * (nonzero that day only, 056), other metrics come from `activityDays` and
+ * show the day total only.
  */
-export function AgentCreations({ days, windowDays, colors, compact, locale }: {
+export function AgentCreations({ days, activityDays, windowDays, colors, compact, locale }: {
   days: readonly AgentCreationDay[];
+  activityDays: readonly ActivityDay[];
   windowDays: number;
   colors: ThemeColors;
   compact?: boolean;
   locale: string;
 }) {
+  const [metric, setMetric] = useState<ActivityMetric>("sessions");
   const from = fixedWindowFrom(windowDays);
   const buckets = useMemo(
-    () => buildAgentCreationBuckets(days, { from }),
-    [days, from],
+    () =>
+      metric === "sessions"
+        ? buildAgentCreationBuckets(days, { from })
+        : buildDailyMetricBuckets(activityDays, metric, { from }),
+    [days, activityDays, metric, from],
   );
   const providers = useMemo(() => rankCreationProviders(buckets), [buckets]);
   const [hovered, setHovered] = useState<string | null>(null);
@@ -61,7 +69,7 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
     setSelected(null);
     // Only the window start invalidates the selection: refetching the same
     // window must not close a tooltip the pointer is resting on (051).
-  }, [from]);
+  }, [from, metric]);
 
   const activeKey = hovered ?? selected;
   const total = buckets.reduce((sum, bucket) => sum + bucket.count, 0);
@@ -82,12 +90,23 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
     : [];
   const first = buckets[0];
   const m = messagesFor(locale);
+  const unit = (count: number) =>
+    metric === "sessions"
+      ? m.units.sessions(count)
+      : metric === "prompts"
+        ? m.units.prompts(count)
+        : metric === "skills"
+          ? m.units.skills(count)
+          : m.units.mcp(count);
 
   return (
     <View style={{ gap: titleGap(compact) }}>
-      <Text style={{ ...sectionTitle(compact), color: colors.foreground }}>
-        {m.creations.title}
-      </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <Text style={{ ...sectionTitle(compact), color: colors.foreground }}>
+          {m.creations.title}
+        </Text>
+        <MetricStepper value={metric} onChange={setMetric} colors={colors} />
+      </View>
 
       {total === 0 ? (
         <InlineEmpty text={m.creations.empty(windowDays)} color={colors.foregroundMuted} />
@@ -99,7 +118,7 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
                 <Pressable
                   key={bucket.key}
                   accessibilityRole="button"
-                  accessibilityLabel={`${dayLabel(bucket.key, locale)}: ${m.units.agents(bucket.count)}${providerBreakdown(bucket, providers)}`}
+                  accessibilityLabel={`${dayLabel(bucket.key, locale)}: ${unit(bucket.count)}${providerBreakdown(bucket, providers)}`}
                   accessibilityState={{ selected: activeKey === bucket.key }}
                   onHoverIn={() => setHovered(bucket.key)}
                   onHoverOut={() => setHovered(null)}
@@ -113,7 +132,7 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
                     justifyContent: "flex-end",
                   }}
                 >
-                  {bucket.providers.length === 0 ? (
+                  {bucket.count === 0 ? (
                     <View style={{ height: 2, backgroundColor: colors.surface2 }} />
                   ) : (
                     <View
@@ -139,7 +158,7 @@ export function AgentCreations({ days, windowDays, colors, compact, locale }: {
                 anchorY={0}
                 containerWidth={width}
                 clampTop={false}
-                title={`${dayLabel(active.key, locale)} · ${m.units.agents(active.count)}`}
+                title={`${dayLabel(active.key, locale)} · ${unit(active.count)}`}
                 rows={tooltipProviders.map((item) => ({
                   label: item.label,
                   value: item.count.toLocaleString(locale),

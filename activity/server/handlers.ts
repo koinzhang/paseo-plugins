@@ -7,6 +7,7 @@ import { realpathSync, statSync } from "node:fs";
 import {
   aggregateAgentCreations,
   aggregateAgents,
+  aggregateByProject,
   aggregateByProvider,
   aggregateActivityByHour,
   aggregateMcpByTool,
@@ -23,6 +24,7 @@ import {
   usageAgentLifetimeRpc,
   usageAgentsRpc,
   usageAgentUnarchiveRpc,
+  usageByProjectRpc,
   usageByProviderRpc,
   usageExportRpc,
   usageListRpc,
@@ -322,6 +324,37 @@ export function createAgentLifetimeHandler(store: UsageStore) {
 }
 
 /** Daily agent creations with a per-provider breakdown (051) — registry only. */
+/**
+ * Per-project totals (070). Project names come from the host project list;
+ * an unreachable host still groups by recorded roots / cwd (basename labels).
+ */
+export function createByProjectHandler(store: UsageStore) {
+  return async (
+    input: RpcInput<typeof usageByProjectRpc>,
+    context: PluginHandlerContext,
+  ): Promise<RpcOutput<typeof usageByProjectRpc>> => {
+    let projects: Array<{ root: string; name: string }> = [];
+    try {
+      const result = await context.paseo.projects.list();
+      projects = result.projects.map((project) => ({
+        root: project.projectRootPath,
+        name: project.projectDisplayName,
+      }));
+    } catch (error) {
+      console.error("[activity] project list unavailable", error);
+    }
+    return {
+      projects: aggregateByProject(
+        store.selectAgents(),
+        store.select({}),
+        store.selectUserMessages({}),
+        projects,
+        { provider: input.provider },
+      ),
+    };
+  };
+}
+
 export function createAgentCreationsHandler(store: UsageStore) {
   return async (
     input: RpcInput<typeof usageAgentCreationsRpc>,

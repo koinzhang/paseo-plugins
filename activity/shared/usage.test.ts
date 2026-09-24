@@ -5,7 +5,10 @@ import {
   aggregateActivityByDay,
   aggregateAgentCreations,
   aggregateAgents,
+  aggregateByProject,
   aggregateByProvider,
+  OTHER_PROJECT_KEY,
+  resolveAgentProjects,
   aggregateMcpByTool,
   aggregateShellTop,
   aggregateSkillsByName,
@@ -1126,6 +1129,70 @@ describe("aggregateAgentCreations (051)", () => {
     assert.deepEqual(
       aggregateAgentCreations(rows, { to: "2026-09-01T00:00:00.000Z" }).map((day) => day.date),
       ["2026-08-01"],
+    );
+  });
+});
+
+describe("projects (070)", () => {
+  const projects = [
+    { root: "/w/app", name: "App" },
+    { root: "/w/app/packages/lib", name: "Lib" },
+    { root: "/w/tools/", name: "Tools" },
+  ];
+
+  it("resolves recorded roots, longest containing root, worktree siblings, cwd, then Other", () => {
+    const map = resolveAgentProjects(
+      [
+        { agentId: "recorded", cwd: "/h/.paseo/worktrees/abc/feat", projectRoot: "/w/app" },
+        { agentId: "sibling", cwd: "/h/.paseo/worktrees/abc/fix" },
+        { agentId: "orphan-worktree", cwd: "/h/.paseo/worktrees/zzz/fix" },
+        { agentId: "nested", cwd: "/w/app/packages/lib/src" },
+        { agentId: "slash", cwd: "/w/tools" },
+        { agentId: "loose", cwd: "/tmp/scratch/" },
+        { agentId: "none" },
+      ],
+      projects,
+    );
+    assert.deepEqual(Object.fromEntries(map), {
+      recorded: "/w/app",
+      sibling: "/w/app",
+      "orphan-worktree": OTHER_PROJECT_KEY,
+      nested: "/w/app/packages/lib",
+      slash: "/w/tools",
+      loose: "/tmp/scratch",
+      none: OTHER_PROJECT_KEY,
+    });
+  });
+
+  it("counts sessions, prompts, skills (low excluded) and MCP per project with a provider filter", () => {
+    const agents = [
+      { agentId: "a", provider: "codex", cwd: "/w/app" },
+      { agentId: "b", provider: "claude", cwd: "/w/app/x" },
+      { agentId: "c", provider: "codex", cwd: "/tmp/scratch" },
+    ];
+    const rows = [
+      { agentId: "a", provider: "codex", category: "skill", confidence: "exact" },
+      { agentId: "a", provider: "codex", category: "skill", confidence: "low" },
+      { agentId: "b", provider: "claude", category: "mcp", confidence: null },
+      { agentId: "ghost", provider: "codex", category: "mcp", confidence: null },
+    ];
+    const messages = [
+      { agentId: "a", provider: "codex" },
+      { agentId: "b", provider: "claude" },
+      { agentId: "c", provider: "codex" },
+    ];
+    assert.deepEqual(aggregateByProject(agents, rows, messages, projects), [
+      { key: "/w/app", label: "App", agentCount: 2, messageCount: 2, skillCalls: 1, mcpCalls: 1 },
+      { key: "/tmp/scratch", label: "scratch", agentCount: 1, messageCount: 1, skillCalls: 0, mcpCalls: 0 },
+      { key: OTHER_PROJECT_KEY, label: "", agentCount: 0, messageCount: 0, skillCalls: 0, mcpCalls: 1 },
+    ]);
+    assert.deepEqual(
+      aggregateByProject(agents, rows, messages, projects, { provider: "claude" }).map((item) => [
+        item.key,
+        item.agentCount,
+        item.mcpCalls,
+      ]),
+      [["/w/app", 1, 1]],
     );
   });
 });

@@ -19,6 +19,7 @@ export function agentRowFromHook(
     createdAt: opts.createdAt ?? updatedAt,
     archivedAt: opts.archivedAt ?? null,
     updatedAt,
+    cwd: agent.cwd || null,
   };
 }
 
@@ -31,7 +32,8 @@ export function agentRowFromSnapshot(agent: {
   createdAt: string;
   updatedAt?: string;
   archivedAt?: string | null;
-}): AgentRow {
+  cwd?: string | null;
+}, projectRoot?: string | null): AgentRow {
   const updatedAt = agent.updatedAt ?? agent.createdAt;
   return {
     agentId: agent.id,
@@ -42,6 +44,8 @@ export function agentRowFromSnapshot(agent: {
     createdAt: agent.createdAt,
     archivedAt: agent.archivedAt ?? null,
     updatedAt,
+    cwd: agent.cwd || null,
+    projectRoot: projectRoot ?? null,
   };
 }
 

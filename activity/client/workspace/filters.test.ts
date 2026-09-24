@@ -42,7 +42,7 @@ test("formatAgentMeta joins selected fields; prompt last", () => {
   assert.equal(formatAgentMeta(item, fields(), byId, "en-US"), null);
   assert.equal(
     formatAgentMeta(item, fields("messages", "prompt"), byId, "en-US", "ship it"),
-    "5 messages · ship it",
+    "5 prompts · ship it",
   );
   assert.equal(
     formatAgentMeta(item, fields("prompt"), byId, "en-US", null),
