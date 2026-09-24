@@ -133,7 +133,7 @@ export function UsageStats({ items, colors, compact, dense }: {
   dense?: boolean;
 }) {
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.card, paddingVertical: dense ? 6 : compact ? 8 : 18, rowGap: dense ? 10 : 16 }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.card, paddingVertical: dense ? 6 : compact ? 8 : 12, rowGap: dense ? 10 : 16 }}>
       {items.map((item, index) => (
         <StatTile
           key={item.label}

@@ -30,7 +30,7 @@ import { UsageStats } from "./usage-stats.tsx";
 import { chartColorScheme, entityColor, providerColor } from "./rank-color.ts";
 import { selectProviderOptions } from "./provider-filter.ts";
 import { useAppLanguage } from "./use-app-language.ts";
-import { buildActivityInsights, buildActivityKpi, ACTIVITY_LIST_LIMIT } from "../shared/insights.ts";
+import { buildActivityInsights, buildActivityKpi } from "../shared/insights.ts";
 import { fixedWindowFrom } from "./range.ts";
 import { useRegisterOpenAgent } from "./open-agent.ts";
 import { ICON_SIZE, ROW_PADDING, TEXT, pageLayout, titleGap } from "./design-tokens.ts";
@@ -43,9 +43,6 @@ import {
   PageEmpty,
   SectionHeader,
 } from "./ui.tsx";
-
-/** Max rows for Activity insights and Most used skills / MCP. */
-const LIST_LIMIT = ACTIVITY_LIST_LIMIT;
 
 /** Fixed width of the creations histogram (050). */
 const CREATIONS_WINDOW_DAYS = 30;
@@ -690,13 +687,7 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
           <View style={styles.column}>
             <RankList
               title={m.global.rankTitle[rankKind]}
-              items={
-                rankKind === "skills"
-                  ? lists.skills.slice(0, LIST_LIMIT)
-                  : rankKind === "mcp"
-                    ? lists.mcp.slice(0, LIST_LIMIT)
-                    : lists.models
-              }
+              items={lists[rankKind].slice(0, insights.length)}
               empty={m.global.rankEmpty[rankKind]}
               styles={styles}
               colors={theme.colors}

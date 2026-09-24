@@ -9,7 +9,7 @@ Global Activity 页把「一次 agent 会话」称作 Agents，容易被理解�
 1. **筛选栏**
    - 移除时间范围 chips（All time / Today / 7 days / 30 days）；页面固定为全部时间（All time）。
    - provider chips 改为下拉框 `Provider: All ▾`，列出**全部** provider（取消 016 的 5 个上限，排序规则不变）。
-   - `Most used models` 列出全部 model（不再受 `ACTIVITY_LIST_LIMIT` 8 行截断；skills / MCP 保持 8 行）。
+   - `Most used models` 列出全部 model（不再受 `ACTIVITY_LIST_LIMIT` 8 行截断；skills / MCP 保持 8 行）。**已被 082 取代**：三类列表均截断到 Insights 行数。
 2. **KPI 6 格**（顺序固定）
 
    | # | 值 | 标签 |
