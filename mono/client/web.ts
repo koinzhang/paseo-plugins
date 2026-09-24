@@ -513,6 +513,10 @@ ${EXPLORER_TOOLBAR_TEST_IDS.map(
 ).join(",\n")} {
   border-bottom-color: transparent !important;
 }
+/* Paseo keeps a 36px Changes repository row even when branch, PR, and actions render nothing. */
+html[${CHROME_ATTRIBUTE}] ${EXPLORER_SELECTOR} [data-testid="changes-repository-header"]:not(:has([data-testid], [role="button"], button, a)) {
+  display: none !important;
+}
 html[${ACTIVE_ATTRIBUTE}] [${GROUP_ATTRIBUTE}] {
   display: flex !important;
   flex-direction: row !important;
