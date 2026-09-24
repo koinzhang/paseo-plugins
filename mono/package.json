@@ -1,7 +1,7 @@
 {
   "name": "@koinzhang/paseo-plugin-mono",
   "version": "0.1.0",
-  "description": "Neutral gray light and dark themes for Paseo.",
+  "description": "Neutral gray themes and configurable interface tweaks for Paseo.",
   "license": "MIT",
   "type": "module",
   "repository": {
@@ -11,6 +11,7 @@
   },
   "files": [
     "paseo-plugin.json",
+    "CHANGELOG.md",
     "index.client.ts",
     "index.server.ts",
     "client/",

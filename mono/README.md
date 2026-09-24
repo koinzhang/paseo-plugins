@@ -17,10 +17,12 @@ On desktop and web (any theme), each model in **Settings → Providers → _prov
 ## Install
 
 ```bash
-paseo plugin add koinzhang/paseo-plugins --path mono
+paseo plugin add npm:@koinzhang/paseo-plugin-mono@0.1.0
 ```
 
 Then pick **Mono Dark** or **Mono Light** in Settings → Appearance.
+
+To install from GitHub, use `paseo plugin add koinzhang/paseo-plugins --path mono`.
 
 ## Development
 
