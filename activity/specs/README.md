@@ -105,6 +105,8 @@
 | [076-global-chart-titles](./076-global-chart-titles/) | 已实现 | Global 三张图标题统一为 Activity Calendar / Daily Activity / Hourly Activity |
 | [077-provider-filter-align-right](./077-provider-filter-align-right/) | 已实现 | Global provider 筛选栏右对齐；下拉菜单与触发器右对齐向左展开 |
 | [078-ranking-collapse](./078-ranking-collapse/) | 已实现 | Global Providers / Projects 排行默认最多显示 5 条，右侧支持展开与收起 |
+| [079-hourly-line-joins](./079-hourly-line-joins/) | 进行中 | 修复 Hourly Activity 折线交点的毛刺 |
+| [080-insights-streak-weekday-reorder](./080-insights-streak-weekday-reorder/) | 已实现 | Insights：Longest streak / Peak weekday 前移到第 3、4 位（Workspaces 上方） |
 ## 约定
 
 每个编号目录通常含：

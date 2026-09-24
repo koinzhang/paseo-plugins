@@ -56,10 +56,10 @@ describe("buildActivityInsights", () => {
       [
         "Active days",
         "Busiest day",
-        "Workspaces",
-        "Coding vs chat",
         "Longest streak",
         "Peak weekday",
+        "Workspaces",
+        "Coding vs chat",
         "Multi-turn sessions",
         "Avg session duration",
       ],
@@ -67,7 +67,7 @@ describe("buildActivityInsights", () => {
     assert.deepEqual(
       rows.map((r) => r.value),
       // 3 coding / (3+1) active → 75%; Mar 9–10 streak; 2 of 3 prompted sessions multi-turn.
-      ["3", "Mar 9 · 10 prompts", "7", "75% coding", "2 days", "Monday", "67%", "18 min"],
+      ["3", "Mar 9 · 10 prompts", "2 days", "Monday", "7", "75% coding", "67%", "18 min"],
     );
   });
 
@@ -96,7 +96,7 @@ describe("buildActivityInsights", () => {
     });
     assert.deepEqual(
       empty.map((r) => r.value),
-      ["0", "—", "0", "—", "—", "—", "—", "—"],
+      ["0", "—", "—", "—", "0", "—", "—", "—"],
     );
   });
 });

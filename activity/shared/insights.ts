@@ -178,8 +178,9 @@ function multiTurnValue(
 }
 
 /**
- * Fixed 8-row insights (072): habit (active days, busiest day, workspaces,
- * coding share, streak, weekday) → session shape (multi-turn share, engaged time).
+ * Fixed 8-row insights (072 / 080): habit (active days, busiest day, streak,
+ * peak weekday, workspaces, coding share) → session shape (multi-turn share,
+ * engaged time).
  */
 export function buildActivityInsights(input: {
   days: readonly ActivityDay[];
@@ -208,13 +209,13 @@ export function buildActivityInsights(input: {
       label: m.busiestDay,
       value: busiest ? formatBusiest(busiest, locale) : "—",
     },
+    { label: m.longestStreak, value: longest > 0 ? units.days(longest) : "—" },
+    { label: m.peakWeekday, value: peakWeekdayValue(input.days, locale) },
     { label: m.workspaces, value: formatCount(input.workspaces) },
     {
       label: m.codingVsChat,
       value: codingVsChatValue(codingAgents, chatAgents, locale),
     },
-    { label: m.longestStreak, value: longest > 0 ? units.days(longest) : "—" },
-    { label: m.peakWeekday, value: peakWeekdayValue(input.days, locale) },
     { label: m.multiTurnSessions, value: multiTurnValue(input.multiTurn ?? null) },
     {
       label: m.avgSessionDuration,

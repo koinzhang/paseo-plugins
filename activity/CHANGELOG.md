@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Most used models lists every model; skills / MCP stay capped at 8.
 - The heatmap no longer shows the Daily / Weekly / Cumulative switch (always daily).
 - Global chart titles name their granularity: Activity Calendar (heatmap), Daily Activity (30-day histogram), Hourly Activity (timeline).
+- Activity insights put Longest streak and Peak weekday above Workspaces.
 
 ### Fixed
 
