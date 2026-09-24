@@ -24,7 +24,7 @@ Paseo 插件仓库。当前包含插件 **Activity**（`activity/`）：本地�
 
 ## Spec 驱动开发
 
-编码前先读 [`activity/specs/README.md`](./activity/specs/README.md) 总览，再读对应编号目录（`001-usage-tracking` … `073-global-kpi-comparison`）：
+编码前先读 [`activity/specs/README.md`](./activity/specs/README.md) 总览，再读对应编号目录（`001-usage-tracking` … `080-insights-streak-weekday-reorder`）：
 
 | 文件 | 作用 |
 |---|---|
