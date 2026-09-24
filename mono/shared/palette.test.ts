@@ -9,10 +9,9 @@ function rgb(hex: string): { r: number; g: number; b: number } {
   return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
 }
 
-function isCoolPaper(hex: string): boolean {
+function isNeutral(hex: string): boolean {
   const { r, g, b } = rgb(hex);
-  const chroma = b - r;
-  return b >= g && g >= r && chroma >= 2 && chroma <= 24;
+  return r === g && g === b;
 }
 
 test("theme ids are unique and cover both appearances", () => {
@@ -27,11 +26,11 @@ test("accent matches foreground so chrome stays ink-colored", () => {
   }
 });
 
-test("every color is a cool paper hex (B ≥ G ≥ R, restrained chroma)", () => {
+test("every theme color is a neutral gray hex", () => {
   for (const theme of MONO_THEMES) {
     for (const [key, value] of Object.entries(theme.colors)) {
       assert.match(value, HEX, `${theme.id}.${key}`);
-      assert.ok(isCoolPaper(value), `${theme.id}.${key} is not cool paper: ${value}`);
+      assert.ok(isNeutral(value), `${theme.id}.${key} is not neutral gray: ${value}`);
     }
   }
 });

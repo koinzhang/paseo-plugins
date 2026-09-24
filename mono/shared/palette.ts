@@ -1,20 +1,20 @@
 import type { PluginThemeContribution } from "@getpaseo/plugin";
 
-// Cool paper / ink: slight blue chroma (B ≥ G ≥ R). Accent equals foreground — no hue on chrome.
+// Neutral gray scale; semantic status colors are derived by the Paseo host.
 export const MONO_THEMES: readonly PluginThemeContribution[] = [
   {
     id: "mono-dark",
     name: "Mono Dark",
     appearance: "dark",
     colors: {
-      background: "#16181c",
-      foreground: "#eaedf0",
-      raised: "#1e2126",
-      control: "#272b31",
-      border: "#32363d",
-      accent: "#eaedf0",
-      mutedForeground: "#8b939e",
-      ring: "#6d7580",
+      background: "#0a0a0a",
+      foreground: "#ededed",
+      raised: "#111111",
+      control: "#171717",
+      border: "#262626",
+      accent: "#ededed",
+      mutedForeground: "#a3a3a3",
+      ring: "#404040",
     },
   },
   {
@@ -22,14 +22,14 @@ export const MONO_THEMES: readonly PluginThemeContribution[] = [
     name: "Mono Light",
     appearance: "light",
     colors: {
-      background: "#f3f5f7",
-      foreground: "#1a1d21",
-      raised: "#eaedf0",
-      control: "#e1e5ea",
-      border: "#d0d6dd",
-      accent: "#1a1d21",
-      mutedForeground: "#6d7580",
-      ring: "#8b939e",
+      background: "#ffffff",
+      foreground: "#171717",
+      raised: "#fafafa",
+      control: "#f5f5f5",
+      border: "#e5e5e5",
+      accent: "#171717",
+      mutedForeground: "#737373",
+      ring: "#d4d4d4",
     },
   },
 ];

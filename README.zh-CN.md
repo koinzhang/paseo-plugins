@@ -12,7 +12,7 @@ Paseo 插件 monorepo。所有插件独立目录、独立 `paseo-plugin.json`，
 | 插件 | ID | 说明 |
 |---|---|---|
 | [Activity](./activity/) | `activity` | 本地用量分析 **兼** workspace agents 运营（Explorer 列表、实时 attention、终端） |
-| [Mono](./mono/) | `mono` | 冷色纸感深色 / 浅色主题 |
+| [Mono](./mono/) | `mono` | Neutral 灰阶深色 / 浅色主题 |
 
 ## Activity
 

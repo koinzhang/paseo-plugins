@@ -1,6 +1,6 @@
 # Mono
 
-Cool paper / ink themes for Paseo: **Mono Dark** and **Mono Light**. Blue-gray sheet and cool ink — accent, selection, and focus use the foreground color, so chrome stays colorless.
+Neutral gray themes for Paseo: **Mono Dark** and **Mono Light**. Backgrounds, surfaces, borders, and text use distinct gray levels; accent, selection, and focus use the foreground color. Paseo retains semantic status colors for success, warning, and danger.
 
 Requires Paseo >= 0.9.0.
 
