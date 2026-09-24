@@ -5,7 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { PluginHandlerContext } from "@getpaseo/plugin/server";
 import { ingestUserMessages, ingestTurnTimeline } from "./ingest.ts";
-import { createUsageStore } from "./store.ts";
+import { createUsageStore, type UserMessageRow } from "./store.ts";
+import { replayDuplicateMessageIds } from "./prompt-dedupe.ts";
 import { createActivityByDayHandler, createByProviderHandler, resyncAgents } from "./handlers.ts";
 import { aggregateActivityByDay, aggregateByProvider } from "../shared/usage.ts";
 import { computeStreaks } from "../shared/activity.ts";
@@ -191,3 +192,60 @@ test("incremental resync stops after the page reaching the last synced seq (064)
     assert.equal(requested.length, 3, "epoch change forces a full scan");
   } finally { store.close(); rmSync(dir, { recursive: true, force: true }); }
 });
+
+function stored(messageId: string, ts: string | null, overrides: Partial<UserMessageRow> = {}): UserMessageRow {
+  return {
+    agentId: "a1", messageId, workspaceId: "w1", provider: "opencode", model: null,
+    turnId: null, seq: null, ts, ingestedAt: ts ?? now, ...overrides,
+  };
+}
+
+test("replayed prompts carrying provider ids pair with live client ids within two seconds (075)", () => {
+  const rows = [
+    stored("msg_1789819973671_tb9kbyafp", "2026-09-19T12:12:54.001Z"),
+    stored("msg_0b9957171001uZEXtFUs3gMrcW", "2026-09-19T12:12:54.004Z"),
+    stored("01a0cd36-50bc-7290-a994-a624afbd6237", "2026-09-19T12:12:55.000Z"),
+    stored("msg_0b99af9cb001MoZWG3voc2QESs", "2026-09-19T12:18:56.590Z"),
+    stored("draft_msg_1790147439170_uljl6rhxk:initial-message", null),
+  ];
+  assert.deepEqual(
+    [...replayDuplicateMessageIds(rows)].sort(),
+    ["01a0cd36-50bc-7290-a994-a624afbd6237", "msg_0b9957171001uZEXtFUs3gMrcW"],
+  );
+  assert.equal(replayDuplicateMessageIds(rows.slice(1, 4)).size, 0, "no live rows, nothing to pair");
+});
+
+test("anonymous replays drop as many newest rows as live prompts sent before them (075)", () => {
+  const replayAt = "2026-09-20T08:19:03.031Z";
+  const rows = [
+    stored("msg_1789739523165_q19qrk03i", "2026-09-18T13:52:15.236Z"),
+    stored("msg_1789739600000_abcdefghi", "2026-09-18T13:53:20.000Z"),
+    stored("canonical:1", replayAt, { seq: 1 }),
+    stored("canonical:2", replayAt, { seq: 5 }),
+    stored("canonical:3", replayAt, { seq: 9 }),
+    stored("msg_1790000000000_later0000", "2026-09-20T09:00:00.000Z"),
+  ];
+  assert.deepEqual([...replayDuplicateMessageIds(rows)].sort(), ["canonical:2", "canonical:3"]);
+});
+
+for (const driver of ["sqlite", "jsonl"] as const) {
+  test(`${driver}: replay duplicates are pruned and stay pruned after reopen (075)`, () => {
+    const dir = mkdtempSync(join(tmpdir(), "activity-dedupe-"));
+    try {
+      const store = createUsageStore({ dir, driver });
+      store.upsertUserMessages([
+        stored("msg_1789819973671_tb9kbyafp", "2026-09-19T12:12:54.001Z"),
+        stored("msg_0b9957171001uZEXtFUs3gMrcW", "2026-09-19T12:12:54.004Z"),
+      ]);
+      assert.equal(store.pruneReplayDuplicateMessages("a1"), 1);
+      assert.equal(store.pruneReplayDuplicateMessages(), 0);
+      store.close();
+      const reopened = createUsageStore({ dir, driver });
+      assert.deepEqual(
+        reopened.selectUserMessages({ agentId: "a1" }).map(row => row.messageId),
+        ["msg_1789819973671_tb9kbyafp"],
+      );
+      reopened.close();
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+}

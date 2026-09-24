@@ -4,6 +4,7 @@ import type { Category, Confidence } from "../shared/classify.ts";
 import { normalizeProvider } from "../shared/classify.ts";
 import { LOG_PREFIX } from "../shared/plugin-id.ts";
 import { resolveActivityDataDir } from "./migrate-data.ts";
+import { replayDuplicateMessageIds } from "./prompt-dedupe.ts";
 
 export interface ToolCallRow {
   agentId: string;
@@ -127,6 +128,8 @@ export interface UsageStore {
   setSyncState(agentId: string, epoch: string, lastSeq: number): void;
   /** Drop hash-keyed (`canonical:…`) user messages for an agent (timeline epoch replace). */
   deleteCanonicalUserMessages(agentId: string): number;
+  /** Drop replayed copies of live prompts (075); all agents when agentId is omitted. */
+  pruneReplayDuplicateMessages(agentId?: string): number;
   close(): void;
 }
 
@@ -393,6 +396,21 @@ function loadSqlite(): SqliteModule | null {
   } catch {
     return null;
   }
+}
+
+function replayDuplicatesByAgent(rows: readonly UserMessageRow[]): Array<[string, string[]]> {
+  const byAgent = new Map<string, UserMessageRow[]>();
+  for (const row of rows) {
+    const list = byAgent.get(row.agentId);
+    if (list) list.push(row);
+    else byAgent.set(row.agentId, [row]);
+  }
+  const result: Array<[string, string[]]> = [];
+  for (const [agentId, list] of byAgent) {
+    const ids = replayDuplicateMessageIds(list);
+    if (ids.size > 0) result.push([agentId, [...ids]]);
+  }
+  return result;
 }
 
 function rowEffectiveTime(row: ToolCallRow): string {
@@ -700,6 +718,7 @@ class SqliteUsageStore implements UsageStore {
     this.insert = this.db.prepare(UPSERT_SQL);
     this.insertAgent = this.db.prepare(UPSERT_AGENT_SQL);
     this.insertMessage = this.db.prepare(UPSERT_MESSAGE_SQL);
+    this.pruneReplayDuplicateMessages();
   }
 
   generation(): number {
@@ -902,6 +921,27 @@ class SqliteUsageStore implements UsageStore {
     return Number(result.changes ?? 0);
   }
 
+  pruneReplayDuplicateMessages(agentId?: string): number {
+    const duplicates = replayDuplicatesByAgent(this.selectUserMessages(agentId ? { agentId } : {}));
+    if (duplicates.length === 0) return 0;
+    this.writes += 1;
+    const remove = this.db.prepare("DELETE FROM user_messages WHERE agent_id = ? AND message_id = ?");
+    let removed = 0;
+    this.db.exec("BEGIN");
+    try {
+      for (const [id, messageIds] of duplicates) {
+        for (const messageId of messageIds) {
+          removed += Number((remove.run(id, messageId) as { changes?: number }).changes ?? 0);
+        }
+      }
+      this.db.exec("COMMIT");
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
+    return removed;
+  }
+
   close(): void {
     this.db.close();
   }
@@ -926,7 +966,14 @@ class JsonlUsageStore implements UsageStore {
         try {
           const parsed = JSON.parse(line) as UserMessageRow | {
             __delete_canonical_messages?: { agentId: string };
+          } | {
+            __delete_messages?: { agentId: string; messageIds: string[] };
           };
+          if (parsed && "__delete_messages" in parsed && parsed.__delete_messages) {
+            const { agentId, messageIds } = parsed.__delete_messages;
+            for (const messageId of messageIds) this.messages.delete(rowKey(agentId, messageId));
+            continue;
+          }
           if (parsed && "__delete_canonical_messages" in parsed && parsed.__delete_canonical_messages) {
             const agentId = parsed.__delete_canonical_messages.agentId;
             for (const [key, row] of this.messages) {
@@ -978,6 +1025,7 @@ class JsonlUsageStore implements UsageStore {
         }
       }
     }
+    this.pruneReplayDuplicateMessages();
   }
 
   private writes = 0;
@@ -1132,6 +1180,22 @@ class JsonlUsageStore implements UsageStore {
         `${JSON.stringify({ __delete_canonical_messages: { agentId, removed } })}\n`,
       );
     }
+    return removed;
+  }
+
+  pruneReplayDuplicateMessages(agentId?: string): number {
+    const duplicates = replayDuplicatesByAgent(this.selectUserMessages(agentId ? { agentId } : {}));
+    if (duplicates.length === 0) return 0;
+    this.writes += 1;
+    let removed = 0;
+    const lines: string[] = [];
+    for (const [id, messageIds] of duplicates) {
+      for (const messageId of messageIds) {
+        if (this.messages.delete(rowKey(id, messageId))) removed += 1;
+      }
+      lines.push(JSON.stringify({ __delete_messages: { agentId: id, messageIds } }));
+    }
+    appendFileSync(this.messagesPath, `${lines.join("\n")}\n`);
     return removed;
   }
 

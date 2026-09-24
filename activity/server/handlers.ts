@@ -758,6 +758,7 @@ export async function resyncAgents(
         });
         if (page.error) throw new Error(page.error);
       }
+      store.pruneReplayDuplicateMessages(agent.id);
       if (newest) store.setSyncState(agent.id, newest.epoch, newest.seq);
 
       syncedAgents += 1;

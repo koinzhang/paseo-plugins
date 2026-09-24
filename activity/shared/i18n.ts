@@ -127,17 +127,17 @@ function en({ num }: Formatters) {
       emptyHint: "Sessions, prompts, skill and MCP calls will show up here",
     },
     heatmap: {
-      title: "Activity",
+      title: "Activity Calendar",
       highlightMonth: (month: string) => `Highlight ${month}`,
       weekContaining: (date: string) => `Week containing ${date}`,
       through: (date: string) => `Through ${date}`,
     },
     creations: {
-      title: "Last 30 days",
+      title: "Daily Activity",
       empty: (days: number) => `No activity in the last ${num(days)} days`,
     },
     timeline: {
-      title: "Timeline",
+      title: "Hourly Activity",
       empty: "No activity yet",
     },
     workspace: {
@@ -274,17 +274,17 @@ function zhCN({ num }: Formatters): Messages {
       emptyHint: "会话、提示词、Skill 和 MCP 调用会显示在这里",
     },
     heatmap: {
-      title: "Activity",
+      title: "活动日历",
       highlightMonth: (month: string) => `高亮 ${month}`,
       weekContaining: (date: string) => `${date} 所在周`,
       through: (date: string) => `截至 ${date}`,
     },
     creations: {
-      title: "最近 30 天",
+      title: "每日活动",
       empty: (days: number) => `最近 ${num(days)} 天没有活动`,
     },
     timeline: {
-      title: "时间线",
+      title: "每小时活动",
       empty: "还没有活动",
     },
     workspace: {

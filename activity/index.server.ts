@@ -137,6 +137,7 @@ export default function contribute(server: PluginServerContext) {
         store.upsertUserMessages(
           ingestUserMessages(event.timeline, event.agent, { model }),
         );
+        store.pruneReplayDuplicateMessages(event.agent.id);
         // event.timeline is the whole history; calls already stored in a terminal
         // status cannot change from a live snapshot, so only the rest are upserted.
         const settled = store.terminalCallIds(event.agent.id);

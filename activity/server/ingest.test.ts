@@ -78,6 +78,9 @@ function fakeStore(): UsageStore & { rows: ToolCallRow[] } {
     deleteCanonicalUserMessages() {
       return 0;
     },
+    pruneReplayDuplicateMessages() {
+      return 0;
+    },
     close() {},
   };
 }

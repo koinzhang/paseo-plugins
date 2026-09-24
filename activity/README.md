@@ -25,7 +25,7 @@ Ingests every agent's Paseo timeline into a local SQLite database. Queries read 
 
 ## Where it shows up
 
-- **Sidebar Activity** — all-time global view by provider (KPI with prev-7d comparison, heatmap, Last 30 days histogram, 168-hour timeline, Providers / Projects rankings, insights, most used)
+- **Sidebar Activity** — all-time global view by provider (KPI with prev-7d comparison, Activity Calendar heatmap, Daily Activity 30-day histogram, Hourly Activity 168-hour timeline, Providers / Projects rankings, insights, most used)
 - **Explorer → Activity** — workspace agents as a management list (search / sort / group / status / lifecycle / archive), live attention (permission badge, status colors, running spinner; API-owned directory observation + explicit lifecycle/archive fields + 15s reconciliation), open Terminals (list / preview / close), plus workspace KPIs and Skills / MCP ranked or newest-call timeline views (with agent titles and one shared persisted view choice); usage queries get a best-effort refresh hint when agents leave running
 - **Agent workspace panel** — per-agent tool detail (dense KPI including prompts / Skills / MCP toggle / SKILL.md); refreshes on timeline turn terminal events
 - **Composer pills** — Activity: current agent's skill / MCP summary (hidden when empty); **Needs attention**: other same-workspace agents with finished / permission / error (hidden when none; click opens shared list)
