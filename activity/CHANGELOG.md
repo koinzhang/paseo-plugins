@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `usage.agent-lifetime` now also reports average engaged session time and prompted / multi-turn session counts.
 - Heatmap, Last 30 days histogram and Timeline each get a Sessions / Prompts / Skill calls / MCP calls switch (default Sessions); the timeline draws a single series for the chosen metric.
 - Global KPI tiles compare against the previous 7 days: Sessions / Prompts show the change vs prev. 7d, Top provider / Top model show the previous window's leader; the provider filter applies to both windows.
+- Providers and Projects rankings collapse to five rows with a `Show N more` / `Show less` toggle.
 
 ### Changed
 
@@ -25,10 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - User-sent messages are called **Prompts** in every Activity view; the Workspace "Show → Prompt" preview is now "Latest prompt".
 - Most used models lists every model; skills / MCP stay capped at 8.
 - The heatmap no longer shows the Daily / Weekly / Cumulative switch (always daily).
+- Global chart titles name their granularity: Activity Calendar (heatmap), Daily Activity (30-day histogram), Hourly Activity (timeline).
 
 ### Fixed
 
 - Rescans no longer overwrite an event's real time with the later replay time: upserts keep the earliest timestamp, an event time can never be later than its first ingest, and existing rows are repaired on startup.
+- Replayed copies of a prompt are dropped: a prompt sent live and later replayed by the provider is stored once, keeping the live row's real time and model.
+- The Global `Provider: All ▾` filter is right-aligned in the content area, and its menu opens right-aligned under the trigger.
 - Oh My Pi (`omp`) is counted as its own provider everywhere instead of being merged into Pi; stored data is unchanged.
 - KPI fit-to-width accounts for the tile divider, so values that just fit no longer ellipsize by a pixel.
 
