@@ -64,9 +64,9 @@ export function RankingBars({ title, empty, entries, highlight, colors, compact,
         <InlineEmpty text={empty} color={colors.foregroundMuted} />
       ) : (
         <View style={{ gap: 2 }}>
-          {visibleRows.map((row) => (
+          {visibleRows.map((row, rank) => (
             <View
-              key={row.key}
+              key={rank}
               style={{
                 flexDirection: "row",
                 alignItems: "center",
@@ -128,7 +128,11 @@ export function RankingBars({ title, empty, entries, highlight, colors, compact,
   );
 }
 
-/** Bar fill that grows from 0 on mount and animates between widths on change. */
+/**
+ * Bar fill that grows from 0 on mount and animates between widths on change.
+ * Rows are keyed by rank, so a bar only moves when its slot's percentage
+ * changes, not when entries reorder under it.
+ */
 function AnimatedBar({ percent, color }: { percent: number; color: string }): ReactNode {
   const progress = useRef(new Animated.Value(0)).current;
 

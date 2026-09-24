@@ -52,7 +52,7 @@ Global KPI 的上一窗口对比与 label 共用 `label` 12 的字体角色，�
 ### 2.3 筛选与指标切换
 
 - **Provider 筛选**（Global，069）：`ProviderDropdown` 触发器 `body` 14（`Provider:` muted + 当前值 semibold + `ChevronDown`），菜单行 `TEXT.menu`
-- **指标切换**（图表 / 排行，070）：`MetricStepper` = `‹ 指标名 ›`，指标名 `body` 14 muted、`minWidth` 84，箭头用 `IconButton`（`ICON_SIZE.action`）
+- **指标切换**（图表 / 排行，070）：`MetricStepper` = `‹ 指标名 ›`，指标名 `body` 14 muted、`minWidth` 84，箭头用 `IconButton`（`ICON_SIZE.action`），颜色与指标名同为 `foregroundMuted`
 - `TextTabs`（`filter` / `chart`）保留在 `ui.tsx`；069 之后 Global 已无时间 / 图表模式 tab
 - **排行展开 / 收起**（078）：行尾右对齐按钮，`body` 14 `foregroundMuted` + `ChevronUp` / `ChevronDown`（`ICON_SIZE.inline`），`ROW_PADDING.dense`；不新增 token
 
@@ -106,7 +106,7 @@ Global KPI 的上一窗口对比与 label 共用 `label` 12 的字体角色，�
 - **图表 tooltip**：一律用 `ChartTooltip`（`client/ui.tsx`，066）— 容器 `tooltipSurface(colors)`（padding 10 / 6、`RADIUS.overlay`、`surface2` 底、1px `border`）；标题 medium 字重，行为「色块 · muted label · 等宽数值」；水平居中于指针并夹在图表内，垂直在锚点上方 8px。三个图表都用浮动 tooltip，不再用 readout 行；热力图不加强度图例
 - **composer popover**：宽度 `popoverFrame(compact)` — regular 300–380（`POPOVER_WIDTH`），compact 由宿主铺满
 - **菜单**：宽 `MENU_WIDTH`（232）、`RADIUS.overlay`、`surface1` 底、1px `border`、轻阴影；行高 compact 40 / regular 28
-- **图表动画**（081，`CHART_MOTION`）：排行条与 Daily Activity 柱首次从 0 增长、数值变化时从当前值过渡（`grow` 400ms，ease-out）；Activity Calendar 首次按周列从左到右淡入（`reveal` 700ms），切换指标 / 范围 / 模式时以 `refreshFloor` 为底再扫一遍（`refresh` 450ms）；数据轮询刷新不重播扫入
+- **图表动画**（081，`CHART_MOTION`）：排行条与 Daily Activity 柱首次从 0 增长、数值变化时从当前值过渡（`grow` 400ms，ease-out）；Activity Calendar 首次按周列从左到右淡入（`reveal` 700ms），切换指标 / 范围 / 模式时以 `refreshFloor` 为底再扫一遍（`refresh` 450ms）；Hourly Activity 面积图整体自基线 `scaleY` 增长（首次 `reveal`，切指标 / provider 用 `refresh`）；数据轮询刷新不重播扫入 / 增长
 - **Provider 下拉**（069 / 077）：触发器右对齐于筛选行；浮层开在触发器下方并右对齐（向左展开），`minWidth` 200、`RADIUS.overlay`、`surface1`；web 用全屏透明 backdrop 点外部关闭；超过 10 行浮层内滚动
 
 ## 7. 状态

@@ -217,7 +217,7 @@ export function MetricStepper({
         icon="ChevronLeft"
         label={m.previousMetric}
         onPress={() => onChange(stepMetric(value, -1))}
-        color={colors.foreground}
+        color={colors.foregroundMuted}
       />
       <Text
         accessibilityLiveRegion="polite"
@@ -230,7 +230,7 @@ export function MetricStepper({
         icon="ChevronRight"
         label={m.nextMetric}
         onPress={() => onChange(stepMetric(value, 1))}
-        color={colors.foreground}
+        color={colors.foregroundMuted}
       />
     </View>
   );

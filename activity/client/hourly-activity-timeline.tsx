@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PanResponder, Pressable, ScrollView, Text, View } from "react-native";
+import { Animated, Easing, PanResponder, Pressable, ScrollView, Text, View } from "react-native";
 import type { ActivityHour } from "../shared/usage.ts";
 import { metricValue, type ActivityMetric } from "../shared/activity.ts";
 import { useMeasuredWidth } from "./measured-width.ts";
 import { mixColor } from "./color-mix.ts";
-import { TEXT, sectionTitle, titleGap } from "./design-tokens.ts";
+import { CHART_MOTION, TEXT, sectionTitle, titleGap } from "./design-tokens.ts";
 import { messagesFor } from "../shared/i18n.ts";
 import { ChartTooltip, InlineEmpty, MetricStepper } from "./ui.tsx";
 
@@ -225,15 +225,44 @@ export function HourlyActivityTimeline({
   // Softened toward the surface so the hover cursor reads grey, not near-black.
   const cursorColor = mixColor(colors.surface2, colors.foregroundMuted, 0.55);
 
+  const ready = hours.length > 0 && slot > 0;
+  const grow = useRef(new Animated.Value(0)).current;
+  const revealedRef = useRef(false);
+  useEffect(() => {
+    if (!ready) return;
+    const first = !revealedRef.current;
+    grow.setValue(0);
+    const animation = Animated.timing(grow, {
+      toValue: 1,
+      duration: first ? CHART_MOTION.reveal : CHART_MOTION.refresh,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    });
+    animation.start(() => {
+      revealedRef.current = true;
+    });
+    return () => animation.stop();
+  }, [ready, metric, resetKey, grow]);
+
   // Stable element identity: hovering must not rebuild ~330 skewed segments.
   const series = useMemo(
     () => (
       <>
-        <AreaSeries values={values} max={peak} height={plotHeight} slot={slot} stroke={colors.accent} fill={fill} />
+        <Animated.View
+          style={{
+            // scaleY pivots on the center; the shift pins the plot to its baseline.
+            transform: [
+              { translateY: grow.interpolate({ inputRange: [0, 1], outputRange: [plotHeight / 2, 0] }) },
+              { scaleY: grow },
+            ],
+          }}
+        >
+          <AreaSeries values={values} max={peak} height={plotHeight} slot={slot} stroke={colors.accent} fill={fill} />
+        </Animated.View>
         <View style={{ height: 1, backgroundColor: colors.border }} />
       </>
     ),
-    [values, peak, plotHeight, slot, colors.accent, colors.border, fill],
+    [values, peak, plotHeight, slot, colors.accent, colors.border, fill, grow],
   );
 
   const hotspots = useMemo(

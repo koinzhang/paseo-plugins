@@ -107,7 +107,7 @@
 | [078-ranking-collapse](./078-ranking-collapse/) | 已实现 | Global Providers / Projects 排行默认最多显示 5 条，右侧支持展开与收起 |
 | [079-hourly-line-joins](./079-hourly-line-joins/) | 进行中 | 修复 Hourly Activity 折线交点的毛刺 |
 | [080-insights-streak-weekday-reorder](./080-insights-streak-weekday-reorder/) | 已实现 | Insights：Longest streak / Peak weekday 前移到第 3、4 位（Workspaces 上方） |
-| [081-ranking-bar-animation](./081-ranking-bar-animation/) | 已实现，页面验收待完成 | Global 图表动画：排行条与 Daily Activity 柱从 0 增长、切换时平滑过渡；Activity Calendar 按周列扫入 |
+| [081-ranking-bar-animation](./081-ranking-bar-animation/) | 已实现，页面验收待完成 | Global 图表动画：排行条与 Daily Activity 柱从 0 增长、切换时平滑过渡；Activity Calendar 按周列扫入；Hourly Activity 自基线增长 |
 ## 约定
 
 每个编号目录通常含：
