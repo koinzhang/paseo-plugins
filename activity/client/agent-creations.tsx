@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Animated, Easing, Pressable, Text, View } from "react-native";
 import {
   buildAgentCreationBuckets,
   buildDailyMetricBuckets,
@@ -13,9 +13,11 @@ import type { ActivityDay, AgentCreationDay } from "../shared/usage.ts";
 import { creationBarColor } from "./color-mix.ts";
 import { chartColorScheme, creationProviderColors } from "./rank-color.ts";
 import { fixedWindowFrom } from "./range.ts";
-import { RADIUS, TEXT, sectionTitle, titleGap } from "./design-tokens.ts";
+import { CHART_MOTION, RADIUS, TEXT, sectionTitle, titleGap } from "./design-tokens.ts";
 import { messagesFor } from "../shared/i18n.ts";
 import { ChartTooltip, InlineEmpty, MetricStepper } from "./ui.tsx";
+
+const EMPTY_BAR_HEIGHT = 2;
 
 type ThemeColors = {
   accent: string;
@@ -132,23 +134,19 @@ export function AgentCreations({ days, activityDays, windowDays, colors, compact
                     justifyContent: "flex-end",
                   }}
                 >
-                  {bucket.count === 0 ? (
-                    <View style={{ height: 2, backgroundColor: colors.surface2 }} />
-                  ) : (
-                    <View
-                      style={{
-                        height: max > 0 ? Math.max(2, Math.round((bucket.count / max) * chartHeight)) : 2,
-                        backgroundColor: creationBarColor(
-                          bucket.count,
-                          max,
-                          colors.surface2,
-                          colors.accent,
-                        ),
-                        borderTopLeftRadius: RADIUS.swatch,
-                        borderTopRightRadius: RADIUS.swatch,
-                      }}
-                    />
-                  )}
+                  <DayBar
+                    height={
+                      bucket.count > 0 && max > 0
+                        ? Math.max(EMPTY_BAR_HEIGHT, Math.round((bucket.count / max) * chartHeight))
+                        : EMPTY_BAR_HEIGHT
+                    }
+                    color={
+                      bucket.count === 0
+                        ? colors.surface2
+                        : creationBarColor(bucket.count, max, colors.surface2, colors.accent)
+                    }
+                    rounded={bucket.count > 0}
+                  />
                 </Pressable>
               ))}
             </View>
@@ -177,6 +175,33 @@ export function AgentCreations({ days, activityDays, windowDays, colors, compact
         </View>
       )}
     </View>
+  );
+}
+
+/** Day column that grows from 0 on mount and animates between heights on change. */
+function DayBar({ height, color, rounded }: { height: number; color: string; rounded: boolean }) {
+  const progress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.timing(progress, {
+      toValue: height,
+      duration: CHART_MOTION.grow,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [height, progress]);
+
+  return (
+    <Animated.View
+      style={{
+        height: progress,
+        backgroundColor: color,
+        borderTopLeftRadius: rounded ? RADIUS.swatch : 0,
+        borderTopRightRadius: rounded ? RADIUS.swatch : 0,
+      }}
+    />
   );
 }
 

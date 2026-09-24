@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Animated, Easing, Pressable, ScrollView, Text, View } from "react-native";
 import type { ActivityDay } from "../shared/usage.ts";
 import { activityLevel, buildActivityCalendar, metricValue, type ActivityMetric, type HeatmapMode } from "../shared/activity.ts";
 import { useAppLanguage } from "./use-app-language.ts";
 import { useMeasuredWidth } from "./measured-width.ts";
 import { ACTIVITY_MIX_STEPS, mixColor } from "./color-mix.ts";
 export { computeStreaks, type HeatmapMode } from "../shared/activity.ts";
-import { FONT_SIZE, sectionTitle, titleGap } from "./design-tokens.ts";
+import { CHART_MOTION, FONT_SIZE, sectionTitle, titleGap } from "./design-tokens.ts";
 import { messagesFor } from "../shared/i18n.ts";
 import { ChartTooltip, MetricStepper } from "./ui.tsx";
 
@@ -43,6 +43,24 @@ export function ActivityHeatmap({ days, from, colors, compact, mode }: {
     setHovered(null);
     setHoveredMonth(null);
   }, [from, mode, days]);
+  const reveal = useRef(new Animated.Value(0)).current;
+  const revealedRef = useRef(false);
+  const measured = width > 0;
+  useEffect(() => {
+    if (!measured) return;
+    const first = !revealedRef.current;
+    reveal.setValue(0);
+    const animation = Animated.timing(reveal, {
+      toValue: 1,
+      duration: first ? CHART_MOTION.reveal : CHART_MOTION.refresh,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    });
+    animation.start(() => {
+      revealedRef.current = true;
+    });
+    return () => animation.stop();
+  }, [measured, metric, mode, from, reveal]);
   const { weeks, months } = useMemo(() => buildActivityCalendar(days, mode, from, new Date(), locale), [days, mode, from, locale]);
   // Intensity follows the selected metric only (070), not the four-metric total.
   const max = useMemo(
@@ -84,6 +102,8 @@ export function ActivityHeatmap({ days, from, colors, compact, mode }: {
         { label: m.common.mcp, value: active.mcp.toLocaleString(locale) },
       ]
     : [];
+  const floor = revealedRef.current ? CHART_MOTION.refreshFloor : 0;
+  const columnStep = weeks.length > 1 ? (1 - CHART_MOTION.columnSpan) / (weeks.length - 1) : 0;
   const axisWidth = needsScroll ? gridWidth : width;
   const monthFocus = hoveredMonth != null;
   return (
@@ -107,7 +127,17 @@ export function ActivityHeatmap({ days, from, colors, compact, mode }: {
         <View style={{ width: Math.max(0, axisWidth) }}>
           <View style={{ flexDirection: "row", gap }}>
             {weeks.map((week, i) => (
-              <View key={i} style={{ gap }}>
+              <Animated.View
+                key={i}
+                style={{
+                  gap,
+                  opacity: reveal.interpolate({
+                    inputRange: [i * columnStep, i * columnStep + CHART_MOTION.columnSpan],
+                    outputRange: [floor, 1],
+                    extrapolate: "clamp",
+                  }),
+                }}
+              >
                 {week.map(cell => {
                   const hidden = cell.future || cell.excluded;
                   const inMonth = cellInMonth(cell.key, hoveredMonth);
@@ -142,7 +172,7 @@ export function ActivityHeatmap({ days, from, colors, compact, mode }: {
                       }} />
                   );
                 })}
-              </View>
+              </Animated.View>
             ))}
           </View>
           <View style={{ marginTop: 10, flexDirection: "row", justifyContent: "space-between" }}>

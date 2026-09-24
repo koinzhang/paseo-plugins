@@ -1,9 +1,9 @@
 import { Icon } from "@getpaseo/plugin/client/react-native";
-import { useMemo, useState, type ReactNode } from "react";
-import { Pressable, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Animated, Easing, Pressable, Text, View } from "react-native";
 import { metricValue, type ActivityMetric } from "../shared/activity.ts";
 import { messagesFor } from "../shared/i18n.ts";
-import { CONTROL, ICON_SIZE, RADIUS, ROW_PADDING, TEXT, pillRadius, sectionTitle, titleGap } from "./design-tokens.ts";
+import { CHART_MOTION, CONTROL, ICON_SIZE, RADIUS, ROW_PADDING, TEXT, pillRadius, sectionTitle, titleGap } from "./design-tokens.ts";
 import { InlineEmpty, MetricStepper } from "./ui.tsx";
 
 const BAR_HEIGHT = 6;
@@ -97,13 +97,9 @@ export function RankingBars({ title, empty, entries, highlight, colors, compact,
                   overflow: "hidden",
                 }}
               >
-                <View
-                  style={{
-                    width: `${max > 0 ? Math.max(1, (row.value / max) * 100) : 0}%`,
-                    height: BAR_HEIGHT,
-                    borderRadius: pillRadius(BAR_HEIGHT),
-                    backgroundColor: colors.accent,
-                  }}
+                <AnimatedBar
+                  percent={max > 0 ? Math.max(1, (row.value / max) * 100) : 0}
+                  color={colors.accent}
                 />
               </View>
               <Text
@@ -129,5 +125,32 @@ export function RankingBars({ title, empty, entries, highlight, colors, compact,
         </View>
       )}
     </View>
+  );
+}
+
+/** Bar fill that grows from 0 on mount and animates between widths on change. */
+function AnimatedBar({ percent, color }: { percent: number; color: string }): ReactNode {
+  const progress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.timing(progress, {
+      toValue: percent,
+      duration: CHART_MOTION.grow,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [percent, progress]);
+
+  return (
+    <Animated.View
+      style={{
+        width: progress.interpolate({ inputRange: [0, 100], outputRange: ["0%", "100%"] }),
+        height: BAR_HEIGHT,
+        borderRadius: pillRadius(BAR_HEIGHT),
+        backgroundColor: color,
+      }}
+    />
   );
 }

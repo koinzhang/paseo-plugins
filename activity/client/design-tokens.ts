@@ -130,6 +130,19 @@ export const iconButton: ViewStyle = {
   flexShrink: 0,
 };
 
+/**
+ * Global chart motion (081): `grow` for bars reaching a new value, `reveal` /
+ * `refresh` for the heatmap's first column sweep and later metric / range
+ * switches. `refreshFloor` is the lowest column opacity during a refresh.
+ */
+export const CHART_MOTION = {
+  grow: 400,
+  reveal: 700,
+  refresh: 450,
+  refreshFloor: 0.3,
+  columnSpan: 0.35,
+} as const;
+
 /** Composer popover content frame, shared by the Activity and Attention pills. */
 export const POPOVER_WIDTH = { min: 300, max: 380 } as const;
 
