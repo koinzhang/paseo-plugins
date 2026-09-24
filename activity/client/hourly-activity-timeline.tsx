@@ -19,8 +19,6 @@ type ThemeColors = {
 /** Hours visible in one viewport; the step follows from the measured width. */
 const VISIBLE_HOURS = 24;
 const STROKE = 2;
-/** Guards against a near-vertical segment asking for an absurd border band. */
-const MAX_STROKE_BAND = 48;
 /** A day label ("Sep 24") plus the right-pinned "Now" must fit, or the label overflows the scroll content. */
 const NOW_LABEL_CLEARANCE = 72;
 
@@ -39,8 +37,8 @@ function hourRangeLabel(start: string, locale: string): string {
 
 /**
  * Filled line series drawn with React Native primitives only (no SVG on the
- * host). Each hour gap is one clipped cell holding a `skewY` parallelogram:
- * its top edge is the polyline segment, its body is the area fill.
+ * host). Clipped `skewY` cells paint the area; rotated strokes and round
+ * joints draw one continuous-looking line above it.
  */
 function AreaSeries({
   values,
@@ -57,9 +55,10 @@ function AreaSeries({
   stroke: string;
   fill: string;
 }) {
-  // Leave room for the stroke band so the peak is never clipped.
+  // Leave room for the line so the peak is never clipped.
   const usable = Math.max(1, height - STROKE - 1);
   const scale = (value: number) => (max > 0 ? (value / max) * usable : 0);
+  const heights = values.map(scale);
 
   return (
     <View
@@ -69,14 +68,11 @@ function AreaSeries({
         overflow: "hidden",
       }}
     >
-      {values.slice(0, -1).map((value, index) => {
-        const left = scale(value);
-        const right = scale(values[index + 1] ?? 0);
+      {heights.slice(0, -1).map((left, index) => {
+        const right = heights[index + 1] ?? 0;
         // skewY(a) maps y -> y + (x - slot/2)·tan(a), so tan is the segment slope.
         const tan = (left - right) / slot;
         const angle = (Math.atan(tan) * 180) / Math.PI;
-        // Vertical band that renders as a STROKE-thick perpendicular line.
-        const band = Math.min(MAX_STROKE_BAND, STROKE * Math.hypot(1, tan));
         return (
           <View key={index} style={{ width: slot, height, overflow: "hidden" }}>
             <View
@@ -84,19 +80,50 @@ function AreaSeries({
                 position: "absolute",
                 left: 0,
                 width: slot,
-                // Place the sheared top edge on the two hour values, then lift
-                // it by the band so a zero segment still paints its baseline.
-                top: height - left + (slot / 2) * tan - band,
-                height: height * 2 + slot * Math.abs(tan) + band,
+                // Place the sheared top edge on the two hour values.
+                top: height - left + (slot / 2) * tan,
+                height: height * 2 + slot * Math.abs(tan),
                 backgroundColor: fill,
-                borderTopWidth: band,
-                borderTopColor: stroke,
                 transform: [{ skewY: `${angle}deg` }],
               }}
             />
           </View>
         );
       })}
+      {heights.slice(0, -1).map((left, index) => {
+        const right = heights[index + 1] ?? 0;
+        const rise = left - right;
+        const length = Math.hypot(slot, rise);
+        return (
+          <View
+            key={`line-${index}`}
+            style={{
+              position: "absolute",
+              left: index * slot + (slot - length) / 2,
+              top: height - (left + right) / 2 - STROKE / 2,
+              width: length,
+              height: STROKE,
+              borderRadius: STROKE / 2,
+              backgroundColor: stroke,
+              transform: [{ rotate: `${(Math.atan2(rise, slot) * 180) / Math.PI}deg` }],
+            }}
+          />
+        );
+      })}
+      {heights.slice(1, -1).map((value, index) => (
+        <View
+          key={`joint-${index}`}
+          style={{
+            position: "absolute",
+            left: (index + 1) * slot - STROKE / 2,
+            top: height - value - STROKE / 2,
+            width: STROKE,
+            height: STROKE,
+            borderRadius: STROKE / 2,
+            backgroundColor: stroke,
+          }}
+        />
+      ))}
     </View>
   );
 }
