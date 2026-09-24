@@ -8,7 +8,7 @@ import { useToast } from "@getpaseo/plugin/client/react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRegisterOpenAgent } from "../open-agent.ts";
-import { usePanelVisibilityReport } from "../panel-visibility.ts";
+import { usePanelPresenceReport } from "../panel-visibility.ts";
 import { useWorkspaceAgentStatuses } from "../use-workspace-agent-statuses.ts";
 import {
   Dimensions,
@@ -123,7 +123,7 @@ export function WorkspaceActivityPanel({
   const queryClient = useQueryClient();
   const openAgent = navigation?.openAgent;
   useRegisterOpenAgent(openAgent);
-  const reportLayout = usePanelVisibilityReport(workspaceId);
+  usePanelPresenceReport(workspaceId);
   const rootRef = useRef<View>(null);
   const triggerRef = useRef<View>(null);
 
@@ -879,7 +879,7 @@ export function WorkspaceActivityPanel({
   }
 
   return (
-    <View ref={rootRef} collapsable={false} style={styles.shell} onLayout={reportLayout}>
+    <View ref={rootRef} collapsable={false} style={styles.shell}>
       <View style={styles.screen}>
         <ScrollView
           style={styles.scroll}

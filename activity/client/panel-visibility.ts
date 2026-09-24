@@ -1,48 +1,45 @@
-import { useCallback, useEffect, useRef } from "react";
-import type { LayoutChangeEvent } from "react-native";
+import { useEffect, useRef } from "react";
 
 /**
- * Which workspaces currently show the Workspace Activity panel (067).
+ * Which workspaces currently have a mounted Workspace Activity panel (067).
  *
- * The host exposes no panel visibility API and keeps hidden panels mounted
- * with a 0-size container, so each mounted instance reports its own layout
- * size: > 0 is visible, 0 or unmounted is hidden.
+ * Inactive tabs and a collapsed Explorer stay mounted. The host can still
+ * evict an inactive tab after its retained-tab limit is reached.
  */
-const visible = new Map<string, Set<object>>();
+const mounted = new Map<string, Set<object>>();
 const listeners = new Set<(workspaceId: string) => void>();
 
-export function setPanelVisible(workspaceId: string, instance: object, isVisible: boolean): void {
-  const instances = visible.get(workspaceId);
+export function setPanelMounted(workspaceId: string, instance: object, isMounted: boolean): void {
+  const instances = mounted.get(workspaceId);
   const was = instances != null && instances.size > 0;
-  if (isVisible) {
+  if (isMounted) {
     if (instances) instances.add(instance);
-    else visible.set(workspaceId, new Set([instance]));
+    else mounted.set(workspaceId, new Set([instance]));
   } else if (instances) {
     instances.delete(instance);
-    if (instances.size === 0) visible.delete(workspaceId);
+    if (instances.size === 0) mounted.delete(workspaceId);
   }
-  if (was === isPanelVisible(workspaceId)) return;
+  if (was === isPanelMounted(workspaceId)) return;
   for (const listener of listeners) listener(workspaceId);
 }
 
-export function isPanelVisible(workspaceId: string): boolean {
-  return (visible.get(workspaceId)?.size ?? 0) > 0;
+export function isPanelMounted(workspaceId: string): boolean {
+  return (mounted.get(workspaceId)?.size ?? 0) > 0;
 }
 
-/** Called with the workspace id whenever its visibility flips. */
-export function watchPanelVisibility(listener: (workspaceId: string) => void): () => void {
+/** Called with the workspace id whenever its mounted state flips. */
+export function watchPanelPresence(listener: (workspaceId: string) => void): () => void {
   listeners.add(listener);
   return () => {
     listeners.delete(listener);
   };
 }
 
-/** `onLayout` for the panel root; clears the report on unmount or workspace change. */
-export function usePanelVisibilityReport(workspaceId: string): (event: LayoutChangeEvent) => void {
+/** Registers a panel until unmount or workspace change. */
+export function usePanelPresenceReport(workspaceId: string): void {
   const instance = useRef({}).current;
-  useEffect(() => () => setPanelVisible(workspaceId, instance, false), [workspaceId, instance]);
-  return useCallback((event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout;
-    setPanelVisible(workspaceId, instance, width > 0 && height > 0);
+  useEffect(() => {
+    setPanelMounted(workspaceId, instance, true);
+    return () => setPanelMounted(workspaceId, instance, false);
   }, [workspaceId, instance]);
 }

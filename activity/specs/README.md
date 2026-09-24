@@ -93,7 +93,7 @@
 | [064-review-hardening](./064-review-hardening/) | 已实现 | 审查修复：read-skill 符号链接、unarchive 参数、读 RPC 缓存与 SQL 下推、目录 hint 多余刷新、增量历史扫描、SQLite busy timeout / WAL |
 | [065-design-tokens](./065-design-tokens/) | 已实现，页面验收待完成 | 设计规范统一：`client/design-tokens.ts` + `docs/design-system.md`；三层 scope 与 popover 同角色同值；测试拦截裸样式数值 |
 | [066-shared-ui-i18n](./066-shared-ui-i18n/) | 已实现，页面验收待完成 | 公共组件 `client/ui.tsx`；三图统一浮动 `ChartTooltip`（Timeline 去 readout）；文案随 Paseo app 语言（en / zh-CN）；两 popover 宽度统一 |
-| [067-workspace-header-button](./067-workspace-header-button/) | 已实现，页面验收待完成 | 每个 workspace header 增加 Activity 图标按钮，点击在 Explorer 打开 Workspace Activity；面板可见时隐藏 |
+| [067-workspace-header-button](./067-workspace-header-button/) | 已实现，页面验收待完成 | 每个 workspace header 增加 Activity 图标按钮，点击在 Explorer 打开 Workspace Activity；面板挂载时隐藏，宿主 tab 缓存上限见 plan |
 ## 约定
 
 每个编号目录通常含：

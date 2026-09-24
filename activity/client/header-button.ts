@@ -1,6 +1,6 @@
 import type { PluginButtonRegistration, PluginClientContext } from "@getpaseo/plugin/client";
 import { messagesFor } from "../shared/i18n.ts";
-import { isPanelVisible, watchPanelVisibility } from "./panel-visibility.ts";
+import { isPanelMounted, watchPanelPresence } from "./panel-visibility.ts";
 import { currentAppLanguage, watchAppLanguage } from "./use-app-language.ts";
 
 type WorkspacesApi = PluginClientContext["paseo"]["workspaces"];
@@ -33,7 +33,7 @@ export function contributeHeaderButtons(
       button: {
         title: buttonTitle(),
         icon: "Activity",
-        visible: !isPanelVisible(workspaceId),
+        visible: !isPanelMounted(workspaceId),
         behavior: {
           kind: "action",
           onPress() {
@@ -117,8 +117,8 @@ export function contributeHeaderButtons(
     for (const button of buttons.values()) button.update({ title });
   });
 
-  const stopVisibility = watchPanelVisibility((workspaceId) => {
-    buttons.get(workspaceId)?.update({ visible: !isPanelVisible(workspaceId) });
+  const stopPresence = watchPanelPresence((workspaceId) => {
+    buttons.get(workspaceId)?.update({ visible: !isPanelMounted(workspaceId) });
   });
 
   return () => {
@@ -126,7 +126,7 @@ export function contributeHeaderButtons(
     ++generation;
     clearInterval(timer);
     stopLanguage();
-    stopVisibility();
+    stopPresence();
     const stop = release;
     release = undefined;
     if (stop) void stop().catch(report);
