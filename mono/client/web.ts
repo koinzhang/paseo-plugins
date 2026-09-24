@@ -523,6 +523,13 @@ ${EXPLORER_TOOLBAR_TEST_IDS.map(
 ).join(",\n")} {
   border-bottom-color: transparent !important;
 }
+${EXPLORER_SELECTOR} [data-testid="changes-repository-header"],
+${EXPLORER_SELECTOR} [data-testid="changes-header"] {
+  background-color: transparent !important;
+}
+${EXPLORER_SELECTOR} [data-testid="forge-setup-callout"] {
+  display: none !important;
+}
 /* Paseo keeps a 36px Changes repository row even when branch, PR, and actions render nothing. */
 html[${CHROME_ATTRIBUTE}] ${EXPLORER_SELECTOR} [${EXPLORER_EMPTY_REPOSITORY_ATTRIBUTE}] {
   display: none !important;
