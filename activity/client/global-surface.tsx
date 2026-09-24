@@ -104,6 +104,8 @@ function rankIconName(kind: RankKind): "Sparkles" | "Plug" | "Bot" {
   return "Bot";
 }
 
+const ROW_GAP = 2;
+
 function RankList({
   title,
   items,
@@ -112,6 +114,7 @@ function RankList({
   colors,
   compact,
   units,
+  visibleRows,
   headerAction,
 }: {
   title: string;
@@ -125,14 +128,17 @@ function RankList({
   colors: { accent: string; foreground: string; foregroundMuted: string; surface0: string };
   compact: boolean;
   units: Messages["units"];
+  /** Rows shown before the list scrolls (matches the Insights column). */
+  visibleRows: number;
   headerAction?: {
     icon: "Sparkles" | "Plug" | "Bot";
     accessibilityLabel: string;
     onPress: () => void;
   };
 }): ReactNode {
+  const [rowHeight, setRowHeight] = useState(0);
   return (
-    <View style={{ gap: 2 }}>
+    <View style={{ gap: ROW_GAP }}>
       <View style={{ marginBottom: titleGap(compact) - 2 }}>
         <SectionHeader title={title} colors={colors} compact={compact}>
           {headerAction ? (
@@ -148,25 +154,42 @@ function RankList({
       {items.length === 0 ? (
         <InlineEmpty text={empty} color={colors.foregroundMuted} />
       ) : (
-        items.map((item) => (
-          <View key={item.key} style={styles.rankRow}>
-            <Icon
-              name={rankIconName(item.kind)}
-              size={ICON_SIZE.inline}
-              color={
-                item.kind === "mcp"
-                  ? entityColor(item.server ?? "", chartColorScheme(colors.surface0))
-                  : colors.accent
-              }
-            />
-            <Text style={styles.rankName} numberOfLines={1}>
-              {item.label}
-            </Text>
-            <Text style={styles.rankMeta}>
-              {item.unit === "prompts" ? units.prompts(item.count) : units.calls(item.count)}
-            </Text>
-          </View>
-        ))
+        <ScrollView
+          key={items[0]?.kind}
+          style={{
+            maxHeight:
+              items.length > visibleRows && rowHeight > 0
+                ? visibleRows * rowHeight + (visibleRows - 1) * ROW_GAP
+                : undefined,
+          }}
+          contentContainerStyle={{ gap: ROW_GAP }}
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled
+        >
+          {items.map((item, index) => (
+            <View
+              key={item.key}
+              style={styles.rankRow}
+              onLayout={index === 0 ? (event) => setRowHeight(event.nativeEvent.layout.height) : undefined}
+            >
+              <Icon
+                name={rankIconName(item.kind)}
+                size={ICON_SIZE.inline}
+                color={
+                  item.kind === "mcp"
+                    ? entityColor(item.server ?? "", chartColorScheme(colors.surface0))
+                    : colors.accent
+                }
+              />
+              <Text style={styles.rankName} numberOfLines={1}>
+                {item.label}
+              </Text>
+              <Text style={styles.rankMeta}>
+                {item.unit === "prompts" ? units.prompts(item.count) : units.calls(item.count)}
+              </Text>
+            </View>
+          ))}
+        </ScrollView>
       )}
     </View>
   );
@@ -687,7 +710,8 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
           <View style={styles.column}>
             <RankList
               title={m.global.rankTitle[rankKind]}
-              items={lists[rankKind].slice(0, insights.length)}
+              items={lists[rankKind]}
+              visibleRows={insights.length}
               empty={m.global.rankEmpty[rankKind]}
               styles={styles}
               colors={theme.colors}
