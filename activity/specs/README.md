@@ -103,6 +103,8 @@
 | [074-timestamp-preservation](./074-timestamp-preservation/) | 已实现 | 重扫不再用回放时间覆盖事件时间：取更早且不晚于首次入库；启动时修复存量 |
 | [075-prompt-replay-dedupe](./075-prompt-replay-dedupe/) | 已实现 | 同一 prompt 的实时行与回放行（provider ID / `canonical:`）去重，保留实时行 |
 | [076-global-chart-titles](./076-global-chart-titles/) | 已实现 | Global 三张图标题统一为 Activity Calendar / Daily Activity / Hourly Activity |
+| [077-provider-filter-align-right](./077-provider-filter-align-right/) | 已实现 | Global provider 筛选栏右对齐；下拉菜单与触发器右对齐向左展开 |
+| [078-ranking-collapse](./078-ranking-collapse/) | 已实现 | Global Providers / Projects 排行默认最多显示 5 条，右侧支持展开与收起 |
 ## 约定
 
 每个编号目录通常含：

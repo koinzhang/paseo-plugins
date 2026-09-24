@@ -1,11 +1,14 @@
+import { Icon } from "@getpaseo/plugin/client/react-native";
 import { useMemo, useState, type ReactNode } from "react";
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { metricValue, type ActivityMetric } from "../shared/activity.ts";
-import { RADIUS, ROW_PADDING, TEXT, pillRadius, sectionTitle, titleGap } from "./design-tokens.ts";
+import { messagesFor } from "../shared/i18n.ts";
+import { CONTROL, ICON_SIZE, RADIUS, ROW_PADDING, TEXT, pillRadius, sectionTitle, titleGap } from "./design-tokens.ts";
 import { InlineEmpty, MetricStepper } from "./ui.tsx";
 
 const BAR_HEIGHT = 6;
 const SWATCH_SIZE = 10;
+const VISIBLE_ROWS = 5;
 
 export type RankingEntry = {
   key: string;
@@ -20,8 +23,8 @@ export type RankingEntry = {
 
 /**
  * Ranked bars with a `‹ Sessions ›` metric switch (069 Providers, 070
- * Projects). Lists every entry with a nonzero value; `highlight` dims the
- * others instead of hiding them. Bars are normalized to the top value.
+ * Projects). Shows the top five nonzero entries until expanded; `highlight`
+ * dims the others instead of hiding them. Bars use the top value for scale.
  */
 export function RankingBars({ title, empty, entries, highlight, colors, compact, locale }: {
   title: string;
@@ -34,6 +37,8 @@ export function RankingBars({ title, empty, entries, highlight, colors, compact,
   locale: string;
 }): ReactNode {
   const [metric, setMetric] = useState<ActivityMetric>("sessions");
+  const [expanded, setExpanded] = useState(false);
+  const m = messagesFor(locale);
   const rows = useMemo(
     () =>
       entries
@@ -43,6 +48,9 @@ export function RankingBars({ title, empty, entries, highlight, colors, compact,
     [entries, metric],
   );
   const max = rows[0]?.value ?? 0;
+  const hiddenCount = Math.max(0, rows.length - VISIBLE_ROWS);
+  const visibleRows = expanded ? rows : rows.slice(0, VISIBLE_ROWS);
+  const toggleLabel = expanded ? m.global.ranking.showLess : m.global.ranking.showMore(hiddenCount);
 
   return (
     <View style={{ gap: titleGap(compact) - 2 }}>
@@ -56,7 +64,7 @@ export function RankingBars({ title, empty, entries, highlight, colors, compact,
         <InlineEmpty text={empty} color={colors.foregroundMuted} />
       ) : (
         <View style={{ gap: 2 }}>
-          {rows.map((row) => (
+          {visibleRows.map((row) => (
             <View
               key={row.key}
               style={{
@@ -105,6 +113,19 @@ export function RankingBars({ title, empty, entries, highlight, colors, compact,
               </Text>
             </View>
           ))}
+          {hiddenCount > 0 ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={toggleLabel}
+              accessibilityState={{ expanded }}
+              hitSlop={CONTROL.hitSlop}
+              onPress={() => setExpanded((value) => !value)}
+              style={{ alignSelf: "flex-end", flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: ROW_PADDING.dense }}
+            >
+              <Text style={{ ...TEXT.body, color: colors.foregroundMuted }}>{toggleLabel}</Text>
+              <Icon name={expanded ? "ChevronUp" : "ChevronDown"} size={ICON_SIZE.inline} color={colors.foregroundMuted} />
+            </Pressable>
+          ) : null}
         </View>
       )}
     </View>

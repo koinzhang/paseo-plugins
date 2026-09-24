@@ -116,6 +116,7 @@ function en({ num }: Formatters) {
       nextMetric: "Next metric",
       providerRanking: { title: "Providers", empty: "No provider activity yet" },
       projectRanking: { title: "Projects", empty: "No project activity yet", other: "Other" },
+      ranking: { showMore: (value: number) => `Show ${num(value)} more`, showLess: "Show less" },
       rankTitle: { skills: "Most used skills", mcp: "Most used MCP", models: "Most used models" },
       rankEmpty: { skills: "No skills yet", mcp: "No MCP yet", models: "No models yet" },
       rankShow: {
@@ -267,6 +268,7 @@ function zhCN({ num }: Formatters): Messages {
       nextMetric: "下一个指标",
       providerRanking: { title: "Provider", empty: "还没有 Provider 活动" },
       projectRanking: { title: "项目", empty: "还没有项目活动", other: "其他" },
+      ranking: { showMore: (value: number) => `展开剩余 ${num(value)} 项`, showLess: "收起" },
       rankTitle: { skills: "常用 Skill", mcp: "常用 MCP", models: "常用模型" },
       rankEmpty: { skills: "还没有 Skill", mcp: "还没有 MCP", models: "还没有模型" },
       rankShow: { skills: "显示常用 Skill", mcp: "显示常用 MCP", models: "显示常用模型" },
