@@ -199,6 +199,23 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
     queryFn: () => byProvider({}),
   });
 
+  const currentWindowStart = fixedWindowFrom(7);
+  const previousWindowStart = fixedWindowFrom(14);
+  // The RPC's `to` is inclusive; end the previous window just before this one.
+  const previousWindowEnd = new Date(Date.parse(currentWindowStart) - 1).toISOString();
+  const comparisonQuery = useQuery({
+    refetchInterval: 15_000,
+    retry: false,
+    queryKey: ["activity", "kpi-comparison", currentWindowStart],
+    queryFn: async () => {
+      const [current, previous] = await Promise.all([
+        byProvider({ from: currentWindowStart }),
+        byProvider({ from: previousWindowStart, to: previousWindowEnd }),
+      ]);
+      return { current: current.providers, previous: previous.providers };
+    },
+  });
+
   const activityQuery = useQuery({
     refetchInterval: 15_000,
     retry: false,
@@ -449,8 +466,10 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
         providers: filteredProviders,
         allProviders: providers,
         providerFilter,
+        comparison: comparisonQuery.data,
       }),
     [
+      comparisonQuery.data,
       filteredProviders,
       locale,
       providerFilter,

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Text, View, type TextStyle } from "react-native";
 import { fitFontSize } from "./fit-text.ts";
 import { FONT_SIZE, FONT_WEIGHT, RADIUS } from "./design-tokens.ts";
+import type { KpiRow } from "../shared/insights.ts";
 
 /** Hidden measuring box wide enough to never clamp the text (051). */
 const MEASURE_WIDTH = 1000;
@@ -62,8 +63,8 @@ function FitText({ text, available, base, min, lineHeight, color, weight, tabula
 }
 
 function StatTile({ item, colors, dense, compact, bordered }: {
-  item: { label: string; value: string };
-  colors: { border: string; foreground: string; foregroundMuted: string };
+  item: KpiRow;
+  colors: { border: string; foreground: string; foregroundMuted: string; statusSuccess: string; statusDanger: string };
   dense: boolean;
   compact: boolean;
   bordered: boolean;
@@ -71,11 +72,15 @@ function StatTile({ item, colors, dense, compact, bordered }: {
   const [width, setWidth] = useState(0);
   const padding = dense ? 8 : 12;
   const available = Math.max(0, width - padding * 2 - (bordered ? 1 : 0));
+  const comparisonColor = item.comparison?.direction === "up"
+    ? colors.statusSuccess
+    : item.comparison?.direction === "down"
+      ? colors.statusDanger
+      : colors.foregroundMuted;
   return (
     <View
       onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
       style={{
-        position: "relative",
         flexGrow: 1,
         flexBasis: dense ? 84 : compact ? 100 : 120,
         minWidth: 0,
@@ -105,13 +110,24 @@ function StatTile({ item, colors, dense, compact, bordered }: {
         lineHeight={16}
         color={colors.foregroundMuted}
       />
+      {item.comparison ? (
+        <FitText
+          text={item.comparison.text}
+          available={available}
+          base={FONT_SIZE.label}
+          min={10}
+          lineHeight={16}
+          color={comparisonColor}
+          tabular
+        />
+      ) : null}
     </View>
   );
 }
 
 export function UsageStats({ items, colors, compact, dense }: {
-  items: ReadonlyArray<{ label: string; value: string }>;
-  colors: { border: string; foreground: string; foregroundMuted: string };
+  items: ReadonlyArray<KpiRow>;
+  colors: { border: string; foreground: string; foregroundMuted: string; statusSuccess: string; statusDanger: string };
   compact: boolean;
   /** Smaller numbers / labels / padding (025). */
   dense?: boolean;

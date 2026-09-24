@@ -99,6 +99,7 @@
 | [070-metric-switch-projects](./070-metric-switch-projects/) | 已实现，页面验收待完成 | KPI 5 格（去 Longest streak）；热力图 / 30 天直方图 / Timeline 右上角 Sessions·Prompts·Skill·MCP 切换；Messages → Prompts；Providers 下方 Projects 排行（`usage.by-project`，agents 记录 cwd / project_root） |
 | [071-omp-provider-split](./071-omp-provider-split/) | 已实现，页面验收待完成 | Oh My Pi（`omp`）不再并入 Pi，所有视图独立统计；删除 `brandProviderId` |
 | [072-insights-habits](./072-insights-habits/) | 已实现，页面验收待完成 | Insights 8 行重排（Active days、Longest streak、多轮会话占比、平均会话投入时长等）；`usage.agent-lifetime` 加 `averageEngagedMs` / 多轮会话计数 |
+| [073-global-kpi-comparison](./073-global-kpi-comparison/) | 已实现，页面验收待完成 | Global 四格 KPI 增加相邻 7 日对比；Top provider / model 显示上一窗口榜首名称 |
 ## 约定
 
 每个编号目录通常含：

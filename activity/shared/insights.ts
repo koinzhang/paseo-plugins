@@ -4,6 +4,8 @@ import { formatCount, formatDisplayName, formatDuration } from "./format.ts";
 import { messagesFor } from "./i18n.ts";
 
 export type InsightRow = { label: string; value: string };
+export type KpiComparison = { text: string; direction: "up" | "down" | "flat" | "unknown" };
+export type KpiRow = InsightRow & { comparison?: KpiComparison };
 
 export type InsightSummary = {
   skills: number;
@@ -78,31 +80,31 @@ function withShare(label: string | undefined, count: number, total: number): str
  * Messages-weighted top provider (050) with its share of all providers' messages
  * (069). A selected provider is shown with its own share.
  */
-function topProviderValue(
+function topProviderStats(
   providers: readonly ProviderUsageItem[],
   allProviders: readonly ProviderUsageItem[],
   providerFilter: string,
-): string {
+): { value: string; label: string | undefined } {
   const total = allProviders.reduce((sum, p) => sum + p.messageCount, 0);
   if (providerFilter !== "all") {
     const selected = providers.find((p) => p.provider === providerFilter);
-    return withShare(selected?.label, selected?.messageCount ?? 0, total);
+    return { value: withShare(selected?.label, selected?.messageCount ?? 0, total), label: selected && selected.messageCount > 0 ? selected.label : undefined };
   }
   const ranked = [...providers]
     .filter((p) => p.messageCount > 0)
     .sort(
       (a, b) =>
         b.messageCount - a.messageCount || a.provider.localeCompare(b.provider),
-    );
+  );
   const top = ranked[0];
-  return withShare(top?.label, top?.messageCount ?? 0, total);
+  return { value: withShare(top?.label, top?.messageCount ?? 0, total), label: top?.label };
 }
 
 /** Messages-weighted top model (050) with its share of in-filter model messages (069). */
-function topModelValue(
+function topModelStats(
   providers: readonly ProviderUsageItem[],
   providerFilter: string,
-): string {
+): { value: string; label: string | undefined } {
   const map = new Map<string, number>();
   const source =
     providerFilter === "all"
@@ -117,9 +119,23 @@ function topModelValue(
     (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
   );
   const top = ranked[0];
-  if (!top || top[1] <= 0) return "—";
+  if (!top || top[1] <= 0) return { value: "—", label: undefined };
   const total = ranked.reduce((sum, [, count]) => sum + count, 0);
-  return withShare(formatDisplayName(top[0]), top[1], total);
+  const label = formatDisplayName(top[0]);
+  return { value: withShare(label, top[1], total), label };
+}
+
+function comparison(current: number, previous: number, locale: string): KpiComparison {
+  const suffix = messagesFor(locale).kpi.previous7Days;
+  if (previous === 0 && current > 0) return { text: `— ${suffix}`, direction: "unknown" };
+  const change = previous === 0 ? 0 : Math.round(((current - previous) / previous) * 100);
+  const direction = change > 0 ? "up" : change < 0 ? "down" : "flat";
+  const arrow = direction === "up" ? "↑" : direction === "down" ? "↓" : "→";
+  return { text: `${arrow}${Math.abs(change).toLocaleString(locale)}% ${suffix}`, direction };
+}
+
+function previousLeader(label: string | undefined, locale: string): KpiComparison {
+  return { text: `${label ?? "—"} ${messagesFor(locale).kpi.previous7DaysBare}`, direction: "unknown" };
 }
 
 /** Share of active agents that are coding (018); empty creations excluded. */
@@ -220,19 +236,46 @@ export function buildActivityKpi(input: {
   /** Every provider; denominator of the top-provider share. */
   allProviders: readonly ProviderUsageItem[];
   providerFilter: string;
-}): InsightRow[] {
+  /** Two adjacent seven-day windows, when the comparison query has loaded. */
+  comparison?: {
+    current: readonly ProviderUsageItem[];
+    previous: readonly ProviderUsageItem[];
+  };
+}): KpiRow[] {
   const locale = input.locale ?? "en";
   const m = messagesFor(locale).kpi;
+  const topProvider = topProviderStats(input.providers, input.allProviders, input.providerFilter);
+  const topModel = topModelStats(input.providers, input.providerFilter);
+  const current = input.comparison?.current ?? [];
+  const previous = input.comparison?.previous ?? [];
+  const previousProvider = topProviderStats(previous, previous, input.providerFilter);
+  const previousModel = topModelStats(previous, input.providerFilter);
+  const count = (items: readonly ProviderUsageItem[], field: "agentCount" | "messageCount") =>
+    items.reduce(
+      (sum, item) => sum + (input.providerFilter === "all" || item.provider === input.providerFilter ? item[field] : 0),
+      0,
+    );
+  const trend = input.comparison;
   return [
-    { label: m.sessions, value: input.sessions.toLocaleString(locale) },
-    { label: m.prompts, value: input.messages.toLocaleString(locale) },
+    {
+      label: m.sessions,
+      value: input.sessions.toLocaleString(locale),
+      comparison: trend ? comparison(count(current, "agentCount"), count(previous, "agentCount"), locale) : undefined,
+    },
+    {
+      label: m.prompts,
+      value: input.messages.toLocaleString(locale),
+      comparison: trend ? comparison(count(current, "messageCount"), count(previous, "messageCount"), locale) : undefined,
+    },
     {
       label: m.topProvider,
-      value: topProviderValue(input.providers, input.allProviders, input.providerFilter),
+      value: topProvider.value,
+      comparison: trend ? previousLeader(previousProvider.label, locale) : undefined,
     },
     {
       label: m.topModel,
-      value: topModelValue(input.providers, input.providerFilter),
+      value: topModel.value,
+      comparison: trend ? previousLeader(previousModel.label, locale) : undefined,
     },
   ];
 }

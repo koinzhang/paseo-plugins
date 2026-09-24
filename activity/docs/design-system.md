@@ -45,6 +45,8 @@
 | `TEXT.menu` | 14 / lh 18 / normal | label foreground，value muted |
 | `TEXT.display` | 19 / 500 | `foreground` |
 
+Global KPI 的上一窗口对比与 label 共用 `label` 12 的字体角色，宽窄屏均放在 label 下方；增长 / 下降分别用 `statusSuccess` / `statusDanger`，榜首名称和持平使用 `foregroundMuted`。
+
 字重只用 `FONT_WEIGHT`：`regular` / `medium`（500）/ `semibold`（600）/ `bold`（700，仅图标角标）。
 
 ### 2.3 Tab 两级

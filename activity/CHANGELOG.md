@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Global Activity **Projects** ranking under Providers, with the same metric switch and provider filter. Projects resolve from the workspace's project root (recorded while the workspace is listed), the agent `cwd` under a known project, or a sibling in the same Paseo worktree; the rest group under Other.
 - `usage.by-project` RPC; the agent registry now records `cwd` and `project_root`.
 - Heatmap, Last 30 days histogram and Timeline each get a Sessions / Prompts / Skill calls / MCP calls switch (default Sessions); the timeline draws a single series for the chosen metric.
+- Global KPI tiles compare against the previous 7 days: Sessions / Prompts show the change vs prev. 7d, Top provider / Top model show the previous window's leader; the provider filter applies to both windows.
 
 ### Changed
 

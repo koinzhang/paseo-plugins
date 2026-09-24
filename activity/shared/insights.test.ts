@@ -164,4 +164,61 @@ describe("buildActivityKpi", () => {
     assert.equal(empty[2]?.value, "—");
     assert.equal(empty[3]?.value, "—");
   });
+
+  it("compares each KPI against the preceding seven days", () => {
+    const current = [
+      provider({ provider: "codex", label: "Codex", agentCount: 10, messageCount: 9, models: [{ model: "gpt-5.4", count: 9 }] }),
+      provider({ provider: "claude", label: "Claude", agentCount: 2, messageCount: 1, models: [{ model: "opus", count: 1 }] }),
+    ];
+    const previous = [
+      provider({ provider: "codex", label: "Codex", agentCount: 6, messageCount: 4, models: [{ model: "gpt-5.4", count: 4 }] }),
+      provider({ provider: "claude", label: "Claude", agentCount: 4, messageCount: 6, models: [{ model: "opus", count: 6 }] }),
+    ];
+    const rows = buildActivityKpi({
+      sessions: 100,
+      messages: 160,
+      providers: [codex, claude],
+      allProviders: [codex, claude],
+      providerFilter: "all",
+      locale: "en",
+      comparison: { current, previous },
+    });
+    assert.deepEqual(rows.map((row) => row.comparison?.text), [
+      "↑20% vs prev. 7d",
+      "→0% vs prev. 7d",
+      "Claude prev. 7d",
+      "Opus prev. 7d",
+    ]);
+
+    const filtered = buildActivityKpi({
+      sessions: 20,
+      messages: 30,
+      providers: [claude],
+      allProviders: [codex, claude],
+      providerFilter: "claude",
+      locale: "en",
+      comparison: { current, previous },
+    });
+    assert.deepEqual(filtered.map((row) => row.comparison?.text), [
+      "↓50% vs prev. 7d",
+      "↓83% vs prev. 7d",
+      "Claude prev. 7d",
+      "Opus prev. 7d",
+    ]);
+  });
+
+  it("leaves percentage undefined when the preceding window has no baseline", () => {
+    const rows = buildActivityKpi({
+      sessions: 1,
+      messages: 1,
+      providers: [codex],
+      allProviders: [codex],
+      providerFilter: "all",
+      comparison: { current: [{ ...codex, agentCount: 1 }], previous: [] },
+    });
+    assert.equal(rows[0]?.comparison?.text, "— vs prev. 7d");
+    assert.equal(rows[1]?.comparison?.direction, "unknown");
+    assert.equal(rows[2]?.comparison?.text, "— prev. 7d");
+    assert.equal(rows[3]?.comparison?.text, "— prev. 7d");
+  });
 });
