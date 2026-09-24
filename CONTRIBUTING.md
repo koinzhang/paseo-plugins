@@ -5,7 +5,7 @@ Thanks for taking the time to contribute. This repository is a monorepo for [Pas
 ## Prerequisites
 
 - Node.js >= 22.6 (CI uses 24; tests run with `--experimental-strip-types`)
-- Paseo >= 0.8.0 to install and try plugins locally
+- Paseo >= 0.9.0-beta.2 for the current Activity package (Activity 0.4.0 is the last release that supports Paseo 0.8.0); Mono requires >= 0.9.0
 - `paseo` CLI available on your `PATH`
 
 ## Layout

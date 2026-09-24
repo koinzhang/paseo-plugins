@@ -20,17 +20,17 @@ Three scopes — not stats-only:
 
 | Scope | Role |
 |---|---|
-| **Global** (sidebar) | Habits across workspaces: heatmap, providers, insights, most-used skills / MCP / models |
+| **Global** (sidebar) | Habits across workspaces: KPI vs the previous 7 days, heatmap / histogram / timeline with a metric switch, Providers / Projects rankings, insights, most-used skills / MCP / models |
 | **Workspace** (Explorer Activity) | Vertical agent ops for the current workspace: list / search / sort / filter / archive, live attention, open Terminals + KPIs; refresh hint on agent idle |
 | **Agent** (panel + pill) | Current session tool detail and skill / MCP summary; refreshes on timeline turn end |
 
-Counted dimensions (local SQLite): tools (skill / MCP / shell / file), agent creations, user messages, models (messages-weighted). Details: [activity/README.md](./activity/README.md) · [architecture](./activity/docs/architecture.md).
+Counted dimensions (local SQLite): tools (skill / MCP / shell / file), agent creations, user messages (Prompts in the UI), models (messages-weighted). Details: [activity/README.md](./activity/README.md) · [architecture](./activity/docs/architecture.md).
 
 Data lives in `~/.paseo/plugin-data/activity/` (`usage.db`). Timeline / `agents.list` are ingestion and live-status sources; queries read the local database.
 
 ## Install
 
-Requires Paseo >= 0.8.0. Activity **0.4.0** is the last release that supports Paseo 0.8.0; later versions will require Paseo >= 0.9.0.
+Requires Paseo >= 0.9.0-beta.2. Activity **0.4.0** is the last release that supports Paseo 0.8.0.
 
 ```bash
 paseo plugin add koinzhang/paseo-plugins --path activity

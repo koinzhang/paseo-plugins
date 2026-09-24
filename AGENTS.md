@@ -1,6 +1,6 @@
 # paseo-plugins
 
-Paseo 插件仓库。当前包含插件 **Activity**（`activity/`）：本地用量分析 **兼** workspace agents 运营——Global（习惯 / provider）、Workspace（Explorer 竖向 Agents 管理 + Terminals + 实时 attention）、Agent（会话工具明细）。
+Paseo 插件仓库。当前包含插件 **Activity**（`activity/`）：本地用量分析 **兼** workspace agents 运营——Global（习惯 / provider / 排行 / KPI 对比）、Workspace（Explorer 竖向 Agents 管理 + Terminals + 实时 attention）、Agent（会话工具明细）。
 
 > 插件 ID / 目录名 / 数据目录：**`activity`**（原 `tool-usage`，见 `activity/specs/007-rename-activity/` Phase 2）。
 > 架构总览：[`activity/docs/architecture.md`](./activity/docs/architecture.md) · 产品 README：[`activity/README.md`](./activity/README.md)
@@ -24,7 +24,7 @@ Paseo 插件仓库。当前包含插件 **Activity**（`activity/`）：本地�
 
 ## Spec 驱动开发
 
-编码前先读 [`activity/specs/README.md`](./activity/specs/README.md) 总览，再读对应编号目录（`001-usage-tracking` … `044-paseo-0.9-adaptation`）：
+编码前先读 [`activity/specs/README.md`](./activity/specs/README.md) 总览，再读对应编号目录（`001-usage-tracking` … `073-global-kpi-comparison`）：
 
 | 文件 | 作用 |
 |---|---|
@@ -126,4 +126,5 @@ jj undo / jj op log / jj op restore         # 恢复
   - 全部 + 按 provider：侧边栏 **Activity** surface
   - 不保留 greeting 模板
 - 查询面以本地库为准；Paseo timeline / `agents.list` 只作采集与回填源
+- `activity/.cache/` 为本地截图 / 临时缓存，已 gitignore，不要提交
 - RPC 名仍为 `usage.*`（契约稳定，不随插件 ID 改名）

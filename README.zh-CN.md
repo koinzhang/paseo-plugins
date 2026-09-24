@@ -20,17 +20,17 @@ Paseo 插件 monorepo。所有插件独立目录、独立 `paseo-plugin.json`，
 
 | Scope | 角色 |
 |---|---|
-| **Global**（侧边栏） | 跨 workspace 习惯：热力图、provider、Insights、Most used skills / MCP / models |
+| **Global**（侧边栏） | 跨 workspace 习惯：KPI 对比前 7 天、热力图 / 直方图 / Timeline 指标切换、Providers / Projects 排行、Insights、Most used skills / MCP / models |
 | **Workspace**（Explorer Activity） | 当前 workspace 的 **竖向 Agents 运营页**：列表 / 搜索 / 排序 / 筛选 / 归档、实时 attention、打开中的 Terminals + KPI；agent 空闲时启发式刷新 |
 | **Agent**（面板 + pill） | 当前会话的工具明细与 skill / MCP 概况；timeline 回合结束刷新 |
 
-计量维度（本地 SQLite）：tools（skill / MCP / shell / file）、agent 创建、用户消息、model（按消息加权）。详见 [activity/README.md](./activity/README.md) · [架构](./activity/docs/architecture.md)。
+计量维度（本地 SQLite）：tools（skill / MCP / shell / file）、agent 创建、用户消息（UI 中称 Prompts）、model（按消息加权）。详见 [activity/README.md](./activity/README.md) · [架构](./activity/docs/architecture.md)。
 
 数据目录 `~/.paseo/plugin-data/activity/`（`usage.db`）。timeline / `agents.list` 作采集与实时状态源；查询只读本地库。
 
 ## 安装
 
-需要 Paseo >= 0.8.0。Activity **0.4.0** 是最后支持 Paseo 0.8.0 的版本；之后的版本将要求 Paseo >= 0.9.0。
+需要 Paseo >= 0.9.0-beta.2。Activity **0.4.0** 是最后支持 Paseo 0.8.0 的版本。
 
 ```bash
 paseo plugin add koinzhang/paseo-plugins --path activity
@@ -43,7 +43,7 @@ npm（Paseo 0.9+）：`paseo plugin install npm:@koinzhang/paseo-plugin-activity
 
 ```bash
 cd activity
-paseo plugin install .
+paseo plugin install "$PWD"   # 绝对路径；npm 版已安装时先 `paseo plugin remove activity`
 paseo plugin reload activity   # 源码改动后重载
 paseo plugin logs activity     # 查看子进程日志
 ```
