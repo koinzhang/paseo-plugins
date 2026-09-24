@@ -9,7 +9,9 @@ Paseo 插件仓库。当前包含插件 **Activity**（`activity/`）：本地�
 
 本地 Paseo 仓库一般与当前 checkout 同级（`../paseo`），写插件时可直接查证 API / 契约 / daemon 实现：
 
-- 本机路径：`/Users/koinzhang/Workspace/xws/paseo`；其他设备先 `ls ..` 确认，不存在就不要臆造路径
+- 本机路径：`/Users/koinzhang/Workspace/xws/paseo`；其他设备先 `ls ..` 确认，不存在就不要臆造路径（缺失时 `./scripts/sync-paseo.sh --clone` 浅克隆）
+- 刷新：`./scripts/sync-paseo.sh`（fetch + fast-forward，只读不改内容）
+- **不要**把 Paseo 改成 git submodule：jj 不支持，submodule 内容不会出现在工作副本里
 - 常用位置：
   - `packages/plugin/src/` — 插件运行时与插件 API（surface / RPC / hooks 等）
   - `packages/protocol/` — RPC 与事件契约
@@ -18,6 +20,7 @@ Paseo 插件仓库。当前包含插件 **Activity**（`activity/`）：本地�
   - `plugin-examples/` — 官方示例插件（surface、timeline、theme 等）
   - `skills/` — 上游 agent 技能；本仓库对应副本在 [`.agents/skills/`](./.agents/skills/)
 - 只读查阅：不要在 paseo 仓库做修改
+- 版本锚点：据源码得出的 API 结论，在对应 `specs/00N/research.md` 记录上游 commit + `paseo --version`（`sync-paseo.sh` 末尾输出可复制块）；上游 HEAD 可能领先于已发布契约
 
 ## Spec 驱动开发
 
