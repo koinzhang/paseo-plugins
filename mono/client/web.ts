@@ -15,6 +15,12 @@ interface DomElement {
   childElementCount: number;
   isConnected: boolean;
   textContent: string | null;
+  style: {
+    getPropertyValue(name: string): string;
+    getPropertyPriority(name: string): string;
+    setProperty(name: string, value: string, priority?: string): void;
+    removeProperty(name: string): void;
+  };
   getAttribute(name: string): string | null;
   setAttribute(name: string, value: string): void;
   removeAttribute(name: string): void;
@@ -39,6 +45,7 @@ declare const document: DomDocument;
 declare const window: object;
 declare const localStorage: { getItem(key: string): string | null };
 declare function getComputedStyle(element: DomElement): {
+  borderColor: string;
   borderBottomWidth: string;
   borderRightWidth: string;
   borderTopWidth: string;
@@ -128,6 +135,7 @@ const PILL_SIGNATURE = { minHeight: "32px", borderTopWidth: "1px", borderTopLeft
 // Chrome renders sub-pixel borders as one device pixel (hairline on 2x displays, 1px on 1x).
 const HAIRLINE_PX = 0.5;
 const POPOVER_BORDER_OPACITY_PERCENT = 50;
+const POPOVER_BORDER_COLOR_PROPERTY = "--mono-popover-border-color";
 const POPOVER_SELECTORS = [
   '[data-testid="combobox-desktop-container"]',
   '[data-menu-surface="true"]',
@@ -165,6 +173,7 @@ export function installMonoWeb(): () => void {
   });
 
   const originals = new Map<DomElement, Map<string, string | null>>();
+  const popoverBorderOriginals = new Map<DomElement, { value: string; priority: string }>();
   let scheduled = false;
   let disposed = false;
 
@@ -203,6 +212,44 @@ export function installMonoWeb(): () => void {
         if (!saved.has(name)) saved.set(name, element.getAttribute(name));
         if (element.getAttribute(name) !== value) element.setAttribute(name, value);
       }
+    }
+  }
+
+  function syncPopoverBorderColors(active: boolean): void {
+    const popovers = active
+      ? Array.from(document.querySelectorAll(POPOVER_SELECTORS.join(",")))
+      : [];
+    const current = new Set(popovers);
+    for (const [element, original] of popoverBorderOriginals) {
+      if (current.has(element)) continue;
+      if (original.value) {
+        element.style.setProperty(POPOVER_BORDER_COLOR_PROPERTY, original.value, original.priority);
+      } else {
+        element.style.removeProperty(POPOVER_BORDER_COLOR_PROPERTY);
+      }
+      popoverBorderOriginals.delete(element);
+    }
+    if (popovers.length === 0) return;
+
+    // Read the host color without our override, including after an in-place theme change.
+    const root = document.documentElement;
+    const chromeValue = root.getAttribute(CHROME_ATTRIBUTE);
+    if (chromeValue !== null) root.removeAttribute(CHROME_ATTRIBUTE);
+    try {
+      for (const element of popovers) {
+        if (!popoverBorderOriginals.has(element)) {
+          popoverBorderOriginals.set(element, {
+            value: element.style.getPropertyValue(POPOVER_BORDER_COLOR_PROPERTY),
+            priority: element.style.getPropertyPriority(POPOVER_BORDER_COLOR_PROPERTY),
+          });
+        }
+        const color = getComputedStyle(element).borderColor;
+        if (element.style.getPropertyValue(POPOVER_BORDER_COLOR_PROPERTY) !== color) {
+          element.style.setProperty(POPOVER_BORDER_COLOR_PROPERTY, color);
+        }
+      }
+    } finally {
+      if (chromeValue !== null) root.setAttribute(CHROME_ATTRIBUTE, chromeValue);
     }
   }
 
@@ -332,6 +379,10 @@ export function installMonoWeb(): () => void {
     const settings = getMonoSettings();
     const mode = selectedMonoTheme();
     if (mode) setDesired(desired, document.documentElement, THEME_ATTRIBUTE, mode);
+    const finish = () => {
+      apply(desired);
+      syncPopoverBorderColors(settings.minimalChrome && mode === null);
+    };
 
     if (settings.minimalChrome) {
       setDesired(desired, document.documentElement, CHROME_ATTRIBUTE);
@@ -350,19 +401,19 @@ export function installMonoWeb(): () => void {
     // A lone item has no sibling to anchor the group; its wrapper is unverifiable.
     const group = buttons.length >= 2 ? lowestCommonAncestor(buttons) : null;
     if (!group || group === document.documentElement) {
-      apply(desired);
+      finish();
       return;
     }
     if (settings.minimalChrome) setDesired(desired, group, SIDEBAR_HEADER_ATTRIBUTE);
 
     if (!settings.compactSidebarNav) {
-      apply(desired);
+      finish();
       return;
     }
 
     const cells = buttons.map((button) => ({ button, cell: directChildContaining(group, button) }));
     if (cells.some((item) => !item.cell) || new Set(cells.map((item) => item.cell)).size !== cells.length) {
-      apply(desired);
+      finish();
       return;
     }
 
@@ -375,7 +426,7 @@ export function installMonoWeb(): () => void {
       const label = button.getAttribute("aria-label");
       if (label) setDesired(desired, button, "title", label);
     }
-    apply(desired);
+    finish();
   }
 
   function schedule(): void {
@@ -400,6 +451,7 @@ export function installMonoWeb(): () => void {
     clearInterval(interval);
     unsubscribeSettings();
     apply(new Map());
+    syncPopoverBorderColors(false);
     style.remove();
     voiceStyle.remove();
   };
@@ -430,6 +482,9 @@ html[${CHROME_ATTRIBUTE}] [${PILL_ATTRIBUTE}] {
 }
 ${POPOVER_SELECTORS.map((selector) => `html[${CHROME_ATTRIBUTE}] ${selector}`).join(",\n")} {
   border-width: ${HAIRLINE_PX}px !important;
+}
+${POPOVER_SELECTORS.map((selector) => `html[${CHROME_ATTRIBUTE}]:not([${THEME_ATTRIBUTE}]) ${selector}`).join(",\n")} {
+  border-color: color-mix(in srgb, var(${POPOVER_BORDER_COLOR_PROPERTY}) ${POPOVER_BORDER_OPACITY_PERCENT}%, transparent) !important;
 }
 ${MONO_THEMES.map(
   (theme) => `${POPOVER_SELECTORS.map(
