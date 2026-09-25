@@ -1,5 +1,5 @@
 import { ACP_CONFIGS, type AcpConfig, type AcpProviderId } from "./acp-configs.ts";
-import { CATEGORIES, type Category, type Scope } from "./contracts.ts";
+import { CATEGORIES, type Category, type Compatibility, type Scope } from "./contracts.ts";
 import { PROVIDER_IDS, type ProviderId } from "./providers.ts";
 
 /** Bilingual static copy; the client picks by app language. */
@@ -168,8 +168,10 @@ const BASE_MECHANISMS: Partial<Record<ProviderId, Partial<Record<Category, Mecha
     skills: {
       supported: true,
       locations: [
-        { scope: "project", path: ".agents/skills · .cursor/skills · .claude/skills · .codex/skills" },
-        { scope: "user", path: "~/.agents/skills · ~/.cursor/skills · ~/.claude/skills · ~/.codex/skills" },
+        { scope: "project", path: ".cursor/skills · .agents/skills" },
+        { scope: "project", path: ".claude/skills · .codex/skills" },
+        { scope: "user", path: "~/.cursor/skills · ~/.agents/skills" },
+        { scope: "user", path: "~/.claude/skills · ~/.codex/skills" },
         { scope: "user", path: "~/.cursor/skills-cursor (built-in)" },
       ],
       notes: [
@@ -188,7 +190,7 @@ const BASE_MECHANISMS: Partial<Record<ProviderId, Partial<Record<Category, Mecha
       ],
     },
     commands: { supported: true, locations: [{ scope: "project", path: ".cursor/commands/**/*.md" }, { scope: "user", path: "~/.cursor/commands/**/*.md" }], notes: [L("Markdown slash commands; nested folders inside commands/ are allowed.", "Markdown 斜杠命令；commands/ 内支持嵌套目录。") ] },
-    subagents: { supported: true, locations: [{ scope: "project", path: ".cursor/agents · .claude/agents · .codex/agents" }, { scope: "user", path: "~/.cursor/agents · ~/.claude/agents · ~/.codex/agents" }], notes: [L("Agent definitions use Markdown with frontmatter; Claude and Codex directories are read for compatibility.", "子代理使用带 frontmatter 的 Markdown；兼容 Claude 和 Codex 目录。") ] },
+    subagents: { supported: true, locations: [{ scope: "project", path: ".cursor/agents" }, { scope: "project", path: ".claude/agents · .codex/agents" }, { scope: "user", path: "~/.cursor/agents" }, { scope: "user", path: "~/.claude/agents · ~/.codex/agents" }], notes: [L("Agent definitions use Markdown with frontmatter; Claude and Codex directories are available when compatibility is on.", "子代理使用带 frontmatter 的 Markdown；开启兼容时可读取 Claude 和 Codex 目录。") ] },
     plugins: { supported: true, locations: [{ scope: "project", path: "plugin.json · .cursor-plugin/plugin.json" }, { scope: "user", path: "~/.cursor/plugins/local/*/plugin.json · .cursor-plugin/plugin.json" }], notes: [L("Local test plugins are discovered from ~/.cursor/plugins/local. The badge uses the root manifest's declared schema version; unsupported versions are unverified.", "从 ~/.cursor/plugins/local 发现本地测试插件。标识使用根清单声明的规范版本；未支持版本标为未校验。") ] },
   },
   copilot: {
@@ -249,11 +251,13 @@ const BASE_MECHANISMS: Partial<Record<ProviderId, Partial<Record<Category, Mecha
     skills: {
       supported: true,
       locations: [
-        { scope: "project", path: ".opencode/skills · .claude/skills · .agents/skills (cwd → worktree)" },
-        { scope: "user", path: "~/.config/opencode/skills · ~/.claude/skills · ~/.agents/skills" },
+        { scope: "project", path: ".opencode/skills (cwd → worktree)" },
+        { scope: "project", path: ".claude/skills · .agents/skills (cwd → worktree)" },
+        { scope: "user", path: "~/.config/opencode/skills" },
+        { scope: "user", path: "~/.claude/skills · ~/.agents/skills" },
       ],
       notes: [
-        L("One level (skills/*/SKILL.md); no manual-only flag.", "只扫一层（skills/*/SKILL.md）；没有仅手动标记。"),
+        L("Every discovered, permitted skill is advertised automatically; there is no per-skill manual-only switch in OpenCode 1.18. The body loads on demand through the skill tool.", "OpenCode 1.18 会自动向模型列出所有已发现且获准使用的技能；不支持单个技能设为仅手动发现。正文仍由 skill 工具按需加载。"),
         L("`permission.skill` patterns: deny hides a skill, ask prompts first.", "`permission.skill` 通配：deny 隐藏，ask 先确认。"),
       ],
     },
@@ -353,3 +357,24 @@ for (const id of Object.keys(ACP_CONFIGS) as AcpProviderId[]) BASE_MECHANISMS[id
 export const MECHANISMS = Object.fromEntries(PROVIDER_IDS.map((id) => [
   id, Object.fromEntries(CATEGORIES.map((category) => [category, BASE_MECHANISMS[id]?.[category] ?? UNVERIFIED])),
 ])) as Record<ProviderId, Record<Category, Mechanism>>;
+
+/** Reflect local compatibility switches in the discovery explanation. */
+export function mechanismFor(provider: ProviderId, category: Category, compatibility: Compatibility | null | undefined): Mechanism {
+  const base = MECHANISMS[provider][category];
+  if (!compatibility || !(provider === "cursor" && (category === "skills" || category === "subagents")
+    || provider === "opencode" && category === "skills")) return base;
+  const isCursor = provider === "cursor";
+  const state = compatibility.enabled === true
+    ? L(isCursor ? "Cursor third-party compatibility is on." : "OpenCode external skill discovery is on by default.",
+      isCursor ? "Cursor 第三方配置兼容已开启。" : "OpenCode 默认开启外部技能目录扫描。")
+    : compatibility.enabled === false
+      ? L(isCursor ? "Cursor third-party compatibility is off; Claude/Codex directories are skipped." : `OpenCode external skill discovery is off (${compatibility.source}); .claude and .agents directories are skipped.`,
+        isCursor ? "Cursor 第三方配置兼容已关闭；跳过 Claude/Codex 目录。" : `OpenCode 外部技能目录扫描已关闭（${compatibility.source}）；跳过 .claude 和 .agents 目录。`)
+      : L("Cursor's IDE switch could not be read; external directories may differ from the live agent.", "无法读取 Cursor IDE 开关；外部目录可能与当前 agent 的加载状态不同。");
+  const locations = compatibility.enabled === false
+    ? base.locations.filter((location) => isCursor
+      ? !/\.claude\/|\.codex\//.test(location.path)
+      : !/\.claude\/|\.agents\//.test(location.path))
+    : base.locations;
+  return { ...base, locations, notes: [state, ...base.notes] };
+}

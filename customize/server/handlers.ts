@@ -18,6 +18,8 @@ import { scanPi } from "./providers/pi.ts";
 import { scanAcp } from "./providers/acp.ts";
 import { buildNestedIndex, fileSize, isDir, isFile, isRecord, readText, type NestedIndex, type ScanContext } from "./scan-kit.ts";
 import { readSnapshot, writeSnapshot } from "./scan-snapshot.ts";
+import { compatibilityFor } from "./compatibility.ts";
+import { mergeSkillAliases } from "./skill-aliases.ts";
 import { parseToml } from "./toml.ts";
 import { parseYaml } from "./yaml-lite.ts";
 
@@ -63,18 +65,20 @@ function nestedIndex(root: string): NestedIndex {
 export function scanProvider(provider: ProviderId, projectRoot: string | null, env: Pick<ScanContext, "home" | "env" | "platform">): Entry[] {
   const root = projectRoot && isDir(projectRoot) ? path.resolve(projectRoot) : null;
   const ctx: ScanContext = { ...env, projectRoot: root, nested: root ? nestedIndex(root) : null };
-  return SCANNERS[provider](ctx);
+  return mergeSkillAliases(provider, SCANNERS[provider](ctx));
 }
 
 export async function handleScan(input: RpcInput<typeof scanRpc>): Promise<RpcOutput<typeof scanRpc>> {
   const home = homedir();
   const entries = scanProvider(input.provider, input.projectRoot, { home, env: process.env, platform: process.platform });
+  const ctx: ScanContext = { home, env: process.env, platform: process.platform, projectRoot: input.projectRoot, nested: null };
   for (const entry of entries) allowed.add(entry.path);
   const result = {
     provider: input.provider,
     projectRoot: input.projectRoot,
     home,
     entries,
+    compatibility: compatibilityFor(input.provider, ctx),
     scannedAt: new Date().toISOString(),
   };
   try {
@@ -87,6 +91,9 @@ export async function handleScan(input: RpcInput<typeof scanRpc>): Promise<RpcOu
 
 export function handleCachedScan(input: RpcInput<typeof cachedScanRpc>): RpcOutput<typeof cachedScanRpc> {
   const cached = readSnapshot(input.provider, input.projectRoot);
+  const currentCompatibility = compatibilityFor(input.provider, {
+    home: homedir(), env: process.env, platform: process.platform, projectRoot: input.projectRoot, nested: null,
+  });
   if (cached.snapshot) {
     for (const entry of cached.snapshot.entries) {
       const candidates = snapshotCandidates.get(entry.path) ?? [];
@@ -96,7 +103,7 @@ export function handleCachedScan(input: RpcInput<typeof cachedScanRpc>): RpcOutp
       snapshotCandidates.set(entry.path, candidates);
     }
   }
-  return cached;
+  return { ...cached, stale: cached.stale || cached.snapshot?.compatibility?.enabled !== currentCompatibility?.enabled };
 }
 
 function assertAllowed(p: string) {

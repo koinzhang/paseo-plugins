@@ -18,6 +18,7 @@ import {
   type ScanContext,
 } from "../scan-kit.ts";
 import type { Entry, Scope } from "../../shared/contracts.ts";
+import { cursorThirdPartySwitch } from "../compatibility.ts";
 
 /** cursor-agent `workspace-paths` slug: non-alphanumerics → `-`, collapsed and trimmed. */
 export function cursorProjectSlug(root: string): string {
@@ -36,6 +37,7 @@ export function mdcRuleState(data: Frontmatter): Pick<EntryInput, "status" | "re
 export function scanCursor(ctx: ScanContext): Entry[] {
   const sink = new EntrySink(ctx);
   const cursorHome = ctx.env.CURSOR_CONFIG_DIR?.trim() || path.join(ctx.home, ".cursor");
+  const thirdParty = cursorThirdPartySwitch(ctx);
 
   // Instructions ------------------------------------------------------------
   const instruction = (file: string, extra: Partial<EntryInput> = {}) => {
@@ -97,13 +99,15 @@ export function scanCursor(ctx: ScanContext): Entry[] {
   }
 
   // Skills ------------------------------------------------------------------
-  const skills = (root: string, scope: Scope, tags: Entry["tags"] = [], nestedDir?: string) => {
+  const skills = (root: string, scope: Scope, tags: Entry["tags"] = [], nestedDir?: string, external = false) => {
     for (const skill of findSkills(root, { recursive: true, maxDepth: 6 })) {
       const base = skillEntry(skill, root, scope);
       const invocation = skillInvocation(skill.doc);
       const allTags = [...(base.tags ?? []), ...invocation.tags, ...tags];
       const paths = fmList(skill.doc.data, "paths") ?? fmList(skill.doc.data, "globs");
-      if (invocation.status === "manual") {
+      if (external && thirdParty.enabled === false) {
+        sink.add({ ...base, tags: allTags, status: "disabled", reason: { code: "config", value: "thirdPartyExtensibilityEnabled: false" } });
+      } else if (invocation.status === "manual") {
         sink.add({ ...base, tags: allTags, status: "manual", ...(invocation.reason ? { reason: invocation.reason } : {}) });
       } else if (paths) {
         sink.add({ ...base, tags: allTags, status: "conditional", reason: { code: "globs", value: `paths: ${paths}` } });
@@ -117,19 +121,19 @@ export function scanCursor(ctx: ScanContext): Entry[] {
   const PROJECT_SKILL_DIRS = [".agents", ".cursor", ".claude", ".codex"] as const;
   if (ctx.projectRoot) {
     for (const base of PROJECT_SKILL_DIRS) {
-      skills(path.join(ctx.projectRoot, base, "skills"), "project", base === ".claude" || base === ".codex" ? ["legacy"] : []);
+      skills(path.join(ctx.projectRoot, base, "skills"), "project", base === ".claude" || base === ".codex" ? ["legacy"] : [], undefined, base === ".claude" || base === ".codex");
     }
     for (const base of PROJECT_SKILL_DIRS) {
       for (const dir of nestedWith(ctx, base)) {
         const root = path.join(dir, base, "skills");
-        if (isDir(root)) skills(root, "project", ["nested"], path.relative(ctx.projectRoot, dir));
+        if (isDir(root)) skills(root, "project", ["nested"], path.relative(ctx.projectRoot, dir), base === ".claude" || base === ".codex");
       }
     }
   }
   skills(path.join(ctx.home, ".agents", "skills"), "user");
   skills(path.join(cursorHome, "skills"), "user");
-  skills(path.join(ctx.home, ".claude", "skills"), "user", ["legacy"]);
-  skills(path.join(ctx.home, ".codex", "skills"), "user", ["legacy"]);
+  skills(path.join(ctx.home, ".claude", "skills"), "user", ["legacy"], undefined, true);
+  skills(path.join(ctx.home, ".codex", "skills"), "user", ["legacy"], undefined, true);
   skills(path.join(cursorHome, "skills-cursor"), "user", ["builtin"]);
 
   // MCP ---------------------------------------------------------------------
@@ -158,7 +162,8 @@ export function scanCursor(ctx: ScanContext): Entry[] {
   const extraFiles = (category: "commands" | "subagents", root: string, scope: Scope, tags: Entry["tags"] = []) => {
       for (const file of listFiles(root, [".md"], true)) {
         const doc = readMarkdown(file);
-        sink.add({ category, scope, name: path.relative(root, file), path: file, root, status: "auto", tags, ...(doc?.description ? { description: doc.description } : {}) });
+        const off = category === "subagents" && tags.includes("legacy") && thirdParty.enabled === false;
+        sink.add({ category, scope, name: path.relative(root, file), path: file, root, status: off ? "disabled" : "auto", ...(off ? { reason: { code: "config", value: "thirdPartyExtensibilityEnabled: false" } } : {}), tags, ...(doc?.description ? { description: doc.description } : {}) });
       }
   };
   if (ctx.projectRoot) {

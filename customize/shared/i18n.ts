@@ -26,6 +26,7 @@ export interface Messages {
   title: string;
   openBoard: string;
   provider: string;
+  compatibility: (state: "on" | "off" | "unknown" | "supported") => string;
   builtinProvider: string;
   noEnabledProvider: string;
   project: string;
@@ -71,6 +72,7 @@ const en: Messages = {
   title: "Customize",
   openBoard: "Open Customize",
   provider: "Provider",
+  compatibility: (state) => state === "on" ? "Third-party skill directories enabled" : state === "off" ? "Third-party skill directories disabled" : state === "supported" ? "Supports shared skill directories" : "Third-party skill directory state unavailable",
   builtinProvider: "Built-in",
   noEnabledProvider: "No supported providers are enabled in Paseo.",
   project: "Project",
@@ -177,6 +179,7 @@ const zh: Messages = {
   title: "Customize",
   openBoard: "打开 Customize",
   provider: "Provider",
+  compatibility: (state) => state === "on" ? "已开启第三方技能目录兼容" : state === "off" ? "已关闭第三方技能目录兼容" : state === "supported" ? "支持共享技能目录" : "第三方技能目录兼容状态未知",
   builtinProvider: "内置",
   noEnabledProvider: "Paseo 中没有已启用且受 Customize 支持的 Provider。",
   project: "项目",

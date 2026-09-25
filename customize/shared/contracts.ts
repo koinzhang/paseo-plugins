@@ -73,6 +73,9 @@ export type Entry = z.infer<typeof EntrySchema>;
 
 const ProviderIdSchema = z.enum(PROVIDER_IDS);
 
+export const CompatibilitySchema = z.object({ enabled: z.boolean().nullable(), source: z.string() });
+export type Compatibility = z.infer<typeof CompatibilitySchema>;
+
 export const scanRpc = defineRpc({
   name: "customize.scan",
   input: z.object({ provider: ProviderIdSchema, projectRoot: z.string().nullable() }),
@@ -81,6 +84,7 @@ export const scanRpc = defineRpc({
     projectRoot: z.string().nullable(),
     home: z.string(),
     entries: z.array(EntrySchema),
+    compatibility: CompatibilitySchema.nullable(),
     scannedAt: z.string(),
   }),
 });

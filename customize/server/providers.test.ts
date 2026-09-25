@@ -117,17 +117,19 @@ test("cursor: mdc rule states, .md ignored, recursive multi-root skills, mcp-dis
   assert.equal(find(entries, "mcp", "off").status, "disabled");
 });
 
-test("opencode: AGENTS.md first match, permission.skill deny, mcp enabled=false", () => {
+test("opencode: discovered skills stay automatic despite foreign manual-only frontmatter", () => {
   const fx = fixture("opencode", {
     "project/AGENTS.md": "# Agents\n",
     "project/CLAUDE.md": "# Claude\n",
     "project/.opencode/skills/secret/SKILL.md": skill("secret"),
+    "project/.claude/skills/manual-elsewhere/SKILL.md": skill("manual-elsewhere", "disable-model-invocation: true\n"),
     "project/opencode.json": JSON.stringify({ permission: { skill: { secret: "deny" } }, mcp: { m: { type: "local", command: ["x"], enabled: false } } }),
   });
   const entries = scan("opencode", fx);
   assert.equal(find(entries, "instructions", "AGENTS.md").status, "auto");
   assert.equal(find(entries, "instructions", "CLAUDE.md").status, "inactive");
   assert.equal(find(entries, "skills", "secret").status, "disabled");
+  assert.equal(find(entries, "skills", "manual-elsewhere").status, "auto");
   assert.equal(find(entries, "mcp", "m").status, "disabled");
 });
 

@@ -7,7 +7,7 @@ import { scanRpc, type ScanResult } from "../shared/contracts.ts";
 import type { ProviderId } from "../shared/providers.ts";
 
 export const SCAN_REFRESH_MS = 10 * 60_000;
-const SNAPSHOT_VERSION = 1;
+const SNAPSHOT_VERSION = 2;
 const MAX_SNAPSHOT_BYTES = 10 * 1024 * 1024;
 const SnapshotSchema = z.object({ version: z.literal(SNAPSHOT_VERSION), result: scanRpc.output });
 
