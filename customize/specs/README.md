@@ -10,5 +10,6 @@
 | 006 | [`006-scan-cache`](./006-scan-cache/) | 保留 Provider 扫描结果，进入页面和切换时静默刷新 | 已实现 |
 | 007 | [`007-cursor-local-plugins`](./007-cursor-local-plugins/) | 扫描 Cursor 本地测试插件目录 | 已实现 |
 | 008 | [`008-agent-plugin-schema-version`](./008-agent-plugin-schema-version/) | 从标准清单读取规范版本并标明未支持版本 | 已实现 |
+| 009 | [`009-persistent-scan-cache`](./009-persistent-scan-cache/) | 持久化扫描快照，过期后静默刷新 | 已实现 |
 
 规则同仓库根 `AGENTS.md`：先改 spec / plan 再改代码；每完成一个 task 在 `tasks.md` 勾选并写验证方式；新功能点新开编号目录。

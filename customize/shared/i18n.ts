@@ -34,6 +34,7 @@ export interface Messages {
   chooseProject: string;
   closeMenu: string;
   refresh: string;
+  lastScanned: (date: string) => string;
   search: string;
   categories: Record<Category, string>;
   scopes: Record<Scope | "managed", string>;
@@ -78,6 +79,7 @@ const en: Messages = {
   chooseProject: "Choose project",
   closeMenu: "Close menu",
   refresh: "Rescan",
+  lastScanned: (date) => `Last scanned: ${date}`,
   search: "Filter by name or path",
   categories: { instructions: "Instructions", rules: "Rules", skills: "Skills", mcp: "MCP", commands: "Commands", subagents: "Subagents", plugins: "Plugins" },
   scopes: { project: "Project", user: "User", managed: "Managed" },
@@ -183,6 +185,7 @@ const zh: Messages = {
   chooseProject: "选择项目",
   closeMenu: "关闭菜单",
   refresh: "重新扫描",
+  lastScanned: (date) => `上次扫描：${date}`,
   search: "按名称或路径筛选",
   categories: { instructions: "指令", rules: "规则", skills: "Skills", mcp: "MCP", commands: "命令", subagents: "子代理", plugins: "插件" },
   scopes: { project: "项目级", user: "用户级", managed: "托管" },

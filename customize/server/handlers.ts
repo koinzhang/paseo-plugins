@@ -4,7 +4,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import type { RpcInput, RpcOutput } from "@getpaseo/plugin";
 import type { Entry } from "../shared/contracts.ts";
-import { openRpc, previewRpc, scanRpc } from "../shared/contracts.ts";
+import { cachedScanRpc, openRpc, previewRpc, scanRpc } from "../shared/contracts.ts";
 import type { ProviderId } from "../shared/providers.ts";
 import { parseJsonc } from "./jsonc.ts";
 import { redactServer } from "./mcp.ts";
@@ -17,6 +17,7 @@ import { scanOpencode } from "./providers/opencode.ts";
 import { scanPi } from "./providers/pi.ts";
 import { scanAcp } from "./providers/acp.ts";
 import { buildNestedIndex, fileSize, isDir, isFile, isRecord, readText, type NestedIndex, type ScanContext } from "./scan-kit.ts";
+import { readSnapshot, writeSnapshot } from "./scan-snapshot.ts";
 import { parseToml } from "./toml.ts";
 import { parseYaml } from "./yaml-lite.ts";
 
@@ -49,6 +50,7 @@ const NESTED_TTL_MS = 15_000;
 const nestedCache = new Map<string, { at: number; index: NestedIndex }>();
 /** Paths returned by scans; preview / open only accept these. */
 const allowed = new Set<string>();
+const snapshotCandidates = new Map<string, Array<{ provider: ProviderId; projectRoot: string | null }>>();
 
 function nestedIndex(root: string): NestedIndex {
   const cached = nestedCache.get(root);
@@ -68,17 +70,45 @@ export async function handleScan(input: RpcInput<typeof scanRpc>): Promise<RpcOu
   const home = homedir();
   const entries = scanProvider(input.provider, input.projectRoot, { home, env: process.env, platform: process.platform });
   for (const entry of entries) allowed.add(entry.path);
-  return {
+  const result = {
     provider: input.provider,
     projectRoot: input.projectRoot,
     home,
     entries,
     scannedAt: new Date().toISOString(),
   };
+  try {
+    writeSnapshot(result);
+  } catch (error) {
+    console.error("Customize could not persist scan snapshot", error);
+  }
+  return result;
+}
+
+export function handleCachedScan(input: RpcInput<typeof cachedScanRpc>): RpcOutput<typeof cachedScanRpc> {
+  const cached = readSnapshot(input.provider, input.projectRoot);
+  if (cached.snapshot) {
+    for (const entry of cached.snapshot.entries) {
+      const candidates = snapshotCandidates.get(entry.path) ?? [];
+      if (!candidates.some((candidate) => candidate.provider === input.provider && candidate.projectRoot === input.projectRoot)) {
+        candidates.push({ provider: input.provider, projectRoot: input.projectRoot });
+      }
+      snapshotCandidates.set(entry.path, candidates);
+    }
+  }
+  return cached;
 }
 
 function assertAllowed(p: string) {
-  if (!allowed.has(p)) throw new Error("Path is not part of a Customize scan");
+  if (allowed.has(p)) return;
+  for (const candidate of snapshotCandidates.get(p) ?? []) {
+    const entries = scanProvider(candidate.provider, candidate.projectRoot, { home: homedir(), env: process.env, platform: process.platform });
+    if (entries.some((entry) => entry.path === p)) {
+      for (const entry of entries) allowed.add(entry.path);
+      return;
+    }
+  }
+  throw new Error("Path is not part of a Customize scan");
 }
 
 /** One MCP server's config, redacted, from a JSON / JSONC / TOML config file. */

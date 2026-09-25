@@ -86,6 +86,12 @@ export const scanRpc = defineRpc({
 });
 export type ScanResult = z.infer<typeof scanRpc.output>;
 
+export const cachedScanRpc = defineRpc({
+  name: "customize.cached-scan",
+  input: scanRpc.input,
+  output: z.object({ snapshot: scanRpc.output.nullable(), stale: z.boolean() }),
+});
+
 export const previewRpc = defineRpc({
   name: "customize.preview",
   input: z.object({ path: z.string(), mcpName: z.string().optional() }),

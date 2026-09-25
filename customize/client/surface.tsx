@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Platform, Text, View } from "react-native";
 import { resolveCategory, visibleCategories } from "../shared/category-visibility.ts";
-import { scanRpc, type Category, type Entry } from "../shared/contracts.ts";
+import { cachedScanRpc, scanRpc, type Category, type Entry } from "../shared/contracts.ts";
 import { messagesFor } from "../shared/i18n.ts";
 import { MECHANISMS } from "../shared/mechanisms.ts";
 import { PROVIDER_IDS, type ProviderId } from "../shared/providers.ts";
@@ -16,7 +16,7 @@ import { EntryRow } from "./entry-row.tsx";
 import { MechanismCard } from "./mechanism-card.tsx";
 import { PreviewPane } from "./preview-pane.tsx";
 import { enabledProviderOptions, selectedProvider } from "./provider-options.ts";
-import { REVISIT_QUERY_POLICY, SCAN_QUERY_POLICY } from "./query-policy.ts";
+import { newestScan, REVISIT_QUERY_POLICY, SCAN_QUERY_POLICY, shouldScanSnapshot } from "./query-policy.ts";
 import { CategoryTabs, ErrorState, IconButton, InlineEmpty, LoadingState, SectionHeader } from "./ui.tsx";
 import { useAppLanguage } from "./use-app-language.ts";
 import { readLastWorkspaceId } from "./web.ts";
@@ -37,6 +37,7 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
   const m = messagesFor(language);
   const paseo = usePaseo();
   const scan = useRpc(scanRpc);
+  const cachedScan = useRpc(cachedScanRpc);
   const settings = useSettings(selectionSettings);
   const providerSnapshot = useQuery({
     queryKey: ["customize", "providers"],
@@ -117,22 +118,30 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
   }, [workspaceRoot, projects.data, projectChoice, m.noProject]);
   const projectRoot = projectChoice ?? workspaceRoot ?? (projects.isPending || (workspaceId !== null && lastWorkspace.isPending) ? null : projectOptions[0]?.id ?? NO_PROJECT);
 
+  const scanEnabled = settings.status === "ready" && providerSnapshot.data !== undefined && effectiveProvider !== null && projectRoot !== null;
+  const saved = useQuery({
+    queryKey: ["customize", "cached-scan", provider, projectRoot],
+    queryFn: () => cachedScan({ provider, projectRoot: projectRoot || null }),
+    enabled: scanEnabled,
+    ...REVISIT_QUERY_POLICY,
+  });
   const result = useQuery({
     queryKey: ["customize", "scan", provider, projectRoot],
     queryFn: () => scan({ provider, projectRoot: projectRoot || null }),
-    enabled: settings.status === "ready" && providerSnapshot.data !== undefined && effectiveProvider !== null && projectRoot !== null,
+    enabled: scanEnabled && shouldScanSnapshot(saved.data, saved.isFetching, saved.isError),
     ...SCAN_QUERY_POLICY,
   });
-  const entries = result.data?.entries ?? [];
+  const displayed = newestScan(saved.data?.snapshot, result.data);
+  const entries = displayed?.entries ?? [];
   const counts = useMemo(() => countByCategory(entries), [entries]);
   const groups = useMemo(() => groupEntries(entries, activeCategory, query), [entries, activeCategory, query]);
   const mechanism = MECHANISMS[provider][activeCategory];
 
   useEffect(() => {
-    if (!selected || !result.data) return;
-    const fresh = result.data.entries.find((entry) => entry.id === selected.id);
+    if (!selected || !displayed) return;
+    const fresh = displayed.entries.find((entry) => entry.id === selected.id);
     if (fresh !== selected) setSelected(fresh ?? null);
-  }, [result.data, selected]);
+  }, [displayed, selected]);
 
   const onSelect = useCallback((entry: Entry) => {
     setSelected((prev) => (prev?.id === entry.id ? null : entry));
@@ -141,7 +150,7 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
   const tabs = visibleCategories(provider).map((id) => ({
     id,
     label: m.categories[id],
-    count: result.data ? counts[id] : undefined,
+    count: displayed ? counts[id] : undefined,
     muted: !MECHANISMS[provider][id].supported,
   }));
   const filtered = query.trim().length > 0;
@@ -215,9 +224,14 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
               </View>
             </View>
             <CategoryTabs options={tabs} value={activeCategory} onChange={setCategory} colors={colors} />
+            {displayed ? (
+              <Text style={{ ...TEXT.caption, color: colors.foregroundMuted }}>
+                {m.lastScanned(new Date(displayed.scannedAt).toLocaleString(language))}
+              </Text>
+            ) : null}
             {settings.saveError ? <Text style={{ ...TEXT.small, color: colors.statusDanger }}>{settings.saveError}</Text> : null}
             <MechanismCard key={`${provider}:${activeCategory}`} mechanism={mechanism} language={language} colors={colors} m={m} />
-            {result.isError && result.data ? <ErrorState error={result.error} onRetry={() => void result.refetch()} colors={colors} /> : null}
+            {result.isError && displayed ? <ErrorState error={result.error} onRetry={() => void result.refetch()} colors={colors} /> : null}
           </View>
 
           {mechanism.supported ? (
@@ -249,10 +263,10 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
             </View>
           ) : null}
 
-          {result.isPending ? (
+          {!displayed && (saved.isPending || result.isPending) ? (
             <LoadingState color={colors.foregroundMuted} />
-          ) : result.isError && !result.data ? (
-            <ErrorState error={result.error} onRetry={() => void result.refetch()} colors={colors} />
+          ) : !displayed && (result.isError || saved.isError) ? (
+            <ErrorState error={result.error ?? saved.error} onRetry={() => void result.refetch()} colors={colors} />
           ) : !mechanism.supported ? null : (
             groups.map((group) => (
               <View key={group.scope} style={{ gap: titleGap(compact) }}>
