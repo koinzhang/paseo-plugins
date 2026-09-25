@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { Platform, Text, View } from "react-native";
 import { resolveCategory, visibleCategories } from "../shared/category-visibility.ts";
 import { cachedScanRpc, scanRpc, type Category, type Entry } from "../shared/contracts.ts";
-import { COMPATIBLE_PROVIDERS } from "../shared/compatibility.ts";
 import { messagesFor } from "../shared/i18n.ts";
 import { MECHANISMS, mechanismFor } from "../shared/mechanisms.ts";
 import { PROVIDER_IDS, type ProviderId } from "../shared/providers.ts";
@@ -137,8 +136,9 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
   const counts = useMemo(() => countByCategory(entries), [entries]);
   const groups = useMemo(() => groupEntries(entries, activeCategory, query), [entries, activeCategory, query]);
   const mechanism = mechanismFor(provider, activeCategory, displayed?.compatibility);
-  const compatibilityState = displayed?.compatibility?.source === "builtIn" ? "supported"
-    : displayed?.compatibility?.enabled === true ? "on" : displayed?.compatibility?.enabled === false ? "off" : "unknown";
+  const compatibility = displayed?.compatibility;
+  const compatibilityState = compatibility?.source === "builtIn" ? "supported"
+    : compatibility?.enabled === true ? "on" : compatibility?.enabled === false ? "off" : "unknown";
 
   useEffect(() => {
     if (!selected || !displayed) return;
@@ -189,7 +189,7 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
               }}
             >
               <View style={{ flexDirection: "row", alignItems: "center", gap: 14, flexShrink: 1, minWidth: 0 }}>
-                {COMPATIBLE_PROVIDERS.has(provider) ? (
+                {compatibility ? (
                   <View accessible accessibilityRole="image" accessibilityLabel={m.compatibility(compatibilityState)}>
                     <Icon name={compatibilityState === "off" ? "Link2Off" : "Link2"} size={ICON_SIZE.action} color={compatibilityState === "on" || compatibilityState === "supported" ? colors.statusSuccess : compatibilityState === "off" ? colors.foregroundMuted : colors.statusWarning} />
                   </View>

@@ -4,7 +4,7 @@
 
 ```
 index.client.tsx
-  addSurface("customize") + addSidebarItem("customize") → client/surface.tsx（看板，侧栏顶部导航入口）
+  addSurface("customize") + addSidebarItem("customize") → client/surface.tsx（看板，侧栏顶部导航入口；侧栏和命令中心图标均为 `FolderCog`）
   addCommandCenterItem("open-customize", global)       → openSurface("customize")
   trackWorkspaceRoute()               → client/web.ts：记录最后停留的 `/h/<server>/workspace/<id>`（surface 无 workspace 上下文）
 index.server.ts

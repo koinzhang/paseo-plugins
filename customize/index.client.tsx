@@ -12,7 +12,7 @@ function addCommands(client: PluginClientContext): () => void {
   return client.addCommandCenterItem({
     id: "open-customize",
     title: messagesFor(currentAppLanguage()).openBoard,
-    icon: "SlidersHorizontal",
+    icon: "FolderCog",
     keywords: ["customize", "agents.md", "claude.md", "rules", "skills", "mcp", "instructions", "provider"],
     context: "global",
     onSelect({ openSurface }) {
@@ -27,7 +27,7 @@ export default function contribute(client: PluginClientContext) {
   client.addSidebarItem({
     id: "customize",
     title: "Customize",
-    icon: "SlidersHorizontal",
+    icon: "FolderCog",
     surface: SURFACE_ID,
   });
 

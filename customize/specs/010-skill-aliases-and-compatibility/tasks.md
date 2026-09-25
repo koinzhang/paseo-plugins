@@ -5,3 +5,4 @@
 - [x] Add compatibility icon and dynamic “How it loads” copy for relevant providers. Verified by typecheck and mechanism assertions.
 - [x] Validate with focused tests, full Customize tests and typecheck; reload plugin. `npm test` passed 39 tests, `npm run typecheck` passed, `paseo plugin reload customize` reported running and logs reported ready.
 - [x] Clarify OpenCode automatic skill discovery, ignore foreign manual-only frontmatter, and verify the updated explanation and status. The provider scan test confirmed `disable-model-invocation: true` remains `auto`; all 39 tests and typecheck passed, and Customize reloaded as `running`.
+- [x] Use `FolderCog` for the Customize sidebar and Command Center entries; render the existing compatibility icon only for non-null scan compatibility. Verified with 39 tests, typecheck, and a Customize reload reporting `running`.

@@ -7,7 +7,7 @@
 ## 目标
 
 1. 在左上角侧栏导航（与 New workspace / History / Search / Schedules 同组）加一个 **Customize** 入口，打开 Customize 看板（sidebar surface）。
-2. 看板右上角可切换 **provider** 与 **project**；选择保存在当前 Paseo host 的插件设置中并在重新打开时恢复。没有保存过 Project 时，默认 = 打开看板前最后停留的 workspace 所属 project；无法得知时取 project 列表第一项。
+2. 看板右上角可切换 **provider** 与 **project**；选择保存在当前 Paseo host 的插件设置中并在重新打开时恢复。没有保存过 Project 时，默认 = 打开看板前最后停留的 workspace 所属 project；无法得知时取 project 列表第一项。侧栏入口与命令中心入口统一使用 `FolderCog` 图标。
 3. 按 **Instructions（AGENTS.md 类）/ Rules / Skills / MCP** 四类展示条目，每类内分 **项目级 / 用户级**。
 4. 每个条目展示：名称、所在目录（相对 project 或 `~`）、来源位置、**自动发现状态**（自动 / 按条件 / 仅手动 / 待批准 / 已禁用 / 未生效）及原因。
 5. 点击条目在下方预览框展示文件内容（截断），可「打开」文件（系统默认编辑器）或在 Finder 中显示；不在列表中展开全文。
