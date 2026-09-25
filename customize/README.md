@@ -7,6 +7,7 @@ Requires Paseo >= 0.9.0.
 ## What you get
 
 - A **Customize** item in the sidebar's top navigation (next to New workspace, History, Search, Schedules) and in the Command Center opens the board.
+- Submit `/customize` in an agent composer to open the board. It selects the agent's Provider and workspace Project when available, updating each independently and keeping the current selection for any unavailable value.
 - Top-right **Provider** and **Project** pickers. The Provider menu lists enabled Paseo providers that Customize can scan, including Cursor, Cline, CodeBuddy Code, Gemini CLI, Goose, Grok Build, Kilo Code, Kiro CLI, Kimi Code, Qwen Code, and TraeCode CLI. It marks each as Built-in or ACP. Choices persist on the Paseo host; before a project is chosen, it defaults to the workspace you were last on. The Project menu lists every Paseo project.
 - Tabs for Instructions / Rules / Skills / MCP / Commands / Subagents / Plugins. Each tab starts with a "how it loads" note for that provider and then **Project** and **User** sections grouped by source directory.
 - A link icon to the left of Provider marks agents that search shared skill directories; providers without compatibility support show no icon. Cursor's icon follows its local `thirdPartyExtensibilityEnabled` IDE setting; OpenCode's follows its external-skill environment flags. The icon and skill explanation update on the next scan when those settings change.
