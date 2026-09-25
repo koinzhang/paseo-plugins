@@ -97,7 +97,7 @@ Each plugin keeps its own `CHANGELOG.md` next to its `package.json` (for example
 
 ## Publishing to npm
 
-npm packages are published by **GitHub Release**, not by pushing `main` alone.
+Activity and Mono are published by **GitHub Release**, not by pushing `main` alone. Customize 0.1.0 uses the local npm CLI as described below.
 
 Workflow: [`.github/workflows/publish.yml`](./.github/workflows/publish.yml). Auth: npm **Trusted Publisher** for that workflow (no `NPM_TOKEN`). Tag must be `{plugin-id}-v{semver}` and match that plugin's `package.json` `version`.
 
@@ -133,7 +133,13 @@ Workflow: [`.github/workflows/publish.yml`](./.github/workflows/publish.yml). Au
 
 Do not republish an existing version; bump again if the publish failed after the version was taken.
 
-For additional plugins later: add a job (or matrix entry) in `publish.yml`, use tag `{id}-v*`, and register the same workflow as a Trusted Publisher on that npm package.
+For future plugins using GitHub Release publication: add a job (or matrix entry) in `publish.yml`, use tag `{id}-v*`, and register the same workflow as a Trusted Publisher on that npm package.
+
+### Customize (`@koinzhang/paseo-plugin-customize`)
+
+The 0.1.0 package and lockfile already carry the intended version. The draft release notes are in [`.github/release-notes/customize-v0.1.0.md`](./.github/release-notes/customize-v0.1.0.md). Before publishing, date the `customize/CHANGELOG.md` `Unreleased` section as `[0.1.0] - YYYY-MM-DD`. A GitHub Release is optional and does not trigger Customize publication.
+
+Run `npm ci --include=dev`, `npm run typecheck`, `npm test`, `npm pack --dry-run`, and `npm whoami` in `customize/`. Check that `0.1.0` is not already published with `npm view @koinzhang/paseo-plugin-customize@0.1.0 version`. Then run `npm publish --access public` from `customize/` with an npm account authorized for `@koinzhang`, and verify with `npm view @koinzhang/paseo-plugin-customize version`. Stop if authentication or the version check fails; do not republish an existing version.
 
 ## Reporting issues and vulnerabilities
 
