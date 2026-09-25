@@ -182,6 +182,7 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "flex-end",
+                zIndex: 30,
               }}
             >
               <View style={{ flexDirection: "row", alignItems: "center", gap: 14, flexShrink: 1, minWidth: 0 }}>
@@ -216,6 +217,10 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
                   label={m.refresh}
                   color={colors.foregroundMuted}
                   busy={result.isFetching}
+                  tooltip={displayed ? {
+                    text: m.lastScanned(new Date(displayed.scannedAt).toLocaleString(language)),
+                    colors,
+                  } : undefined}
                   onPress={() => {
                     void providerSnapshot.refetch();
                     void result.refetch();
@@ -224,11 +229,6 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
               </View>
             </View>
             <CategoryTabs options={tabs} value={activeCategory} onChange={setCategory} colors={colors} />
-            {displayed ? (
-              <Text style={{ ...TEXT.caption, color: colors.foregroundMuted }}>
-                {m.lastScanned(new Date(displayed.scannedAt).toLocaleString(language))}
-              </Text>
-            ) : null}
             {settings.saveError ? <Text style={{ ...TEXT.small, color: colors.statusDanger }}>{settings.saveError}</Text> : null}
             <MechanismCard key={`${provider}:${activeCategory}`} mechanism={mechanism} language={language} colors={colors} m={m} />
             {result.isError && displayed ? <ErrorState error={result.error} onRetry={() => void result.refetch()} colors={colors} /> : null}

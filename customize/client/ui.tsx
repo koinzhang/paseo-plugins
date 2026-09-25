@@ -1,5 +1,5 @@
 import { Icon } from "@getpaseo/plugin/client/react-native";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import type { Status } from "../shared/contracts.ts";
 import { CONTROL, FONT_WEIGHT, ICON_SIZE, RADIUS, TEXT, iconButton, pillRadius, sectionTitle } from "./design-tokens.ts";
@@ -30,6 +30,7 @@ export function IconButton({
   disabled,
   busy,
   style,
+  tooltip,
 }: {
   icon: string;
   label: string;
@@ -39,15 +40,20 @@ export function IconButton({
   disabled?: boolean;
   busy?: boolean;
   style?: StyleProp<ViewStyle>;
+  tooltip?: { text: string; colors: Pick<Colors, "surface2" | "border" | "foreground"> };
 }): ReactNode {
-  return (
+  const [hovered, setHovered] = useState(false);
+  const button = (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityHint={tooltip?.text}
       accessibilityState={{ disabled: disabled === true }}
       disabled={disabled}
       hitSlop={CONTROL.hitSlop}
       onPress={onPress}
+      onHoverIn={tooltip ? () => setHovered(true) : undefined}
+      onHoverOut={tooltip ? () => setHovered(false) : undefined}
       style={[iconButton, disabled ? { opacity: 0.4 } : null, style]}
     >
       {busy ? (
@@ -56,6 +62,32 @@ export function IconButton({
         <Icon name={icon} size={size} color={color} />
       )}
     </Pressable>
+  );
+  if (!tooltip) return button;
+  return (
+    <View style={{ position: "relative", width: CONTROL.iconButton, height: CONTROL.iconButton, zIndex: hovered ? 50 : 1 }}>
+      {button}
+      {hovered ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            top: CONTROL.iconButton + 6,
+            right: 0,
+            minWidth: 180,
+            maxWidth: 260,
+            paddingHorizontal: 8,
+            paddingVertical: 6,
+            borderRadius: RADIUS.overlay,
+            borderWidth: 1,
+            borderColor: tooltip.colors.border,
+            backgroundColor: tooltip.colors.surface2,
+          }}
+        >
+          <Text style={{ ...TEXT.caption, color: tooltip.colors.foreground }}>{tooltip.text}</Text>
+        </View>
+      ) : null}
+    </View>
   );
 }
 
