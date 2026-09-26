@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Entry } from "../shared/contracts.ts";
 import { messagesFor, resolveAppLanguage } from "../shared/i18n.ts";
-import { countByCategory, groupEntries, projectLabel } from "./entries.ts";
+import { countByCategory, countSkillInvocation, groupEntries, matchesSkillInvocation, projectLabel } from "./entries.ts";
 
 const entry = (over: Partial<Entry>): Entry => ({
   id: over.name ?? "x",
@@ -29,6 +29,25 @@ test("groupEntries: project before user, sources grouped, query filters", () => 
   assert.deepEqual(groups[0]?.sources.map((source) => source.source), [".agents/skills", ".claude/skills"]);
   assert.equal(groupEntries(entries, "skills", "CLAUDE")[0]?.count, 1);
   assert.deepEqual(countByCategory(entries), { instructions: 0, rules: 1, skills: 3, mcp: 0, commands: 0, subagents: 0, plugins: 0 });
+});
+
+test("skill invocation: auto includes conditional, manual is exact, other statuses stay in all", () => {
+  const entries = [
+    entry({ name: "auto" }),
+    entry({ name: "conditional", status: "conditional" }),
+    entry({ name: "manual", status: "manual" }),
+    entry({ name: "disabled", status: "disabled" }),
+    entry({ name: "rule", category: "rules", status: "manual" }),
+  ];
+  assert.equal(matchesSkillInvocation(entries[0]!, "auto"), true);
+  assert.equal(matchesSkillInvocation(entries[1]!, "auto"), true);
+  assert.equal(matchesSkillInvocation(entries[2]!, "auto"), false);
+  assert.equal(matchesSkillInvocation(entries[3]!, "auto"), false);
+  assert.equal(matchesSkillInvocation(entries[2]!, "manual"), true);
+  assert.deepEqual(countSkillInvocation(entries), { all: 4, auto: 2, manual: 1 });
+  assert.deepEqual(groupEntries(entries, "skills", "", "auto").map((group) => group.count), [2, 0]);
+  assert.deepEqual(groupEntries(entries, "skills", "manual", "manual")[0]?.sources[0]?.entries.map((item) => item.name), ["manual"]);
+  assert.equal(groupEntries(entries, "rules", "", "auto")[0]?.count, 1);
 });
 
 test("projectLabel / resolveAppLanguage", () => {

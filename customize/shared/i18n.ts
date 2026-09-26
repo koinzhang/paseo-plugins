@@ -37,6 +37,8 @@ export interface Messages {
   refresh: string;
   lastScanned: (date: string) => string;
   search: string;
+  skillInvocation: string;
+  skillFilters: Record<"all" | "auto" | "manual", string>;
   categories: Record<Category, string>;
   scopes: Record<Scope | "managed", string>;
   statuses: Record<Status, string>;
@@ -83,6 +85,8 @@ const en: Messages = {
   refresh: "Rescan",
   lastScanned: (date) => `Last scanned: ${date}`,
   search: "Filter by name or path",
+  skillInvocation: "Skill invocation",
+  skillFilters: { all: "All", auto: "Auto", manual: "Manual" },
   categories: { instructions: "Instructions", rules: "Rules", skills: "Skills", mcp: "MCP", commands: "Commands", subagents: "Subagents", plugins: "Plugins" },
   scopes: { project: "Project", user: "User", managed: "Managed" },
   statuses: {
@@ -190,6 +194,8 @@ const zh: Messages = {
   refresh: "重新扫描",
   lastScanned: (date) => `上次扫描：${date}`,
   search: "按名称或路径筛选",
+  skillInvocation: "技能调用方式",
+  skillFilters: { all: "全部", auto: "自动", manual: "仅手动" },
   categories: { instructions: "指令", rules: "规则", skills: "Skills", mcp: "MCP", commands: "命令", subagents: "子代理", plugins: "插件" },
   scopes: { project: "项目级", user: "用户级", managed: "托管" },
   statuses: {

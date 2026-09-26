@@ -225,6 +225,71 @@ export function CategoryTabs<T extends string>({
   );
 }
 
+/** Compact list-mode switch. Height matches the search field. */
+export function SegmentedControl<T extends string>({
+  options,
+  value,
+  onChange,
+  colors,
+  label,
+}: {
+  options: ReadonlyArray<{ id: T; label: string; count?: number }>;
+  value: T;
+  onChange: (id: T) => void;
+  colors: Pick<Colors, "foreground" | "foregroundMuted" | "border" | "surface1" | "surface2">;
+  label: string;
+}): ReactNode {
+  return (
+    <View
+      accessibilityRole="tablist"
+      accessibilityLabel={label}
+      style={{
+        flexDirection: "row",
+        alignItems: "stretch",
+        height: CONTROL.searchHeight,
+        borderRadius: RADIUS.control,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surface1,
+        overflow: "hidden",
+        flexShrink: 0,
+      }}
+    >
+      {options.map((option, index) => {
+        const active = option.id === value;
+        return (
+          <Pressable
+            key={option.id}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            onPress={() => onChange(option.id)}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              paddingHorizontal: 10,
+              borderLeftWidth: index === 0 ? 0 : 1,
+              borderLeftColor: colors.border,
+              backgroundColor: active ? colors.surface2 : "transparent",
+            }}
+          >
+            <Text
+              style={{
+                ...TEXT.small,
+                fontWeight: active ? FONT_WEIGHT.semibold : FONT_WEIGHT.medium,
+                color: active ? colors.foreground : colors.foregroundMuted,
+              }}
+            >
+              {option.label}
+            </Text>
+            {option.count != null ? <Text style={{ ...TEXT.count, color: colors.foregroundMuted }}>{option.count}</Text> : null}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export function statusColor(status: Status, colors: Colors): string {
   switch (status) {
     case "auto":

@@ -11,13 +11,13 @@ import { type ProviderId } from "../shared/providers.ts";
 import { selectionSettings } from "../shared/selection-settings.ts";
 import { CONTROL, ICON_SIZE, PREVIEW_FRACTION, RADIUS, TEXT, pageLayout, titleGap } from "./design-tokens.ts";
 import { Dropdown, type DropdownOption } from "./dropdown.tsx";
-import { countByCategory, groupEntries, projectLabel } from "./entries.ts";
+import { countByCategory, countSkillInvocation, groupEntries, matchesSkillInvocation, projectLabel, SKILL_INVOCATION_FILTERS, type SkillInvocationFilter } from "./entries.ts";
 import { EntryRow } from "./entry-row.tsx";
 import { MechanismCard } from "./mechanism-card.tsx";
 import { PreviewPane } from "./preview-pane.tsx";
 import { enabledProviderOptions, selectedProvider } from "./provider-options.ts";
 import { newestScan, REVISIT_QUERY_POLICY, SCAN_QUERY_POLICY, shouldScanSnapshot } from "./query-policy.ts";
-import { CategoryTabs, ErrorState, IconButton, InlineEmpty, LoadingState, SectionHeader } from "./ui.tsx";
+import { CategoryTabs, ErrorState, IconButton, InlineEmpty, LoadingState, SectionHeader, SegmentedControl } from "./ui.tsx";
 import { useAppLanguage } from "./use-app-language.ts";
 import { readLastWorkspaceId } from "./web.ts";
 
@@ -74,6 +74,7 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
   const [category, setCategoryState] = useState<Category>("instructions");
   const activeCategory = resolveCategory(provider, category);
   const [query, setQuery] = useState("");
+  const [skillFilter, setSkillFilter] = useState<SkillInvocationFilter>("all");
   const [selected, setSelected] = useState<Entry | null>(null);
 
   const setProvider = (id: string) => {
@@ -127,7 +128,11 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
   const displayed = newestScan(saved.data?.snapshot, result.data);
   const entries = displayed?.entries ?? [];
   const counts = useMemo(() => countByCategory(entries), [entries]);
-  const groups = useMemo(() => groupEntries(entries, activeCategory, query), [entries, activeCategory, query]);
+  const skillCounts = useMemo(() => countSkillInvocation(entries), [entries]);
+  const groups = useMemo(
+    () => groupEntries(entries, activeCategory, query, skillFilter),
+    [entries, activeCategory, query, skillFilter],
+  );
   const mechanism = mechanismFor(provider, activeCategory, displayed?.compatibility);
   const compatibility = displayed?.compatibility;
   const compatibilityState = compatibility?.source === "builtIn" ? "supported"
@@ -139,6 +144,11 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
     if (fresh !== selected) setSelected(fresh ?? null);
   }, [displayed, selected]);
 
+  useEffect(() => {
+    if (!selected || selected.category !== "skills" || matchesSkillInvocation(selected, skillFilter)) return;
+    setSelected(null);
+  }, [selected, skillFilter]);
+
   const onSelect = useCallback((entry: Entry) => {
     setSelected((prev) => (prev?.id === entry.id ? null : entry));
   }, []);
@@ -149,7 +159,13 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
     count: displayed ? counts[id] : undefined,
     muted: !MECHANISMS[provider][id].supported,
   }));
-  const filtered = query.trim().length > 0;
+  const queryActive = query.trim().length > 0;
+  const listNarrowed = queryActive || (activeCategory === "skills" && skillFilter !== "all");
+  const skillFilterOptions = SKILL_INVOCATION_FILTERS.map((id) => ({
+    id,
+    label: m.skillFilters[id],
+    count: displayed ? skillCounts[id] : undefined,
+  }));
 
   if (settings.status === "loading") return <LoadingState color={colors.foregroundMuted} />;
   if (settings.status !== "ready") {
@@ -236,31 +252,44 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
           </View>
 
           {mechanism.supported ? (
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 6,
-                height: CONTROL.searchHeight,
-                paddingHorizontal: 10,
-                borderRadius: RADIUS.control,
-                borderWidth: 1,
-                borderColor: colors.border,
-                backgroundColor: colors.surface1,
-              }}
-            >
-              <Icon name="Search" size={ICON_SIZE.inline} color={colors.foregroundMuted} />
-              <TextInput
-                value={query}
-                onChangeText={setQuery}
-                placeholder={m.search}
-                placeholderTextColor={colors.foregroundMuted}
-                accessibilityLabel={m.search}
-                autoCorrect={false}
-                autoCapitalize="none"
-                style={{ flex: 1, ...TEXT.small, color: colors.foreground, paddingVertical: 0 }}
-              />
-              {filtered ? <IconButton icon="X" label={m.preview.close} color={colors.foregroundMuted} size={ICON_SIZE.inline} onPress={() => setQuery("")} /> : null}
+            <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+              <View
+                style={{
+                  flexGrow: 1,
+                  flexBasis: 180,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                  height: CONTROL.searchHeight,
+                  paddingHorizontal: 10,
+                  borderRadius: RADIUS.control,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface1,
+                }}
+              >
+                <Icon name="Search" size={ICON_SIZE.inline} color={colors.foregroundMuted} />
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder={m.search}
+                  placeholderTextColor={colors.foregroundMuted}
+                  accessibilityLabel={m.search}
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                  style={{ flex: 1, ...TEXT.small, color: colors.foreground, paddingVertical: 0 }}
+                />
+                {queryActive ? <IconButton icon="X" label={m.preview.close} color={colors.foregroundMuted} size={ICON_SIZE.inline} onPress={() => setQuery("")} /> : null}
+              </View>
+              {activeCategory === "skills" ? (
+                <SegmentedControl
+                  label={m.skillInvocation}
+                  options={skillFilterOptions}
+                  value={skillFilter}
+                  onChange={setSkillFilter}
+                  colors={colors}
+                />
+              ) : null}
             </View>
           ) : null}
 
@@ -279,7 +308,7 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
                 />
                 {group.count === 0 ? (
                   <InlineEmpty
-                    text={filtered ? m.noMatches : group.scope === "project" && !projectRoot ? m.noProject : m.emptyScope(m.scopes[group.scope])}
+                    text={listNarrowed ? m.noMatches : group.scope === "project" && !projectRoot ? m.noProject : m.emptyScope(m.scopes[group.scope])}
                     color={colors.foregroundMuted}
                   />
                 ) : (
