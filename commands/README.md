@@ -38,9 +38,26 @@ from slash autocomplete, so the provider's own command of the same name (if any)
 ## Install
 
 ```bash
-paseo plugin add koinzhang/paseo-plugins --path commands
+paseo plugin add npm:@koinzhang/paseo-commands
 ```
+
+To install from GitHub, use `paseo plugin add koinzhang/paseo-plugins --path commands`.
 
 Requires Paseo >= 0.9.2. The plugin SDK cannot change agent settings yet, so the daemon side of
 the plugin connects to its local daemon (`PASEO_LISTEN` or `$PASEO_HOME/paseo.pid`) and sends the
 same requests the app uses. If the daemon requires a password, set `PASEO_PASSWORD` for it.
+
+## Development
+
+```bash
+cd commands
+npm install
+npm run typecheck
+npm test
+paseo plugin install "$PWD"
+paseo plugin reload commands
+```
+
+Command definitions and option matching live in `shared/` (`commands.ts`, `parse.ts`,
+`resolve-option.ts`), daemon-side setting writes in `server/daemon.ts`, and the menus plus
+settings UI in `client/`. Specs are in [`specs/`](./specs/).

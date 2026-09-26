@@ -5,7 +5,7 @@ Paseo 插件仓库。当前包含插件 **Activity**（`activity/`）：本地�
 > 插件 ID / 目录名 / 数据目录：**`activity`**（原 `tool-usage`，见 `activity/specs/007-rename-activity/` Phase 2）。
 > 架构总览：[`activity/docs/architecture.md`](./activity/docs/architecture.md) · 产品 README：[`activity/README.md`](./activity/README.md)
 
-其他插件：**Mono**（`mono/`，主题 + 布局微调）；**Customize**（`customize/`，按 provider / project 展示 instructions、rules、skills、MCP 及自动发现状态；spec 在 `customize/specs/`，各家机制依据见 `customize/specs/001-customize-board/research.md`；UI 复用 Activity design tokens）；**Commands**（`commands/`，npm `@koinzhang/paseo-commands`，`/model` `/effort` `/profile` `/mode` `/feature` `/rename` `/cancel` 控制当前 agent（`/rename` 默认改当前 tab，`-w` 改 workspace），`/resend` 重发最近一条用户 prompt；设置写操作经 server 端 `DaemonClient`，重发直接使用公开插件 SDK，见 `commands/specs/`）。命令同上，在对应目录执行、把 `activity` 换成插件 ID。
+其他插件：**Mono**（`mono/`，主题 + 布局微调）；**Customize**（`customize/`，按 provider / project 展示 instructions、rules、skills、MCP 及自动发现状态；spec 在 `customize/specs/`，各家机制依据见 `customize/specs/001-customize-board/research.md`；UI 复用 Activity design tokens）；**Commands**（`commands/`，npm `@koinzhang/paseo-commands`，需 Paseo >= 0.9.2，`/model` `/effort` `/profile` `/mode` `/feature` `/rename` `/cancel` 控制当前 agent（`/rename` 默认改当前 tab，`-w` 改 workspace），`/resend` 重发最近一条用户 prompt；设置写操作经 server 端 `DaemonClient`，重发直接使用公开插件 SDK；各命令可在 Settings → Plugins → commands 单独启停，见 `commands/specs/`）。命令同上，在对应目录执行、把 `activity` 换成插件 ID。
 
 ## Paseo 源码（查阅用）
 
@@ -111,7 +111,7 @@ jj undo / jj op log / jj op restore         # 恢复
 
 ## 发 npm 包
 
-**不要**只靠 push `main` 发版。流程：bump `activity/package.json` version → 合进 `main` → 打 tag `activity-vX.Y.Z` → `gh release create` → `.github/workflows/publish.yml` 用 npm Trusted Publisher 自动 `npm publish`。
+**不要**只靠 push `main` 发版。流程：bump `<plugin>/package.json` version → 合进 `main` → 打 tag `{plugin-id}-vX.Y.Z`（如 `activity-v0.7.0`、`commands-v0.1.0`）→ `gh release create` → `.github/workflows/publish.yml` 用 npm Trusted Publisher 自动 `npm publish`（已接入 activity / mono；新插件接入需在 publish.yml 加对应 job，并在 npm 该包下把同一 workflow 注册为 Trusted Publisher）。
 
 完整步骤见 [`CONTRIBUTING.md` § Publishing to npm](./CONTRIBUTING.md#publishing-to-npm)；用户说「发版 / publish / release npm」时读 [`.agents/skills/publish-npm/SKILL.md`](./.agents/skills/publish-npm/SKILL.md) 并按其执行。
 
