@@ -7,7 +7,7 @@ import { resolveCategory, visibleCategories } from "../shared/category-visibilit
 import { cachedScanRpc, scanRpc, type Category, type Entry } from "../shared/contracts.ts";
 import { messagesFor } from "../shared/i18n.ts";
 import { MECHANISMS, mechanismFor } from "../shared/mechanisms.ts";
-import { PROVIDER_IDS, type ProviderId } from "../shared/providers.ts";
+import { type ProviderId } from "../shared/providers.ts";
 import { selectionSettings } from "../shared/selection-settings.ts";
 import { CONTROL, ICON_SIZE, PREVIEW_FRACTION, RADIUS, TEXT, pageLayout, titleGap } from "./design-tokens.ts";
 import { Dropdown, type DropdownOption } from "./dropdown.tsx";
@@ -23,10 +23,6 @@ import { readLastWorkspaceId } from "./web.ts";
 
 const NO_PROJECT = "";
 const WORKSPACE_PAGE_LIMIT = 200;
-
-const lastCategory: Record<ProviderId, Category> = Object.fromEntries(
-  PROVIDER_IDS.map((id) => [id, "instructions"]),
-) as Record<ProviderId, Category>;
 
 /** Sidebar surface; an unselected project defaults to the last workspace. */
 export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNode {
@@ -86,15 +82,12 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
     setSelected(null);
   };
   const setCategory = (next: Category) => {
-    lastCategory[provider] = next;
     setCategoryState(next);
     setSelected(null);
   };
 
   useEffect(() => {
-    const restored = resolveCategory(provider, lastCategory[provider]);
-    lastCategory[provider] = restored;
-    setCategoryState(restored);
+    setCategoryState((current) => resolveCategory(provider, current));
     setSelected(null);
     setQuery("");
   }, [provider]);

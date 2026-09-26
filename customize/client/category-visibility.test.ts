@@ -19,7 +19,13 @@ test("keeps confirmed capabilities visible when their local scan is incomplete",
   assert.equal(visibleCategories("opencode").includes("plugins"), true);
 });
 
-test("selects a visible category when switching providers", () => {
+test("keeps the current category when the next provider still offers it", () => {
+  assert.equal(resolveCategory("codex", "skills"), "skills");
+  assert.equal(resolveCategory("cursor", "mcp"), "mcp");
+  assert.equal(resolveCategory("opencode", "rules"), "rules");
+});
+
+test("selects the first visible category when the next provider lacks it", () => {
   assert.equal(resolveCategory("pi", "mcp"), "instructions");
   assert.equal(resolveCategory("kiro", "commands"), "instructions");
   assert.equal(resolveCategory("cursor", "commands"), "commands");

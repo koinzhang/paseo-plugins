@@ -13,5 +13,6 @@
 | 009 | [`009-persistent-scan-cache`](./009-persistent-scan-cache/) | 持久化扫描快照，过期后静默刷新 | 已实现 |
 | 010 | [`010-skill-aliases-and-compatibility`](./010-skill-aliases-and-compatibility/) | 按实体文件合并 skill 别名，展示第三方目录兼容状态 | 已实现 |
 | 011 | [`011-slash-command`](./011-slash-command/) | `/customize` 从当前 agent 打开看板并选择 Provider / Project | 已实现 |
+| 012 | [`012-sticky-category`](./012-sticky-category/) | 切换 Provider / Project 时保持分类，缺失时回到第一项 | 已实现 |
 
 规则同仓库根 `AGENTS.md`：先改 spec / plan 再改代码；每完成一个 task 在 `tasks.md` 勾选并写验证方式；新功能点新开编号目录。
