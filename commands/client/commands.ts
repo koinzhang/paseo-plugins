@@ -38,6 +38,15 @@ type CommandSpec = CommandMetadata &
     | { execute(context: Context): Promise<void>; plan?: never }
   );
 
+async function renameCurrent(ctx: Context): Promise<void> {
+  const request = planRename(ctx.args);
+  if (request.target === "workspace") {
+    await ctx.paseo.workspaces.ref(ctx.workspace.id).setTitle(request.title);
+    return;
+  }
+  await ctx.rpc(agentControl, { op: "rename", agentId: ctx.agent.id, title: request.title });
+}
+
 async function resendLastPrompt(ctx: Context): Promise<void> {
   const agent = ctx.paseo.agents.ref(ctx.agent.id);
   let page = await agent.timeline.refetch({
@@ -120,12 +129,12 @@ export const COMMANDS: readonly CommandSpec[] = [
   },
   {
     name: "rename",
-    description: "Rename the agent",
+    description: "Rename the tab or workspace",
     details:
-      "Set the agent title shown in the sidebar and tabs.",
-    argumentHint: "<title>",
+      "Rename the current agent tab. Pass -w or --workspace to rename the workspace instead. -t and --tab are the same as the default.",
+    argumentHint: "[-t|-w] <title>",
     section: "session",
-    plan: async (ctx) => planRename(ctx.args, ctx.agent.id),
+    execute: renameCurrent,
   },
   {
     name: "cancel",

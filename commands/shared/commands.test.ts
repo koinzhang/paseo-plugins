@@ -8,6 +8,7 @@ import {
   planModel,
   planProfile,
   planRename,
+  RENAME_USAGE,
   type AgentState,
   type PickerEntry,
   type Plan,
@@ -243,13 +244,30 @@ test("/profile rejects another provider and missing profiles", () => {
   assert.throws(() => planProfile("nope", state, profiles), /^Error: Unknown profile "nope"/);
 });
 
-test("/rename requires a title and keeps spaces", () => {
-  assert.deepEqual(run(planRename("  Payment Review ", "a1")).control, {
-    op: "rename",
-    agentId: "a1",
-    title: "Payment Review",
+test("/rename defaults to the current tab and keeps spaces", () => {
+  assert.deepEqual(planRename("  Payment Review "), { target: "tab", title: "Payment Review" });
+  assert.deepEqual(planRename("-t  Payment Review"), { target: "tab", title: "Payment Review" });
+  assert.deepEqual(planRename("--tab Payment Review"), { target: "tab", title: "Payment Review" });
+});
+
+test("/rename -w sets the workspace title", () => {
+  assert.deepEqual(planRename("-w  Payments work"), { target: "workspace", title: "Payments work" });
+  assert.deepEqual(planRename("--workspace Payments work"), {
+    target: "workspace",
+    title: "Payments work",
   });
-  assert.throws(() => planRename("  ", "a1"), { message: "Usage: /rename <title>" });
+  assert.deepEqual(planRename("-w -- -t literal"), { target: "workspace", title: "-t literal" });
+});
+
+test("/rename rejects a missing title and unknown flags", () => {
+  assert.throws(() => planRename("  "), { message: RENAME_USAGE });
+  assert.throws(() => planRename("-w"), { message: RENAME_USAGE });
+  assert.throws(() => planRename("--"), { message: RENAME_USAGE });
+  assert.throws(() => planRename("-x Name"), { message: `Unknown option "-x". ${RENAME_USAGE}` });
+});
+
+test("/rename treats text after -- as a tab title", () => {
+  assert.deepEqual(planRename("-- -w literal"), { target: "tab", title: "-w literal" });
 });
 
 test("/cancel only when running", () => {

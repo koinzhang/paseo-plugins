@@ -13,7 +13,7 @@
 | `/profile [profile]` | 列出 `agentProfiles`；其他 provider 的 profile 置灰 | 把 profile 中可运行时修改的 model / mode / thinking / features 同步到当前 agent；其余字段忽略并简短提示 |
 | `/mode [mode]` | 当前 agent 可用 modes，标记当前值 | 切换 mode |
 | `/feature [name] [value]` | 所有 features 及当前值（子菜单选值） | `name`：该 feature 的可选值；`name value`：修改 |
-| `/rename <title>` | 提示用法，不发起 turn | 修改 agent title |
+| `/rename <title>` | 提示用法，不发起 turn | 修改当前 tab（agent title）。`-w` 改 workspace，见 004 |
 | `/cancel` | 运行中则取消；空闲时简短提示 | — |
 
 ## 交互

@@ -12,6 +12,7 @@ Requires Paseo **>= 0.9.2**.
 ### Changed
 
 - Settings groups slash commands into Runtime, Session, and Prompt sections.
+- `/rename` renames the current agent tab by default. `-t` / `--tab` do the same; `-w` / `--workspace` rename the workspace.
 
 ### Added
 

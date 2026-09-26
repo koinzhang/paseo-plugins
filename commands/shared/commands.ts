@@ -323,10 +323,51 @@ export function planProfile(args: string, state: AgentState, profiles: readonly 
   return profileRun(profile, state);
 }
 
-export function planRename(args: string, agentId: string): Plan {
-  const title = args.trim();
-  if (!title) throw new Error("Usage: /rename <title>");
-  return { kind: "run", control: { op: "rename", agentId, title } };
+export type RenameTarget = "tab" | "workspace";
+
+export interface RenameRequest {
+  target: RenameTarget;
+  title: string;
+}
+
+const RENAME_FLAGS: Record<string, RenameTarget> = {
+  "-t": "tab",
+  "--tab": "tab",
+  "-w": "workspace",
+  "--workspace": "workspace",
+};
+
+export const RENAME_USAGE = "Usage: /rename [-t|--tab|-w|--workspace] <title>";
+
+function firstToken(value: string): string {
+  const space = value.search(/\s/);
+  return space === -1 ? value : value.slice(0, space);
+}
+
+/** Drop a leading `--` used to end options, so a title may start with `-`. */
+function stripEndOfOptions(value: string): string {
+  if (value === "--") return "";
+  if (value.startsWith("-- ") || value.startsWith("--\t")) return value.slice(2).trim();
+  return value;
+}
+
+export function planRename(args: string): RenameRequest {
+  let rest = args.trim();
+  if (!rest) throw new Error(RENAME_USAGE);
+
+  let target: RenameTarget = "tab";
+  const head = firstToken(rest);
+  if (head === "--") {
+    rest = stripEndOfOptions(rest);
+  } else if (head.startsWith("-")) {
+    const mapped = RENAME_FLAGS[head];
+    if (!mapped) throw new Error(`Unknown option "${head}". ${RENAME_USAGE}`);
+    target = mapped;
+    rest = stripEndOfOptions(rest.slice(head.length).trim());
+  }
+
+  if (!rest) throw new Error(RENAME_USAGE);
+  return { target, title: rest };
 }
 
 export function planCancel(agentId: string, status: string): Plan {
