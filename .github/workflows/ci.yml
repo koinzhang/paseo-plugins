@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        plugin: [activity, mono, customize]
+        plugin: [activity, mono, customize, commands]
     defaults:
       run:
         working-directory: ${{ matrix.plugin }}

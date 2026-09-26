@@ -1,0 +1,6 @@
+{
+  "id": "commands",
+  "requirements": {
+    "paseo": ">=0.9.2"
+  }
+}
