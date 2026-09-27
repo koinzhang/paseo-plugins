@@ -146,7 +146,8 @@ jobs:
 
   publish-commands:
     name: Publish commands
-    if: startsWith(github.event.release.tag_name, 'commands-v')
+    # The first version is published manually before npm Trusted Publisher can be configured.
+    if: startsWith(github.event.release.tag_name, 'commands-v') && github.event.release.tag_name != 'commands-v0.1.0'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:

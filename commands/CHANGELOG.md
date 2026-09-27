@@ -7,13 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+## [0.1.0] - 2026-09-28
 
-- Requires Paseo **>= 0.9.0** (was >= 0.9.2).
-
-## [0.1.0] - 2026-09-27
-
-Requires Paseo **>= 0.9.2**.
+Requires Paseo **>= 0.9.0**.
 
 ### Added
 
