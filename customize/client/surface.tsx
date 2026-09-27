@@ -74,6 +74,7 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
   const [category, setCategoryState] = useState<Category>("instructions");
   const activeCategory = resolveCategory(provider, category);
   const [query, setQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
   const [skillFilter, setSkillFilter] = useState<SkillInvocationFilter>("all");
   const [selected, setSelected] = useState<Entry | null>(null);
 
@@ -84,6 +85,7 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
   };
   const setCategory = (next: Category) => {
     setCategoryState(next);
+    setSearchFocused(false);
     setSelected(null);
   };
 
@@ -91,6 +93,7 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
     setCategoryState((current) => resolveCategory(provider, current));
     setSelected(null);
     setQuery("");
+    setSearchFocused(false);
   }, [provider]);
 
   const projects = useQuery({
@@ -187,101 +190,67 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
   return (
     <View style={{ flex: 1, minHeight: 0, backgroundColor: colors.surface0 }}>
       <View style={{ flex: selected ? 1 - (compact ? PREVIEW_FRACTION.compact : PREVIEW_FRACTION.regular) : 1, minHeight: 0 }}>
-        <ScrollView contentContainerStyle={{ padding: page.padding, gap: page.gap }} keyboardShouldPersistTaps="handled">
-          <View style={{ gap: titleGap(compact), zIndex: 1 }}>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "flex-end",
-                zIndex: 30,
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 14, flexShrink: 1, minWidth: 0 }}>
-                {compatibility ? (
-                  <View accessible accessibilityRole="image" accessibilityLabel={m.compatibility(compatibilityState)}>
-                    <Icon name={compatibilityState === "off" ? "Link2Off" : "Link2"} size={ICON_SIZE.action} color={compatibilityState === "on" || compatibilityState === "supported" ? colors.statusSuccess : compatibilityState === "off" ? colors.foregroundMuted : colors.statusWarning} />
-                  </View>
-                ) : null}
-                <Dropdown
-                  label={m.provider}
-                  options={providerOptions}
-                  value={provider}
-                  onChange={setProvider}
-                  colors={colors}
-                  triggerLabel={m.chooseProvider}
-                  closeLabel={m.closeMenu}
-                  menuAlign={compact ? "left" : "right"}
-                  disabled={settings.saving}
-                />
-                <Dropdown
-                  label={m.project}
-                  options={projectOptions}
-                  value={projectRoot ?? NO_PROJECT}
-                  onChange={(id) => {
-                    if (settings.saving) return;
-                    void settings.save({ ...settings.values, projectRoot: id }, settings.revision);
-                    setSelected(null);
-                  }}
-                  colors={colors}
-                  triggerLabel={m.chooseProject}
-                  closeLabel={m.closeMenu}
-                  emptyLabel={m.noProject}
-                  disabled={settings.saving}
-                />
-                <IconButton
-                  icon="RefreshCw"
-                  label={m.refresh}
-                  color={colors.foregroundMuted}
-                  busy={result.isFetching}
-                  tooltip={displayed ? {
-                    text: m.lastScanned(new Date(displayed.scannedAt).toLocaleString(language)),
-                    colors,
-                  } : undefined}
-                  onPress={() => {
-                    void providerSnapshot.refetch();
-                    void result.refetch();
-                  }}
-                />
-              </View>
-            </View>
-            <CategoryTabs options={tabs} value={activeCategory} onChange={setCategory} colors={colors} />
-            {settings.saveError ? <Text style={{ ...TEXT.small, color: colors.statusDanger }}>{settings.saveError}</Text> : null}
-            <MechanismCard key={`${provider}:${activeCategory}`} mechanism={mechanism} language={language} colors={colors} m={m} />
-            {result.isError && displayed ? <ErrorState error={result.error} onRetry={() => void result.refetch()} colors={colors} /> : null}
-          </View>
-
-          {mechanism.supported ? (
-            <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-              <View
-                style={{
-                  flexGrow: 1,
-                  flexBasis: 180,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 6,
-                  height: CONTROL.searchHeight,
-                  paddingHorizontal: 10,
-                  borderRadius: RADIUS.control,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  backgroundColor: colors.surface1,
+        <View style={{ paddingHorizontal: page.padding, paddingTop: page.padding, gap: titleGap(compact), zIndex: 1 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              zIndex: 30,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 14, flexShrink: 1, minWidth: 0 }}>
+              {compatibility ? (
+                <View accessible accessibilityRole="image" accessibilityLabel={m.compatibility(compatibilityState)}>
+                  <Icon name={compatibilityState === "off" ? "Link2Off" : "Link2"} size={ICON_SIZE.action} color={compatibilityState === "on" || compatibilityState === "supported" ? colors.statusSuccess : compatibilityState === "off" ? colors.foregroundMuted : colors.statusWarning} />
+                </View>
+              ) : null}
+              <Dropdown
+                label={m.provider}
+                options={providerOptions}
+                value={provider}
+                onChange={setProvider}
+                colors={colors}
+                triggerLabel={m.chooseProvider}
+                closeLabel={m.closeMenu}
+                menuAlign={compact ? "left" : "right"}
+                disabled={settings.saving}
+              />
+              <Dropdown
+                label={m.project}
+                options={projectOptions}
+                value={projectRoot ?? NO_PROJECT}
+                onChange={(id) => {
+                  if (settings.saving) return;
+                  void settings.save({ ...settings.values, projectRoot: id }, settings.revision);
+                  setSelected(null);
                 }}
-              >
-                <Icon name="Search" size={ICON_SIZE.inline} color={colors.foregroundMuted} />
-                <TextInput
-                  value={query}
-                  onChangeText={setQuery}
-                  placeholder={m.search}
-                  placeholderTextColor={colors.foregroundMuted}
-                  accessibilityLabel={m.search}
-                  autoCorrect={false}
-                  autoCapitalize="none"
-                  style={{ flex: 1, ...TEXT.small, color: colors.foreground, paddingVertical: 0 }}
-                />
-                {queryActive ? <IconButton icon="X" label={m.preview.close} color={colors.foregroundMuted} size={ICON_SIZE.inline} onPress={() => setQuery("")} /> : null}
-              </View>
-              {activeCategory === "skills" ? (
+                colors={colors}
+                triggerLabel={m.chooseProject}
+                closeLabel={m.closeMenu}
+                emptyLabel={m.noProject}
+                disabled={settings.saving}
+              />
+              <IconButton
+                icon="RefreshCw"
+                label={m.refresh}
+                color={colors.foregroundMuted}
+                busy={result.isFetching}
+                tooltip={displayed ? {
+                  text: m.lastScanned(new Date(displayed.scannedAt).toLocaleString(language)),
+                  colors,
+                } : undefined}
+                onPress={() => {
+                  void providerSnapshot.refetch();
+                  void result.refetch();
+                }}
+              />
+            </View>
+          </View>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+            <CategoryTabs options={tabs} value={activeCategory} onChange={setCategory} colors={colors} />
+            <View style={{ flexBasis: 220, flexGrow: 1, minWidth: 0, flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center", gap: 8 }}>
+              {mechanism.supported && activeCategory === "skills" ? (
                 <SegmentedControl
                   label={m.skillInvocation}
                   options={skillFilterOptions}
@@ -290,9 +259,51 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
                   colors={colors}
                 />
               ) : null}
+              <MechanismCard key={`${provider}:${activeCategory}`} mechanism={mechanism} language={language} colors={colors} m={m} compact={compact} />
+              {mechanism.supported ? (
+                <View
+                  style={{
+                    width: 220,
+                    minWidth: 180,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    height: CONTROL.searchHeight,
+                    paddingHorizontal: 10,
+                    borderRadius: RADIUS.control,
+                    borderWidth: 1,
+                    borderColor: searchFocused ? colors.foregroundMuted : colors.border,
+                    backgroundColor: colors.surface1,
+                  }}
+                >
+                  <Icon name="Search" size={ICON_SIZE.inline} color={colors.foregroundMuted} />
+                  <TextInput
+                    value={query}
+                    onChangeText={setQuery}
+                    onFocus={() => setSearchFocused(true)}
+                    onBlur={() => setSearchFocused(false)}
+                    placeholder={m.search}
+                    placeholderTextColor={colors.foregroundMuted}
+                    accessibilityLabel={m.search}
+                    autoCorrect={false}
+                    autoCapitalize="none"
+                    style={{ flex: 1, ...TEXT.small, color: colors.foreground, paddingVertical: 0, borderWidth: 0, ...(Platform.OS === "web" ? ({ outlineStyle: "none" } as object) : null) }}
+                  />
+                  {queryActive ? <IconButton icon="X" label={m.preview.close} color={colors.foregroundMuted} size={ICON_SIZE.inline} onPress={() => setQuery("")} /> : null}
+                </View>
+              ) : null}
             </View>
-          ) : null}
+          </View>
+          {settings.saveError ? <Text style={{ ...TEXT.small, color: colors.statusDanger }}>{settings.saveError}</Text> : null}
+          {result.isError && displayed ? <ErrorState error={result.error} onRetry={() => void result.refetch()} colors={colors} /> : null}
+        </View>
 
+        <ScrollView
+          style={{ flex: 1, minHeight: 0, ...(Platform.OS === "web" ? ({ scrollbarWidth: "none", msOverflowStyle: "none" } as object) : null) }}
+          contentContainerStyle={{ paddingHorizontal: page.padding, paddingTop: page.gap, paddingBottom: page.padding, gap: page.gap }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           {!displayed && (saved.isPending || result.isPending) ? (
             <LoadingState color={colors.foregroundMuted} />
           ) : !displayed && (result.isError || saved.isError) ? (
