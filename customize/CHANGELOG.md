@@ -5,6 +5,22 @@ All notable changes to `@koinzhang/paseo-plugin-customize` are documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-09-28
+
+Requires Paseo **>= 0.9.0**.
+
+### Fixed
+
+- The board no longer shifts sideways when the entry list grows past one page: the list scrollbar is hidden, the provider/project controls stay pinned at the top, and only the entry list scrolls.
+- The search field shows focus on its outer border only, without the inner outline.
+
+### Changed
+
+- Category tabs, the Skills invocation filter, and search now share one top toolbar.
+- The loading-mechanism note became an inline toolbar dropdown; it opens as an overlay and no longer takes a row of its own.
+
+[0.2.1]: https://github.com/koinzhang/paseo-plugins/releases/tag/customize-v0.2.1
+
 ## [0.2.0] - 2026-09-28
 
 Requires Paseo **>= 0.9.0**.
