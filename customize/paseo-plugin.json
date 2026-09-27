@@ -1,5 +1,6 @@
 {
   "id": "customize",
+  "description": "Per-provider board of local instructions, rules, skills, MCP servers, commands, subagents, and plugins",
   "requirements": {
     "paseo": ">=0.9.0"
   }

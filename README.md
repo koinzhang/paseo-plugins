@@ -32,7 +32,7 @@ Data lives in `~/.paseo/plugin-data/activity/` (`usage.db`). Timeline / `agents.
 
 ## Install
 
-Requires Paseo >= 0.9.0-beta.2. Activity **0.4.0** is the last release that supports Paseo 0.8.0.
+Requires Paseo >= 0.9.0. Activity **0.4.0** is the last release that supports Paseo 0.8.0.
 
 ```bash
 paseo plugin add koinzhang/paseo-plugins --path activity

@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Requires Paseo **>= 0.9.0** (was >= 0.9.0-beta.2).
 - Activity insights now show Active days, Busiest day, Workspaces, Coding vs chat, Longest streak, Peak weekday (full name), Multi-turn sessions (share of prompted sessions with 2+ prompts) and Avg session duration (engaged time, idle gaps over 30 min skipped). Skill / MCP calls, Prompts per session and Longest session were removed.
 - Global Activity says **Sessions** wherever it counts agent conversations (KPI, Insights, creations histogram, timeline, heatmap tooltip, empty state). Workspace / Agent Agents lists are unchanged.
 - Global filter bar: the range chips are gone (the page is all-time) and provider chips became a `Provider: All ▾` dropdown listing every provider instead of the top 5.

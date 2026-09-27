@@ -37,7 +37,7 @@ Everything lives on the daemon machine in `~/.paseo/plugin-data/activity/` (SQLi
 
 ## Install
 
-Requires Paseo **>= 0.9.0-beta.2** (current package targets **0.9.0-beta.2**). **0.4.0** is the last release that supports Paseo 0.8.0.
+Requires Paseo **>= 0.9.0**. **0.4.0** is the last release that supports Paseo 0.8.0.
 
 From Git (Paseo 0.8 and later):
 

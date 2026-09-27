@@ -1,6 +1,7 @@
 {
   "id": "activity",
+  "description": "Local usage analytics and workspace agent ops: Explorer fleet list, live attention, and terminals",
   "requirements": {
-    "paseo": ">=0.9.0-beta.2"
+    "paseo": ">=0.9.0"
   }
 }

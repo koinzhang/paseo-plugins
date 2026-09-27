@@ -32,7 +32,7 @@ Paseo 插件 monorepo。所有插件独立目录、独立 `paseo-plugin.json`，
 
 ## 安装
 
-需要 Paseo >= 0.9.0-beta.2。Activity **0.4.0** 是最后支持 Paseo 0.8.0 的版本。
+需要 Paseo >= 0.9.0。Activity **0.4.0** 是最后支持 Paseo 0.8.0 的版本。
 
 ```bash
 paseo plugin add koinzhang/paseo-plugins --path activity
