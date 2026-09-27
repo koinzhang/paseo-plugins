@@ -38,7 +38,7 @@ from slash autocomplete, so the provider's own command of the same name (if any)
 ## Install
 
 ```bash
-paseo plugin add npm:@koinzhang/paseo-commands
+paseo plugin add npm:@koinzhang/paseo-plugin-commands
 ```
 
 To install from GitHub, use `paseo plugin add koinzhang/paseo-plugins --path commands`.

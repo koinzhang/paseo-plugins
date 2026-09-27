@@ -1,5 +1,5 @@
 {
-  "name": "@koinzhang/paseo-commands",
+  "name": "@koinzhang/paseo-plugin-commands",
   "version": "0.1.0",
   "description": "Essential client-side slash commands for controlling the current Paseo agent.",
   "license": "MIT",
