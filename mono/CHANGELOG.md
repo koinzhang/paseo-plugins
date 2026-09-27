@@ -5,6 +5,17 @@ All notable changes to `@koinzhang/paseo-plugin-mono` are documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-09-28
+
+Requires Paseo **>= 0.9.0**.
+
+### Added
+
+- Composer file attachments show a file-type mark and the filename on desktop and web. Hovering or clicking a workspace file shows its path; long paths keep the first directory and the filename, and the full path stays in the native tooltip.
+- New **Composer → Optimize file attachments** switch (on by default). Turning it off restores the host attachment style immediately; deleting, dropping, and Add to chat keep working either way.
+
+[0.2.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/mono-v0.2.0
+
 ## [0.1.0] - 2026-09-24
 
 Requires Paseo **>= 0.9.0**.
