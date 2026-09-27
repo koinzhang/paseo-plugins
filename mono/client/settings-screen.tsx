@@ -36,6 +36,10 @@ function DisplayControls({ settings }: { settings: ReadySettings }) {
     (value: boolean) => change("hideVoiceMode", value),
     [change],
   );
+  const changeEnhancedFileAttachments = useCallback(
+    (value: boolean) => change("enhancedFileAttachments", value),
+    [change],
+  );
   return (
     <>
       <SettingsSection title="Layout">
@@ -60,6 +64,17 @@ function DisplayControls({ settings }: { settings: ReadySettings }) {
             value={settings.values.hideThinking}
             disabled={settings.saving}
             onValueChange={changeHideThinking}
+          />
+        </SettingsCard>
+      </SettingsSection>
+      <SettingsSection title="Composer">
+        <SettingsCard>
+          <SettingsSwitch
+            label="Optimize file attachments"
+            hint="Show file-type marks and filenames; hover or click workspace files to see their paths. Web and desktop only."
+            value={settings.values.enhancedFileAttachments}
+            disabled={settings.saving}
+            onValueChange={changeEnhancedFileAttachments}
           />
         </SettingsCard>
       </SettingsSection>

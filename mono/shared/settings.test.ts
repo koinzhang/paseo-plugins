@@ -18,16 +18,18 @@ test("every tweak is enabled by default", () => {
     hideThinking: true,
     hideDictation: true,
     hideVoiceMode: true,
+    enhancedFileAttachments: true,
   });
 });
 
 test("each setting is stored independently", () => {
-  assert.deepEqual(MONO_SETTINGS.schema.parse({ hideThinking: false, hideDictation: false }), {
+  assert.deepEqual(MONO_SETTINGS.schema.parse({ hideThinking: false, hideDictation: false, enhancedFileAttachments: false }), {
     compactSidebarNav: true,
     minimalChrome: true,
     hideThinking: false,
     hideDictation: false,
     hideVoiceMode: true,
+    enhancedFileAttachments: false,
   });
 });
 
@@ -35,6 +37,10 @@ test("settings equality compares every field", () => {
   assert.equal(sameMonoSettings(DEFAULT_MONO_SETTINGS, { ...DEFAULT_MONO_SETTINGS }), true);
   assert.equal(
     sameMonoSettings(DEFAULT_MONO_SETTINGS, { ...DEFAULT_MONO_SETTINGS, compactSidebarNav: false }),
+    false,
+  );
+  assert.equal(
+    sameMonoSettings(DEFAULT_MONO_SETTINGS, { ...DEFAULT_MONO_SETTINGS, enhancedFileAttachments: false }),
     false,
   );
 });

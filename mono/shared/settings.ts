@@ -11,6 +11,7 @@ export const MONO_SETTINGS = defineSettings({
     hideThinking: z.boolean().default(true),
     hideDictation: z.boolean().default(true),
     hideVoiceMode: z.boolean().default(true),
+    enhancedFileAttachments: z.boolean().default(true),
   }),
 });
 
