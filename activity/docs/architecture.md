@@ -61,7 +61,7 @@ server/          handlers · store · ingest · background-sync · hooks
 | `usage.by-project` | — | — | —（全时段） | Global（Projects 排行，provider 过滤；070） |
 | `usage.agents` | — | ✓ | ✓ | Workspace |
 | `usage.agent-lifetime` | — | — | —（全时段） | Global（最长寿命 049；072 加平均会话投入时长 + 多轮会话计数，provider 过滤；051 起含活跃 agent） |
-| `usage.agent-creations` | — | — | ✓ | Global（Agent creations 直方图，日柱 provider 软渐变；051/055） |
+| `usage.agent-creations` | — | — | ✓ | Global（Agent creations 直方图，日柱 accent 强度色 057；051/055 已取代） |
 | `usage.host-info` | — | — | — | Workspace（cwd `~` 折叠） |
 | `usage.activity-by-day` | — | ✓ | ✓ | Global |
 | `usage.activity-by-hour` | — | — | 固定 168h | Global（059；provider 过滤） |
@@ -74,6 +74,7 @@ server/          handlers · store · ingest · background-sync · hooks
 | Surface + Sidebar | `activity` / global |
 | Workspace panel | `usage` / agent |
 | Workspace panel | `workspace-activity` / workspace · `locations: ["explorer"]` |
+| Header button | `workspace-activity` / per workspace（067；面板挂载时隐藏） |
 | Command Center | `open-usage-global` · `open-usage` · `open-workspace-activity` |
 | Composer pills | per-agent Activity（用量）；per-agent Attention（040：同仓 finished/permission） |
 

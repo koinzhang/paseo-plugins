@@ -26,7 +26,7 @@ Ingests every agent's Paseo timeline into a local SQLite database. Queries read 
 ## Where it shows up
 
 - **Sidebar Activity** — all-time global view by provider (KPI with prev-7d comparison, Activity Calendar heatmap, Daily Activity 30-day histogram, Hourly Activity 168-hour timeline, Providers / Projects rankings, insights, most used)
-- **Explorer → Activity** — workspace agents as a management list (search / sort / group / status / lifecycle / archive), live attention (permission badge, status colors, running spinner; API-owned directory observation + explicit lifecycle/archive fields + 15s reconciliation), open Terminals (list / preview / close), plus workspace KPIs and Skills / MCP ranked or newest-call timeline views (with agent titles and one shared persisted view choice); usage queries get a best-effort refresh hint when agents leave running
+- **Explorer → Activity** (or the Activity button in a workspace header; hidden while the panel is open) — workspace agents as a management list (search / sort / group / status / lifecycle / archive), live attention (permission badge, status colors, running spinner; API-owned directory observation + explicit lifecycle/archive fields + 15s reconciliation), open Terminals (list / preview / close), plus workspace KPIs and Skills / MCP ranked or newest-call timeline views (with agent titles and one shared persisted view choice); usage queries get a best-effort refresh hint when agents leave running
 - **Agent workspace panel** — per-agent tool detail (dense KPI including prompts / Skills / MCP toggle / SKILL.md); refreshes on timeline turn terminal events
 - **Composer pills** — Activity: current agent's skill / MCP summary (hidden when empty); **Needs attention**: other same-workspace agents with finished / permission / error (hidden when none; click opens shared list)
 - **Command Center** — Activity · Workspace Activity · Agent Activity
@@ -39,7 +39,7 @@ Everything lives on the daemon machine in `~/.paseo/plugin-data/activity/` (SQLi
 
 Requires Paseo **>= 0.9.0**. **0.4.0** is the last release that supports Paseo 0.8.0.
 
-From Git (Paseo 0.8 and later):
+From Git (Paseo 0.9 and later):
 
 ```bash
 paseo plugin add koinzhang/paseo-plugins --path activity
@@ -86,7 +86,7 @@ This plugin is spec-driven: read [specs/README.md](./specs/README.md) before cod
 
 ## Publish
 
-Release history: [CHANGELOG.md](./CHANGELOG.md) (current **0.6.0**). npm releases go through a GitHub Release tag `activity-vX.Y.Z` (not push-to-`main` alone). Steps: [CONTRIBUTING.md § Publishing to npm](../CONTRIBUTING.md#publishing-to-npm).
+Release history: [CHANGELOG.md](./CHANGELOG.md) (current **0.7.0**). npm releases go through a GitHub Release tag `activity-vX.Y.Z` (not push-to-`main` alone). Steps: [CONTRIBUTING.md § Publishing to npm](../CONTRIBUTING.md#publishing-to-npm).
 
 ## License
 

@@ -18,7 +18,7 @@ export type InsightSummary = {
   chatAgents?: number;
 };
 
-/** Shared cap for Activity insights and Most used skills / MCP / models. */
+/** Shared cap for the Workspace Activity Skills / MCP rankings. */
 export const ACTIVITY_LIST_LIMIT = 8;
 
 function formatDayLabel(dateKey: string, locale: string): string {

@@ -85,7 +85,7 @@
 | [056-creations-tooltip-nonzero](./056-creations-tooltip-nonzero/) | 已实现 | 创建直方图浮层只列当日有创建的 provider（省略 count 0） |
 | [057-creations-accent-bars](./057-creations-accent-bars/) | 已实现，页面验收待完成 | 创建直方图日柱改用主题 accent 强度色（与热力图同色系）；浮层保留 provider 品牌色 |
 | [058-heatmap-weekday-rows](./058-heatmap-weekday-rows/) | 已实现，页面验收待完成 | 热力图行 = weekday（周日起）、列 = 自然周（Codex 样式）；修订 048 |
-| [059-hourly-activity-timeline](./059-hourly-activity-timeline/) | 已实现，页面验收待完成 | 最近 168 小时活动时间线；发散折线面积图（轴上 messages / 轴下 agents）、一屏 24 小时、按住拖拽平移、独立于 range chips |
+| [059-hourly-activity-timeline](./059-hourly-activity-timeline/) | 已实现，页面验收待完成 | 最近 168 小时活动时间线；一屏 24 小时、按住拖拽平移、独立于 range chips（070 起由发散双轴面积图改为单指标切换） |
 | [060-global-section-spacing](./060-global-section-spacing/) | 已实现，页面验收待完成 | Global 各 section 间距节奏统一：热力图尾部留白、Timeline 内部 gap、insights / 排行标题 10 / 12 |
 | [061-heatmap-tab-font-size](./061-heatmap-tab-font-size/) | 已实现，页面验收待完成 | 热力图 Daily / Weekly / Cumulative 与横轴月份标签同字号（`LABEL_FONT_SIZE` 12） |
 | [062-measured-width-cache](./062-measured-width-cache/) | 已实现，页面验收待完成 | 测量宽度：0 宽不上报、同步测 DOM、监听 resize / visibilitychange；隐藏窗口与切页面不再重排 |
@@ -105,7 +105,7 @@
 | [076-global-chart-titles](./076-global-chart-titles/) | 已实现 | Global 三张图标题统一为 Activity Calendar / Daily Activity / Hourly Activity |
 | [077-provider-filter-align-right](./077-provider-filter-align-right/) | 已实现 | Global provider 筛选栏右对齐；下拉菜单与触发器右对齐向左展开 |
 | [078-ranking-collapse](./078-ranking-collapse/) | 已实现 | Global Providers / Projects 排行默认最多显示 5 条，右侧支持展开与收起 |
-| [079-hourly-line-joins](./079-hourly-line-joins/) | 进行中 | 修复 Hourly Activity 折线交点的毛刺 |
+| [079-hourly-line-joins](./079-hourly-line-joins/) | 已实现，页面验收待完成 | 修复 Hourly Activity 折线交点的毛刺 |
 | [080-insights-streak-weekday-reorder](./080-insights-streak-weekday-reorder/) | 已实现 | Insights：Longest streak / Peak weekday 前移到第 3、4 位（Workspaces 上方） |
 | [081-ranking-bar-animation](./081-ranking-bar-animation/) | 已实现，页面验收待完成 | Global 图表动画：排行条与 Daily Activity 柱从 0 增长、切换时平滑过渡；Activity Calendar 按周列扫入；Hourly Activity 自基线增长 |
 | [082-rank-list-insights-limit](./082-rank-list-insights-limit/) | 已实现，页面验收待完成 | Most used skills / MCP / models 展示全部，可视高度对齐 Insights 行数，超出滚动（隐藏滚动条） |

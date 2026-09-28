@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Heatmap, Last 30 days histogram and Timeline each get a Sessions / Prompts / Skill calls / MCP calls switch (default Sessions); the timeline draws a single series for the chosen metric.
 - Global KPI tiles compare against the previous 7 days: Sessions / Prompts show the change vs prev. 7d, Top provider / Top model show the previous window's leader; the provider filter applies to both windows.
 - Providers and Projects rankings collapse to five rows with a `Show N more` / `Show less` toggle.
+- Global chart motion: ranking bars and Daily Activity bars grow from zero and transition when the metric changes, the Activity Calendar sweeps in by week column, and the Hourly Activity plot grows from its baseline (081).
 
 ### Changed
 
@@ -25,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Global filter bar: the range chips are gone (the page is all-time) and provider chips became a `Provider: All ▾` dropdown listing every provider instead of the top 5.
 - Global KPI: Sessions, Prompts, Top provider · share, Top model · share. Active days, Peak weekday and Longest streak moved into Insights.
 - User-sent messages are called **Prompts** in every Activity view; the Workspace "Show → Prompt" preview is now "Latest prompt".
-- Most used models lists every model; skills / MCP stay capped at 8.
+- Most used skills / MCP / models list every item; the column is as tall as the Insights column and scrolls beyond it, resetting to the top when the list kind changes (082).
 - The heatmap no longer shows the Daily / Weekly / Cumulative switch (always daily).
 - Global chart titles name their granularity: Activity Calendar (heatmap), Daily Activity (30-day histogram), Hourly Activity (timeline).
 - Activity insights put Longest streak and Peak weekday above Workspaces.
@@ -37,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Global `Provider: All ▾` filter is right-aligned in the content area, and its menu opens right-aligned under the trigger.
 - Oh My Pi (`omp`) is counted as its own provider everywhere instead of being merged into Pi; stored data is unchanged.
 - KPI fit-to-width accounts for the tile divider, so values that just fit no longer ellipsize by a pixel.
+- The Hourly Activity line meets cleanly at each hour with rounded joins instead of sheared border spikes (079).
 
 ## [0.6.0] - 2026-09-22
 
