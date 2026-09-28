@@ -10,10 +10,10 @@ const SURFACE_ID = "customize";
 
 /** Command titles follow the app language; the host has no update(), so re-register on change. */
 function addCommands(client: PluginClientContext): () => void {
-  const description = messagesFor(currentAppLanguage()).openBoard;
+  const messages = messagesFor(currentAppLanguage());
   const removeCommandCenterItem = client.addCommandCenterItem({
     id: "open-customize",
-    title: description,
+    title: messages.title,
     icon: "FolderCog",
     keywords: ["customize", "agents.md", "claude.md", "rules", "skills", "mcp", "instructions", "provider"],
     context: "global",
@@ -23,7 +23,7 @@ function addCommands(client: PluginClientContext): () => void {
   });
   const removeSlashCommand = client.addSlashCommand({
     name: "customize",
-    description,
+    description: messages.openBoard,
     argumentHint: "",
     context: "agent",
     onSubmit: openCustomizeFromAgent,
