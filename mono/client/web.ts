@@ -30,6 +30,7 @@ interface DomElement {
   removeAttribute(name: string): void;
   getBoundingClientRect(): { width: number; height: number };
   contains(element: DomElement): boolean;
+  closest(selector: string): DomElement | null;
   remove(): void;
   querySelectorAll<T extends DomElement = DomElement>(selector: string): ArrayLike<T>;
 }
@@ -52,6 +53,7 @@ declare const window: object;
 declare const localStorage: { getItem(key: string): string | null };
 declare function getComputedStyle(element: DomElement): {
   color: string;
+  fontSize: string;
   borderColor: string;
   borderBottomWidth: string;
   borderRightWidth: string;
@@ -164,8 +166,8 @@ const FILE_SUBTITLE_ATTRIBUTE = "data-mono-file-subtitle";
 const FILE_PATH_ATTRIBUTE = "data-mono-file-path";
 const FILE_PATH_OPEN_ATTRIBUTE = "data-mono-file-path-open";
 const FILE_ICON_COLOR_PROPERTY = "--mono-file-icon-color";
-// Matches Paseo attachment-pill.tsx labelTitle -> theme.fontSize.base.
-const FILE_TITLE_FONT_SIZE_PX = 14;
+const FILE_FONT_SIZE_PROPERTY = "--mono-file-font-size";
+const COMPOSER_TEXT_SELECTOR = '[data-composer-input], textarea, [data-testid="composer-readonly-content"]';
 
 type DesiredAttributes = Map<DomElement, Map<string, string>>;
 
@@ -194,7 +196,7 @@ export function installMonoWeb(): () => void {
 
   const originals = new Map<DomElement, Map<string, string | null>>();
   const popoverBorderOriginals = new Map<DomElement, { value: string; priority: string }>();
-  const fileIconColorOriginals = new Map<DomElement, { value: string; priority: string }>();
+  const fileStyleOriginals = new Map<DomElement, Map<string, { value: string; priority: string }>>();
   const openedPaths = new Set<DomElement>();
   let scheduled: number | null = null;
   let disposed = false;
@@ -393,12 +395,38 @@ export function installMonoWeb(): () => void {
     return child?.parentElement === parent ? child : null;
   }
 
+  function setFileStyle(element: DomElement, property: string, value: string): void {
+    let originals = fileStyleOriginals.get(element);
+    if (!originals) {
+      originals = new Map();
+      fileStyleOriginals.set(element, originals);
+    }
+    if (!originals.has(property)) {
+      originals.set(property, {
+        value: element.style.getPropertyValue(property),
+        priority: element.style.getPropertyPriority(property),
+      });
+    }
+    if (element.style.getPropertyValue(property) !== value) element.style.setProperty(property, value);
+  }
+
+  function restoreFileStyles(current = new Set<DomElement>()): void {
+    for (const [element, originals] of fileStyleOriginals) {
+      if (current.has(element)) continue;
+      for (const [property, original] of originals) {
+        if (original.value) element.style.setProperty(property, original.value, original.priority);
+        else element.style.removeProperty(property);
+      }
+      fileStyleOriginals.delete(element);
+    }
+  }
+
   function syncFilePills(desired: DesiredAttributes, enabled: boolean): void {
     for (const pill of openedPaths) {
       if (!enabled && pill.isConnected) pill.removeAttribute(FILE_PATH_OPEN_ATTRIBUTE);
       if (!enabled || !pill.isConnected) openedPaths.delete(pill);
     }
-    const currentIcons = new Set<DomElement>();
+    const currentElements = new Set<DomElement>();
     for (const pill of enabled ? Array.from(document.querySelectorAll(FILE_PILL_SELECTOR)) : []) {
       const body = pill.firstElementChild;
       const icon = body?.firstElementChild;
@@ -407,17 +435,12 @@ export function installMonoWeb(): () => void {
       const subtitle = title?.nextElementSibling;
       const name = title?.textContent?.trim();
       if (!icon || !title || !subtitle || !name) continue;
-      currentIcons.add(icon);
-      if (!fileIconColorOriginals.has(icon)) {
-        fileIconColorOriginals.set(icon, {
-          value: icon.style.getPropertyValue(FILE_ICON_COLOR_PROPERTY),
-          priority: icon.style.getPropertyPriority(FILE_ICON_COLOR_PROPERTY),
-        });
-      }
-      const color = getComputedStyle(subtitle).color;
-      if (icon.style.getPropertyValue(FILE_ICON_COLOR_PROPERTY) !== color) {
-        icon.style.setProperty(FILE_ICON_COLOR_PROPERTY, color);
-      }
+      currentElements.add(icon);
+      currentElements.add(pill);
+      setFileStyle(icon, FILE_ICON_COLOR_PROPERTY, getComputedStyle(subtitle).color);
+      const composer = pill.closest('[data-testid="message-input-root"]');
+      const input = composer?.querySelectorAll(COMPOSER_TEXT_SELECTOR)[0];
+      setFileStyle(pill, FILE_FONT_SIZE_PROPERTY, input ? getComputedStyle(input).fontSize : "14px");
       setDesired(desired, pill, FILE_PILL_ATTRIBUTE);
       setDesired(desired, icon, FILE_ICON_ATTRIBUTE, fileMark(name));
       setDesired(desired, title, FILE_TITLE_ATTRIBUTE);
@@ -429,12 +452,7 @@ export function installMonoWeb(): () => void {
         if (path !== name) setDesired(desired, title, FILE_PATH_ATTRIBUTE, shortenFilePath(path));
       }
     }
-    for (const [icon, original] of fileIconColorOriginals) {
-      if (currentIcons.has(icon)) continue;
-      if (original.value) icon.style.setProperty(FILE_ICON_COLOR_PROPERTY, original.value, original.priority);
-      else icon.style.removeProperty(FILE_ICON_COLOR_PROPERTY);
-      fileIconColorOriginals.delete(icon);
-    }
+    restoreFileStyles(currentElements);
   }
 
   function toggleFilePath(event: { target: DomElement | null }): void {
@@ -546,11 +564,7 @@ export function installMonoWeb(): () => void {
     clearInterval(interval);
     unsubscribeSettings();
     apply(new Map());
-    for (const [icon, original] of fileIconColorOriginals) {
-      if (original.value) icon.style.setProperty(FILE_ICON_COLOR_PROPERTY, original.value, original.priority);
-      else icon.style.removeProperty(FILE_ICON_COLOR_PROPERTY);
-    }
-    fileIconColorOriginals.clear();
+    restoreFileStyles();
     syncPopoverBorderColors(false);
     style.remove();
     voiceStyle.remove();
@@ -576,25 +590,30 @@ const LAYOUT_CSS = `
 [${FILE_SUBTITLE_ATTRIBUTE}] {
   display: none !important;
 }
+[${FILE_ICON_ATTRIBUTE}] {
+  width: var(${FILE_FONT_SIZE_PROPERTY}, 14px) !important;
+  flex-shrink: 0;
+}
 [${FILE_ICON_ATTRIBUTE}] > * {
   display: none !important;
 }
 [${FILE_ICON_ATTRIBUTE}]::before {
   content: attr(${FILE_ICON_ATTRIBUTE});
   display: flex;
-  width: 18px;
-  height: 18px;
+  width: var(${FILE_FONT_SIZE_PROPERTY}, 14px);
+  height: var(${FILE_FONT_SIZE_PROPERTY}, 14px);
   align-items: center;
   justify-content: center;
   border: 1px solid currentColor;
   border-radius: 3px;
   box-sizing: border-box;
-  font-size: 9px;
+  font-size: calc(var(${FILE_FONT_SIZE_PROPERTY}, 14px) / 2);
   font-weight: 700;
   line-height: 1;
   color: var(${FILE_ICON_COLOR_PROPERTY});
 }
 [${FILE_TITLE_ATTRIBUTE}] {
+  font-size: var(${FILE_FONT_SIZE_PROPERTY}, 14px) !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
@@ -604,7 +623,7 @@ const LAYOUT_CSS = `
 }
 [${FILE_PILL_ATTRIBUTE}]:is(:hover, [${FILE_PATH_OPEN_ATTRIBUTE}]) [${FILE_PATH_ATTRIBUTE}]::after {
   content: attr(${FILE_PATH_ATTRIBUTE});
-  font-size: ${FILE_TITLE_FONT_SIZE_PX}px;
+  font-size: var(${FILE_FONT_SIZE_PROPERTY}, 14px);
 }
 html[${CHROME_ATTRIBUTE}] [${SIDEBAR_HEADER_ATTRIBUTE}] {
   border-bottom-color: transparent !important;
