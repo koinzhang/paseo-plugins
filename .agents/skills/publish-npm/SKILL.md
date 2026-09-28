@@ -12,7 +12,7 @@ Canonical human doc: [CONTRIBUTING.md § Publishing to npm](../../../CONTRIBUTIN
 
 ## Rules
 
-- Activity and Mono publish through a **published GitHub Release**, not by push-to-`main` alone. Customize 0.1.0 follows the user-directed local npm CLI flow below.
+- Every plugin publishes through a **published GitHub Release**, not by push-to-`main` alone. The release tag triggers the matching job in `publish.yml`.
 - Tag shape: `{plugin-id}-v{semver}` (Activity: `activity-v0.4.0`).
 - Tag semver **must** equal that plugin's `package.json` `version`.
 - Do not force-republish an existing npm version; bump again if needed.
@@ -60,10 +60,8 @@ Package: `@koinzhang/paseo-plugin-activity` · directory: `activity/` · workflo
 - If the job is skipped: tag must start with `activity-v`.
 - If the job fails at version check: tag and `activity/package.json` version disagree.
 
-## Customize 0.1.0
+## Customize
 
-Package: `@koinzhang/paseo-plugin-customize` · directory: `customize/` · local npm CLI publication (no GitHub Release trigger).
+Package: `@koinzhang/paseo-plugin-customize` · directory: `customize/` · workflow: `.github/workflows/publish.yml` (`publish-customize` job).
 
-- The package and lockfile already say `0.1.0`. Follow the release preparation and verification steps in `CONTRIBUTING.md` and use `.github/release-notes/customize-v0.1.0.md` as the notes draft.
-- At actual release time, date `customize/CHANGELOG.md`, verify npm authentication and that the version is unused, then publish with `npm publish --access public` from `customize/`.
-- Verify the npm package version after publication. Commit or push the release materials through jj only if requested.
+Follow the Activity checklist with `customize` in place of `activity` and tag `customize-vX.Y.Z`. Customize 0.2.0 and later publish through GitHub Release; 0.1.0 predates the workflow job and was published locally — do not republish it.
