@@ -24,5 +24,7 @@
 | 020 | [`020-provider-versions`](./020-provider-versions/) | 全 Provider 版本探测，顶部兼容图标与 Provider 之间展示 | 已实现，页面目视验收待完成 |
 | 021 | [`021-provider-filter-groups`](./021-provider-filter-groups/) | Provider 下拉按 Built-in / ACP 分组，组内按名称排序，组间分割线 | 已实现 |
 | 022 | [`022-toolbar-responsive-wrap`](./022-toolbar-responsive-wrap/) | 工具栏两段式响应换行：先左右 section 分两行，再段内折行 | 已实现 |
+| 023 | [`023-preview-action-icon-size`](./023-preview-action-icon-size/) | 预览详情页复制图标尺寸与 Open / Reveal 对齐 | 已实现 |
+| 024 | [`024-token-estimates`](./024-token-estimates/) | 六类配置条目的 token 估算胶囊（分脚本启发式，Plugins 递归，MCP 不统计） | 已实现 |
 
 规则同仓库根 `AGENTS.md`：先改 spec / plan 再改代码；每完成一个 task 在 `tasks.md` 勾选并写验证方式；新功能点新开编号目录。

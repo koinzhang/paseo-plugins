@@ -5,6 +5,12 @@ All notable changes to `@koinzhang/paseo-plugin-customize` are documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Every Instructions, Rules, Skills, Commands, Subagents, and Plugins row now shows an estimated token count (`≈1.2k tok`) after the status pill. The estimate uses a script-aware heuristic (`ceil(ascii / 4 + cjk / 1.5 + otherNonAsciiBytes / 3)`) over the entry's own content, and plugin rows recursively sum their bundled component prompts. MCP is not counted, because a server's real context cost is its `tools/list` payload rather than anything on disk. Counts are cached by path + mtime + size and persisted with the scan snapshot.
+
 ## [0.2.1] - 2026-09-28
 
 Requires Paseo **>= 0.9.0**.

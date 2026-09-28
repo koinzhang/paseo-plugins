@@ -4,10 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { Text, View } from "react-native";
 import { openRpc, previewRpc, type Entry } from "../shared/contracts.ts";
-import { formatBytes, type Messages } from "../shared/i18n.ts";
+import { formatBytes, formatTokenCount, type Messages } from "../shared/i18n.ts";
 import { RADIUS, TEXT } from "./design-tokens.ts";
 import { entryMeta } from "./entry-row.tsx";
-import { ErrorState, IconButton, LoadingState, StatusBadge, TextButton, type Colors } from "./ui.tsx";
+import { ErrorState, IconButton, LoadingState, StatusBadge, TextButton, TokenBadge, type Colors } from "./ui.tsx";
 
 export function PreviewPane({
   entry,
@@ -51,6 +51,9 @@ export function PreviewPane({
           {entry.name}
         </Text>
         <StatusBadge status={entry.status} label={m.statuses[entry.status]} colors={colors} />
+        {entry.tokens ? (
+          <TokenBadge label={m.tokens(formatTokenCount(entry.tokens))} hint={m.tokensHint(formatTokenCount(entry.tokens))} colors={colors} />
+        ) : null}
         <View style={{ flex: 1 }} />
         <TextButton icon="ExternalLink" label={m.preview.open} onPress={() => run(false)} colors={colors} />
         {!compact && !isUrl ? <TextButton icon="FolderOpen" label={m.preview.reveal} onPress={() => run(true)} colors={colors} /> : null}

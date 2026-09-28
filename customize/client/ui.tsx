@@ -328,3 +328,27 @@ export function StatusBadge({ status, label, colors }: { status: Status; label: 
     </View>
   );
 }
+
+/** Outlined token pill: same shell as `StatusBadge`, neutral color so it never competes with status. */
+export function TokenBadge({ label, hint, colors }: { label: string; hint: string; colors: Colors }): ReactNode {
+  return (
+    <View
+      accessible
+      accessibilityLabel={hint}
+      style={{
+        height: CONTROL.pillBadgeHeight,
+        paddingHorizontal: 7,
+        borderRadius: pillRadius(CONTROL.pillBadgeHeight),
+        borderWidth: 1,
+        borderColor: colors.border,
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      <Text style={{ ...TEXT.pillBadge, color: colors.foregroundMuted }} numberOfLines={1}>
+        {label}
+      </Text>
+    </View>
+  );
+}

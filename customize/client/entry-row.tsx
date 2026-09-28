@@ -3,8 +3,9 @@ import { memo, type ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import type { Category, Entry } from "../shared/contracts.ts";
 import type { Messages } from "../shared/i18n.ts";
+import { formatTokenCount } from "../shared/i18n.ts";
 import { ICON_SIZE, RADIUS, ROW_PADDING, TEXT } from "./design-tokens.ts";
-import { StatusBadge, type Colors } from "./ui.tsx";
+import { StatusBadge, TokenBadge, type Colors } from "./ui.tsx";
 
 export const CATEGORY_ICONS: Record<Category, string> = {
   instructions: "FileText",
@@ -40,11 +41,12 @@ export const EntryRow = memo(function EntryRow({
   m: Messages;
 }): ReactNode {
   const muted = entry.status === "inactive" || entry.status === "disabled";
+  const tokens = entry.tokens ? formatTokenCount(entry.tokens) : null;
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      accessibilityLabel={`${entry.name}, ${m.statuses[entry.status]}${entry.agentPlugin ? `, ${m.agentPluginLabel(entry.agentPlugin.version, entry.agentPlugin.validation)}` : ""}`}
+      accessibilityLabel={`${entry.name}, ${m.statuses[entry.status]}${tokens ? `, ${m.tokens(tokens)}` : ""}${entry.agentPlugin ? `, ${m.agentPluginLabel(entry.agentPlugin.version, entry.agentPlugin.validation)}` : ""}`}
       onPress={() => onSelect(entry)}
       style={({ hovered, pressed }: { hovered?: boolean; pressed: boolean }) => ({
         flexDirection: "row",
@@ -69,6 +71,7 @@ export const EntryRow = memo(function EntryRow({
             {entry.name}
           </Text>
           <StatusBadge status={entry.status} label={m.statuses[entry.status]} colors={colors} />
+          {tokens ? <TokenBadge label={m.tokens(tokens)} hint={m.tokensHint(tokens)} colors={colors} /> : null}
           {entry.agentPlugin ? (
             <View style={{ borderRadius: RADIUS.control, borderWidth: 1, borderColor: entry.agentPlugin.validation === "valid" ? colors.accent : colors.statusWarning, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 }}>
               <Text style={{ ...TEXT.pillBadge, color: entry.agentPlugin.validation === "valid" ? colors.accent : colors.statusWarning }} numberOfLines={1}>{m.agentPluginLabel(entry.agentPlugin.version, entry.agentPlugin.validation)}</Text>

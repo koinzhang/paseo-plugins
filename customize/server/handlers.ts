@@ -24,6 +24,7 @@ import { mergeSkillAliases } from "./skill-aliases.ts";
 import { parseToml } from "./toml.ts";
 import { parseYaml } from "./yaml-lite.ts";
 import { detectProviderVersion } from "./provider-version.ts";
+import { withTokens } from "./tokens.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -67,7 +68,7 @@ function nestedIndex(root: string): NestedIndex {
 export function scanProvider(provider: ProviderId, projectRoot: string | null, env: Pick<ScanContext, "home" | "env" | "platform" | "providerVersion">): Entry[] {
   const root = projectRoot && isDir(projectRoot) ? path.resolve(projectRoot) : null;
   const ctx: ScanContext = { ...env, projectRoot: root, nested: root ? nestedIndex(root) : null };
-  return mergeSkillAliases(provider, SCANNERS[provider](ctx));
+  return withTokens(mergeSkillAliases(provider, SCANNERS[provider](ctx)));
 }
 
 export async function handleScan(input: RpcInput<typeof scanRpc>, context?: PluginHandlerContext): Promise<RpcOutput<typeof scanRpc>> {

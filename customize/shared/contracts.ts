@@ -68,6 +68,8 @@ export const EntrySchema = z.object({
   tags: z.array(z.enum(TAGS)),
   agentPlugin: z.object({ version: z.string(), validation: z.enum(["valid", "unsupported"]) }).optional(),
   mcp: z.object({ name: z.string(), transport: z.string(), target: z.string() }).optional(),
+  /** Script-aware estimate of the entry's own content; not a live context measurement. */
+  tokens: z.number().optional(),
 });
 export type Entry = z.infer<typeof EntrySchema>;
 

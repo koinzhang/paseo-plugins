@@ -28,6 +28,8 @@ Requires Paseo >= 0.9.0.
 
 The reason (the exact frontmatter key or config setting) is shown next to the status.
 
+- Each row shows an estimated token count (`≈1.2k tok`) after the status pill for Instructions, Rules, Skills, Commands, Subagents, and Plugins. The estimate is a script-aware heuristic — `ceil(ascii / 4 + cjk / 1.5 + otherNonAsciiBytes / 3)` — over the entry's own content, so it is an upper bound: skills, commands, and subagents load their body on demand. Plugin rows recursively sum the prompt files (`.md` / `.markdown` / `.mdc` / `.rules` / `.txt`) under the package's `skills`, `commands`, `agents`, `rules`, and `instructions` directories; manifests, code, and `node_modules` are not counted. **MCP is not counted**, because a server's real cost is its `tools/list` payload, which cannot be read from a config file. Counts are cached by path + mtime + size and persisted with the scan snapshot.
+
 - Click a row for a preview pane at the bottom (first 64 KiB / 400 lines) with **Open**, **Reveal**, and **Copy path**. MCP previews mask `env` / `headers` values and secret-looking arguments.
 
 Scanning is read-only. Preview and open only accept paths returned by a scan.

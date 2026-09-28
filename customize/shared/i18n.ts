@@ -45,6 +45,8 @@ export interface Messages {
   statuses: Record<Status, string>;
   tags: Record<Tag, string>;
   agentPluginLabel: (version: string, validation: "valid" | "unsupported") => string;
+  tokens: (value: string) => string;
+  tokensHint: (value: string) => string;
   reason: (code: ReasonCode, value: string | undefined) => string;
   howItWorks: string;
   showDetails: string;
@@ -122,6 +124,8 @@ const en: Messages = {
     synced: "claude.ai sync",
   },
   agentPluginLabel: (version, validation) => `Agent Plugins ${version}${validation === "unsupported" ? " (unverified)" : ""}`,
+  tokens: (value) => `≈${value} tok`,
+  tokensHint: (value) => `Estimated content tokens: ${value}. Skills, commands, and subagents load on demand; MCP is not counted.`,
   reason: (code, value) => {
     switch (code) {
       case "frontmatter":
@@ -232,6 +236,8 @@ const zh: Messages = {
     synced: "claude.ai 同步",
   },
   agentPluginLabel: (version, validation) => `Agent Plugins ${version}${validation === "unsupported" ? "（未校验）" : ""}`,
+  tokens: (value) => `≈${value} tok`,
+  tokensHint: (value) => `内容 token 估算：${value}。Skills、命令与子代理按需加载；MCP 不计入。`,
   reason: (code, value) => {
     switch (code) {
       case "frontmatter":
@@ -299,4 +305,12 @@ export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MiB`;
+}
+
+/** Compact token count: exact below 1k, one decimal below 10k, integer k, one decimal M. */
+export function formatTokenCount(tokens: number): string {
+  if (tokens < 1_000) return String(tokens);
+  if (tokens < 10_000) return `${(tokens / 1_000).toFixed(1)}k`;
+  if (tokens < 1_000_000) return `${Math.round(tokens / 1_000)}k`;
+  return `${(tokens / 1_000_000).toFixed(1)}M`;
 }
