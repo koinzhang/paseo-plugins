@@ -33,7 +33,7 @@
 
 - 模型选择的 provider 行 `testID="model-provider-${id}"`，尾部文字为 `selection.rows.length` 的 i18n 文案（如 `16 models`）
 - 改写其中第一个数字为「总数 − 该 provider 下被隐藏且仍在 snapshot 模型列表中的数量」；英文单复数随之调整
-- 用 `data-mono-count-original` / `data-mono-count-shown` 记录原文与改写值；宿主更新文字时以新文字为原文，停用时还原
+- 015 修订：保留宿主文字节点，以 `data-mono-count-shown` + CSS 伪元素显示可见数量，避免多个 host 实例改写文字形成反馈循环；同步 accessibility label，停用时恢复宿主属性
 - 适配器停用时移除全部开关
 
 ### Composer 隐藏

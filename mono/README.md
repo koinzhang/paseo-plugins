@@ -19,7 +19,7 @@ On desktop and web (any theme), each model in **Settings → Providers → _prov
 ## Install
 
 ```bash
-paseo plugin add npm:@koinzhang/paseo-plugin-mono@0.2.0
+paseo plugin add npm:@koinzhang/paseo-plugin-mono@0.2.1
 ```
 
 Then pick **Mono Dark** or **Mono Light** in Settings → Appearance.
@@ -33,6 +33,7 @@ cd mono
 npm install
 npm run typecheck
 npm test
+npm run test:browser # Chromium DOM regression; requires ego-browser
 paseo plugin install "$PWD"
 paseo plugin reload mono
 ```

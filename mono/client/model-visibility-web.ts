@@ -20,7 +20,11 @@ interface DomElement {
   firstElementChild: DomElement | null;
   textContent: string | null;
   getBoundingClientRect(): { width: number; height: number };
-  style: { setProperty(name: string, value: string): void; removeProperty(name: string): void };
+  style: {
+    getPropertyValue(name: string): string;
+    setProperty(name: string, value: string): void;
+    removeProperty(name: string): void;
+  };
   getAttribute(name: string): string | null;
   setAttribute(name: string, value: string): void;
   removeAttribute(name: string): void;
@@ -44,6 +48,7 @@ declare const window: object;
 declare function getComputedStyle(element: DomElement): {
   color: string;
   backgroundColor: string;
+  fontSize: string;
 };
 declare class MutationObserver {
   constructor(callback: () => void);
@@ -64,8 +69,11 @@ const TOGGLE_ATTRIBUTE = "data-mono-model-toggle";
 const HOST_SWITCH_SELECTOR = `[role="switch"]:not([${TOGGLE_ATTRIBUTE}])`;
 const PROVIDER_ATTRIBUTE = "data-mono-provider";
 const MODEL_ATTRIBUTE = "data-mono-model";
-const COUNT_ORIGINAL_ATTRIBUTE = "data-mono-count-original";
 const COUNT_SHOWN_ATTRIBUTE = "data-mono-count-shown";
+const COUNT_OWNER_ATTRIBUTE = "data-mono-count-owner";
+const COUNT_ARIA_ORIGINAL_ATTRIBUTE = "data-mono-count-aria-original";
+const COUNT_FONT_ORIGINAL_ATTRIBUTE = "data-mono-count-font-original";
+const COUNT_FONT_PROPERTY = "--mono-model-count-font-size";
 // Paseo's switchGeometry (control-geometry.ts) and Switch timing (switch.tsx).
 const TRACK_WIDTH_PX = 34;
 const TRACK_HEIGHT_PX = 20;
@@ -93,10 +101,11 @@ export function installModelVisibilityWeb(): () => void {
 
   const toggles = new Set<DomElement>();
   const counts = new Set<DomElement>();
+  const countOwner = Math.random().toString(36).slice(2);
   // Host switch colors persist across dialogs so a sheet opened without host switches still matches.
   const sampled: Partial<Record<SwitchColor, string>> = {};
   let dialog: DomElement | null = null;
-  let scheduled = false;
+  let scheduled: number | null = null;
   let disposed = false;
 
   function findProviderId(root: DomElement): string | null {
@@ -199,6 +208,25 @@ export function installModelVisibilityWeb(): () => void {
     }
   }
 
+  function restoreCount(element: DomElement): void {
+    if (element.getAttribute(COUNT_OWNER_ATTRIBUTE) !== countOwner) return;
+    const aria = element.getAttribute(COUNT_ARIA_ORIGINAL_ATTRIBUTE);
+    if (aria !== null) {
+      const original = JSON.parse(aria) as string | null;
+      if (original === null) element.removeAttribute("aria-label");
+      else element.setAttribute("aria-label", original);
+    }
+    const font = element.getAttribute(COUNT_FONT_ORIGINAL_ATTRIBUTE);
+    if (font) element.style.setProperty(COUNT_FONT_PROPERTY, font);
+    else element.style.removeProperty(COUNT_FONT_PROPERTY);
+    for (const name of [
+      COUNT_SHOWN_ATTRIBUTE,
+      COUNT_OWNER_ATTRIBUTE,
+      COUNT_ARIA_ORIGINAL_ATTRIBUTE,
+      COUNT_FONT_ORIGINAL_ATTRIBUTE,
+    ]) element.removeAttribute(name);
+  }
+
   function syncProviderCounts(): void {
     for (const element of counts) {
       if (!element.parentElement) counts.delete(element);
@@ -213,37 +241,52 @@ export function installModelVisibilityWeb(): () => void {
       if (!countElement) continue;
 
       const current = countElement.textContent ?? "";
-      let original = countElement.getAttribute(COUNT_ORIGINAL_ATTRIBUTE);
-      if (original === null || current !== countElement.getAttribute(COUNT_SHOWN_ATTRIBUTE)) {
-        original = current;
-        countElement.setAttribute(COUNT_ORIGINAL_ATTRIBUTE, original);
-      }
-      const total = parseModelCount(original);
+      const total = parseModelCount(current);
       const visible =
         total === null ? null : visibleModelCount(hidden, provider, total, knownModelIds(provider));
       const desired =
-        total === null || visible === total ? original : rewriteModelCount(original, visible!);
-      if (current !== desired) countElement.textContent = desired;
+        total === null || visible === total ? current : rewriteModelCount(current, visible!);
+      if (current === desired) {
+        restoreCount(countElement);
+        counts.delete(countElement);
+        continue;
+      }
+      // Bundles from different hosts share this document. Replacing the host's
+      // text makes their observers alternate between different visible counts.
+      // Keep that text intact and change only attributes the observers ignore.
+      if (countElement.getAttribute(COUNT_ARIA_ORIGINAL_ATTRIBUTE) === null) {
+        countElement.setAttribute(
+          COUNT_ARIA_ORIGINAL_ATTRIBUTE,
+          JSON.stringify(countElement.getAttribute("aria-label")),
+        );
+        countElement.setAttribute(
+          COUNT_FONT_ORIGINAL_ATTRIBUTE,
+          countElement.style.getPropertyValue(COUNT_FONT_PROPERTY),
+        );
+        countElement.style.setProperty(COUNT_FONT_PROPERTY, getComputedStyle(countElement).fontSize);
+      }
       setIfChanged(countElement, COUNT_SHOWN_ATTRIBUTE, desired);
+      setIfChanged(countElement, COUNT_OWNER_ATTRIBUTE, countOwner);
+      setIfChanged(countElement, "aria-label", desired);
       counts.add(countElement);
     }
   }
 
   function reconcile(): void {
-    scheduled = false;
+    scheduled = null;
     if (disposed) return;
     syncDialog();
     syncProviderCounts();
   }
 
   function schedule(): void {
-    if (scheduled || disposed) return;
-    scheduled = true;
-    queueMicrotask(reconcile);
+    if (scheduled !== null || disposed) return;
+    scheduled = requestAnimationFrame(reconcile);
   }
 
   function renderCss(): void {
-    style.textContent = `${TOGGLE_CSS}${hiddenModelsCss(getHiddenModels())}`;
+    const css = `${TOGGLE_CSS}${hiddenModelsCss(getHiddenModels())}`;
+    if (style.textContent !== css) style.textContent = css;
   }
 
   renderCss();
@@ -261,17 +304,13 @@ export function installModelVisibilityWeb(): () => void {
 
   return () => {
     disposed = true;
+    if (scheduled !== null) cancelAnimationFrame(scheduled);
     observer.disconnect();
     unsubscribe();
     for (const toggle of toggles) toggle.remove();
     toggles.clear();
     for (const element of counts) {
-      const original = element.getAttribute(COUNT_ORIGINAL_ATTRIBUTE);
-      if (original !== null && element.textContent === element.getAttribute(COUNT_SHOWN_ATTRIBUTE)) {
-        element.textContent = original;
-      }
-      element.removeAttribute(COUNT_ORIGINAL_ATTRIBUTE);
-      element.removeAttribute(COUNT_SHOWN_ATTRIBUTE);
+      restoreCount(element);
     }
     counts.clear();
     for (const name of Object.values(COLOR_VARS)) dialog?.style.removeProperty(name);
@@ -291,6 +330,13 @@ function opaqueColor(color: string): string | null {
 }
 
 const TOGGLE_CSS = `
+[${COUNT_SHOWN_ATTRIBUTE}] {
+  font-size: 0 !important;
+}
+[${COUNT_SHOWN_ATTRIBUTE}]::after {
+  content: attr(${COUNT_SHOWN_ATTRIBUTE});
+  font-size: var(${COUNT_FONT_PROPERTY});
+}
 [${TOGGLE_ATTRIBUTE}] {
   all: unset;
   box-sizing: border-box;

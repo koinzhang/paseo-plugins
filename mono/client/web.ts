@@ -196,7 +196,7 @@ export function installMonoWeb(): () => void {
   const popoverBorderOriginals = new Map<DomElement, { value: string; priority: string }>();
   const fileIconColorOriginals = new Map<DomElement, { value: string; priority: string }>();
   const openedPaths = new Set<DomElement>();
-  let scheduled = false;
+  let scheduled: number | null = null;
   let disposed = false;
 
   function setDesired(
@@ -457,7 +457,7 @@ export function installMonoWeb(): () => void {
   }
 
   function reconcile(): void {
-    scheduled = false;
+    scheduled = null;
     if (disposed) return;
 
     const desired: DesiredAttributes = new Map();
@@ -521,9 +521,8 @@ export function installMonoWeb(): () => void {
   }
 
   function schedule(): void {
-    if (scheduled || disposed) return;
-    scheduled = true;
-    queueMicrotask(reconcile);
+    if (scheduled !== null || disposed) return;
+    scheduled = requestAnimationFrame(reconcile);
   }
 
   const observer = new MutationObserver(schedule);
@@ -540,6 +539,7 @@ export function installMonoWeb(): () => void {
 
   return () => {
     disposed = true;
+    if (scheduled !== null) cancelAnimationFrame(scheduled);
     observer.disconnect();
     document.removeEventListener("click", toggleFilePath);
     for (const pill of openedPaths) pill.removeAttribute(FILE_PATH_OPEN_ATTRIBUTE);
