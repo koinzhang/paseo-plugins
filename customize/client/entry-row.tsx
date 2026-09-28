@@ -27,6 +27,13 @@ export function entryMeta(entry: Entry, m: Messages, includeFormat = false): str
   return parts.join(" · ");
 }
 
+/** Shared row / card accessibility label: name, status, token estimate, plugin format. */
+export function entryLabel(entry: Entry, m: Messages): string {
+  const atRest = entry.tokens?.atRest ? formatTokenCount(entry.tokens.atRest) : null;
+  const onInvoke = entry.tokens?.onInvoke ? formatTokenCount(entry.tokens.onInvoke) : null;
+  return `${entry.name}, ${m.statuses[entry.status]}${atRest ? `, ${m.tokens(atRest)}` : ""}${onInvoke ? `, ${m.tokensOnInvoke(onInvoke)}` : ""}${entry.agentPlugin ? `, ${m.agentPluginLabel(entry.agentPlugin.version, entry.agentPlugin.validation)}` : ""}`;
+}
+
 export const EntryRow = memo(function EntryRow({
   entry,
   selected,
@@ -47,7 +54,7 @@ export const EntryRow = memo(function EntryRow({
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      accessibilityLabel={`${entry.name}, ${m.statuses[entry.status]}${atRest ? `, ${m.tokens(atRest)}` : ""}${onInvoke ? `, ${m.tokensOnInvoke(onInvoke)}` : ""}${entry.agentPlugin ? `, ${m.agentPluginLabel(entry.agentPlugin.version, entry.agentPlugin.validation)}` : ""}`}
+      accessibilityLabel={entryLabel(entry, m)}
       onPress={() => onSelect(entry)}
       style={({ hovered, pressed }: { hovered?: boolean; pressed: boolean }) => ({
         flexDirection: "row",
@@ -60,8 +67,8 @@ export const EntryRow = memo(function EntryRow({
         backgroundColor: selected ? colors.surface2 : hovered || pressed ? colors.surface1 : "transparent",
       })}
     >
-      <View style={{ paddingTop: 1, opacity: muted ? 0.5 : 1 }}>
-        <Icon name={CATEGORY_ICONS[entry.category]} size={ICON_SIZE.leading} color={colors.foregroundMuted} />
+      <View style={{ paddingTop: 2, opacity: muted ? 0.5 : 1 }}>
+        <Icon name={CATEGORY_ICONS[entry.category]} size={ICON_SIZE.inline} color={colors.foregroundMuted} />
       </View>
       <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>

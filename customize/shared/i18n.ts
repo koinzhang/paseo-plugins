@@ -38,6 +38,8 @@ export interface Messages {
   refresh: string;
   lastScanned: (date: string) => string;
   search: string;
+  showCards: string;
+  showList: string;
   skillInvocation: string;
   skillFilters: Record<"all" | "auto" | "manual", string>;
   categories: Record<Category, string>;
@@ -91,6 +93,8 @@ const en: Messages = {
   refresh: "Rescan",
   lastScanned: (date) => `Last scanned: ${date}`,
   search: "Filter by name or path",
+  showCards: "Switch to card view",
+  showList: "Switch to list view",
   skillInvocation: "Skill invocation",
   skillFilters: { all: "All", auto: "Auto", manual: "Manual" },
   categories: { instructions: "Instructions", rules: "Rules", skills: "Skills", mcp: "MCP", commands: "Commands", subagents: "Subagents", plugins: "Plugins" },
@@ -205,6 +209,8 @@ const zh: Messages = {
   refresh: "重新扫描",
   lastScanned: (date) => `上次扫描：${date}`,
   search: "按名称或路径筛选",
+  showCards: "切换为卡片视图",
+  showList: "切换为列表视图",
   skillInvocation: "技能调用方式",
   skillFilters: { all: "全部", auto: "自动", manual: "仅手动" },
   categories: { instructions: "指令", rules: "规则", skills: "Skills", mcp: "MCP", commands: "命令", subagents: "子代理", plugins: "插件" },

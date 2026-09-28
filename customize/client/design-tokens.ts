@@ -62,6 +62,11 @@ export function titleGap(compact = false): number {
 
 export const ROW_PADDING = { dense: 6, regular: 9 } as const;
 
+/** Card-view grid metrics; defined in `grid.ts` so pure tests avoid the React Native import. */
+export { GRID } from "./grid.ts";
+
+export const CARD = { padding: 12 } as const;
+
 export const RADIUS = {
   swatch: 3,
   control: 6,

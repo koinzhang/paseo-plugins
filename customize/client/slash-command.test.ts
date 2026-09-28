@@ -27,16 +27,16 @@ test("/customize selects the current agent provider and workspace project", asyn
 
   assert.deepEqual(calls, [
     { name: "settings.board-selection.read", input: {} },
-    { name: "settings.board-selection.write", input: { revision: "one", values: { provider: "codex", projectRoot: "/repo" } } },
+    { name: "settings.board-selection.write", input: { revision: "one", values: { provider: "codex", projectRoot: "/repo", layout: "list" } } },
   ]);
   assert.deepEqual(opened, ["customize"]);
 });
 
 test("/customize updates each available selection and keeps the unavailable one", async () => {
   const cases = [
-    { provider: "", project: "/repo", expected: { provider: "claude", projectRoot: "/repo" } },
-    { provider: "codex", project: "", expected: { provider: "codex", projectRoot: "/old" } },
-    { provider: "unknown", project: "/repo", expected: { provider: "claude", projectRoot: "/repo" } },
+    { provider: "", project: "/repo", expected: { provider: "claude", projectRoot: "/repo", layout: "list" } },
+    { provider: "codex", project: "", expected: { provider: "codex", projectRoot: "/old", layout: "list" } },
+    { provider: "unknown", project: "/repo", expected: { provider: "claude", projectRoot: "/repo", layout: "list" } },
   ];
   for (const { provider, project, expected } of cases) {
     const calls: Array<{ name: string; input: unknown }> = [];
@@ -79,10 +79,27 @@ test("/customize retries a conflicting selection with the latest revision", asyn
 
   assert.equal(reads, 2);
   assert.deepEqual(writes, [
-    { revision: "revision-1", values: { provider: "pi", projectRoot: "/repo" } },
-    { revision: "revision-2", values: { provider: "pi", projectRoot: "/repo" } },
+    { revision: "revision-1", values: { provider: "pi", projectRoot: "/repo", layout: "list" } },
+    { revision: "revision-2", values: { provider: "pi", projectRoot: "/repo", layout: "list" } },
   ]);
   assert.deepEqual(opened, ["customize"]);
+});
+
+test("/customize keeps the stored view layout", async () => {
+  const writes: unknown[] = [];
+  const { context } = commandContext("codex", "/repo", async (name, input) => {
+    if (name.endsWith(".read")) {
+      return { status: "ready", revision: "one", values: { provider: "claude", projectRoot: "/old", layout: "card" } };
+    }
+    writes.push(input);
+    return { status: "saved", revision: "two", values: {} };
+  });
+
+  await openCustomizeFromAgent(context);
+
+  assert.deepEqual(writes, [
+    { revision: "one", values: { provider: "codex", projectRoot: "/repo", layout: "card" } },
+  ]);
 });
 
 test("/customize opens the board when settings cannot be read", async () => {

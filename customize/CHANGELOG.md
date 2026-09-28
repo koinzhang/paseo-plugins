@@ -9,7 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Entries can switch between the list and a responsive card grid with the button to the right of the search field. Cards show the same name, status, description, path/reason, token estimate, and Agent Plugins badge, reflow from one to three columns with the panel width, and open the same preview. The view choice is saved with Provider and Project.
 - Every Instructions, Rules, Skills, Commands, Subagents, and Plugins row now shows an estimated token count after the status pill. The estimate uses a script-aware heuristic (`ceil(ascii / 4 + cjk * 1.05 + otherNonAsciiBytes / 3)`), calibrated against GPT's `o200k_base` on local Chinese `AGENTS.md` files and a 2168-file corpus (about 10% mean error). Instructions and Rules show one always-on number; Skills, Commands, and Subagents show the advertised metadata (`≈114 tok`) plus the body that arrives on invoke (`+1.2k on invoke`); plugin rows recursively sum their bundled component prompts with the same split. MCP is not counted, because a server's real context cost is its `tools/list` payload rather than anything on disk. Counts are cached by path + mtime + size and persisted with the scan snapshot.
+
+### Fixed
+
+- Scrolled entries keep a gap below the fixed toolbar instead of touching it.
+
+### Changed
+
+- The Rescan icon in the toolbar now matches the search, chevron, and mechanism icons at 14 px.
+- Entry icons in list rows and cards are 14 px and centered with the title; the view toggle no longer shows a hover tooltip.
 
 ## [0.2.1] - 2026-09-28
 

@@ -9,10 +9,12 @@ import { messagesFor } from "../shared/i18n.ts";
 import { MECHANISMS, mechanismFor } from "../shared/mechanisms.ts";
 import { type ProviderId } from "../shared/providers.ts";
 import { selectionSettings } from "../shared/selection-settings.ts";
-import { CONTROL, ICON_SIZE, PREVIEW_FRACTION, RADIUS, TEXT, pageLayout, titleGap } from "./design-tokens.ts";
+import { CONTROL, GRID, ICON_SIZE, PREVIEW_FRACTION, RADIUS, TEXT, pageLayout, titleGap } from "./design-tokens.ts";
 import { Dropdown, type DropdownOption } from "./dropdown.tsx";
 import { countByCategory, countSkillInvocation, groupEntries, matchesSkillInvocation, projectLabel, SKILL_INVOCATION_FILTERS, type SkillInvocationFilter } from "./entries.ts";
+import { EntryCard } from "./entry-card.tsx";
 import { EntryRow } from "./entry-row.tsx";
+import { cardWidth, gridColumns } from "./grid.ts";
 import { MechanismCard } from "./mechanism-card.tsx";
 import { PreviewPane } from "./preview-pane.tsx";
 import { enabledProviderOptions, selectedProvider } from "./provider-options.ts";
@@ -77,6 +79,9 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
   const [searchFocused, setSearchFocused] = useState(false);
   const [skillFilter, setSkillFilter] = useState<SkillInvocationFilter>("all");
   const [selected, setSelected] = useState<Entry | null>(null);
+  const [contentWidth, setContentWidth] = useState(0);
+  const viewLayout = settings.status === "ready" ? settings.values.layout : "list";
+  const cardWidthValue = cardWidth(contentWidth, gridColumns(contentWidth));
 
   const setProvider = (id: string) => {
     if (settings.status !== "ready" || settings.saving || !providerOptions.some((option) => option.id === id)) return;
@@ -87,6 +92,10 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
     setCategoryState(next);
     setSearchFocused(false);
     setSelected(null);
+  };
+  const toggleLayout = () => {
+    if (settings.status !== "ready" || settings.saving) return;
+    void settings.save({ ...settings.values, layout: viewLayout === "list" ? "card" : "list" }, settings.revision);
   };
 
   useEffect(() => {
@@ -190,7 +199,7 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
   return (
     <View style={{ flex: 1, minHeight: 0, backgroundColor: colors.surface0 }}>
       <View style={{ flex: selected ? 1 - (compact ? PREVIEW_FRACTION.compact : PREVIEW_FRACTION.regular) : 1, minHeight: 0 }}>
-        <View style={{ paddingHorizontal: page.padding, paddingTop: page.padding, gap: titleGap(compact), zIndex: 1 }}>
+        <View style={{ paddingHorizontal: page.padding, paddingTop: page.padding, paddingBottom: titleGap(compact), gap: titleGap(compact), zIndex: 1 }}>
           <View
             style={{
               flexDirection: "row",
@@ -246,6 +255,7 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
                 icon="RefreshCw"
                 label={m.refresh}
                 color={colors.foregroundMuted}
+                size={ICON_SIZE.inline}
                 busy={result.isFetching}
                 tooltip={displayed ? {
                   text: m.lastScanned(new Date(displayed.scannedAt).toLocaleString(language)),
@@ -272,36 +282,45 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
               ) : null}
               <MechanismCard key={`${provider}:${activeCategory}`} mechanism={mechanism} language={language} colors={colors} m={m} compact={compact} />
               {mechanism.supported ? (
-                <View
-                  style={{
-                    width: 220,
-                    minWidth: 180,
-                    flexShrink: 1,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 6,
-                    height: CONTROL.searchHeight,
-                    paddingHorizontal: 10,
-                    borderRadius: RADIUS.control,
-                    borderWidth: 1,
-                    borderColor: searchFocused ? colors.foregroundMuted : colors.border,
-                    backgroundColor: colors.surface1,
-                  }}
-                >
-                  <Icon name="Search" size={ICON_SIZE.inline} color={colors.foregroundMuted} />
-                  <TextInput
-                    value={query}
-                    onChangeText={setQuery}
-                    onFocus={() => setSearchFocused(true)}
-                    onBlur={() => setSearchFocused(false)}
-                    placeholder={m.search}
-                    placeholderTextColor={colors.foregroundMuted}
-                    accessibilityLabel={m.search}
-                    autoCorrect={false}
-                    autoCapitalize="none"
-                    style={{ flex: 1, ...TEXT.small, color: colors.foreground, paddingVertical: 0, borderWidth: 0, ...(Platform.OS === "web" ? ({ outlineStyle: "none" } as object) : null) }}
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 1, minWidth: 0 }}>
+                  <View
+                    style={{
+                      width: 220,
+                      minWidth: 180,
+                      flexShrink: 1,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                      height: CONTROL.searchHeight,
+                      paddingHorizontal: 10,
+                      borderRadius: RADIUS.control,
+                      borderWidth: 1,
+                      borderColor: searchFocused ? colors.foregroundMuted : colors.border,
+                      backgroundColor: colors.surface1,
+                    }}
+                  >
+                    <Icon name="Search" size={ICON_SIZE.inline} color={colors.foregroundMuted} />
+                    <TextInput
+                      value={query}
+                      onChangeText={setQuery}
+                      onFocus={() => setSearchFocused(true)}
+                      onBlur={() => setSearchFocused(false)}
+                      placeholder={m.search}
+                      placeholderTextColor={colors.foregroundMuted}
+                      accessibilityLabel={m.search}
+                      autoCorrect={false}
+                      autoCapitalize="none"
+                      style={{ flex: 1, ...TEXT.small, color: colors.foreground, paddingVertical: 0, borderWidth: 0, ...(Platform.OS === "web" ? ({ outlineStyle: "none" } as object) : null) }}
+                    />
+                    {queryActive ? <IconButton icon="X" label={m.preview.close} color={colors.foregroundMuted} size={ICON_SIZE.inline} onPress={() => setQuery("")} /> : null}
+                  </View>
+                  <IconButton
+                    icon={viewLayout === "card" ? "List" : "LayoutGrid"}
+                    label={viewLayout === "card" ? m.showList : m.showCards}
+                    color={colors.foregroundMuted}
+                    disabled={settings.saving}
+                    onPress={toggleLayout}
                   />
-                  {queryActive ? <IconButton icon="X" label={m.preview.close} color={colors.foregroundMuted} size={ICON_SIZE.inline} onPress={() => setQuery("")} /> : null}
                 </View>
               ) : null}
             </View>
@@ -312,50 +331,71 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
 
         <ScrollView
           style={{ flex: 1, minHeight: 0, ...(Platform.OS === "web" ? ({ scrollbarWidth: "none", msOverflowStyle: "none" } as object) : null) }}
-          contentContainerStyle={{ paddingHorizontal: page.padding, paddingTop: page.gap, paddingBottom: page.padding, gap: page.gap }}
+          contentContainerStyle={{ paddingHorizontal: page.padding, paddingTop: page.gap, paddingBottom: page.padding }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {!displayed && (saved.isPending || result.isPending) ? (
-            <LoadingState color={colors.foregroundMuted} />
-          ) : !displayed && (result.isError || saved.isError) ? (
-            <ErrorState error={result.error ?? saved.error} onRetry={() => void result.refetch()} colors={colors} />
-          ) : !mechanism.supported ? null : (
-            groups.map((group) => (
-              <View key={group.scope} style={{ gap: titleGap(compact) }}>
-                <SectionHeader
-                  title={m.scopes[group.scope]}
-                  count={group.count}
-                  colors={colors}
-                  compact={compact}
-                />
-                {group.count === 0 ? (
-                  <InlineEmpty
-                    text={listNarrowed ? m.noMatches : group.scope === "project" && !projectRoot ? m.noProject : m.emptyScope(m.scopes[group.scope])}
-                    color={colors.foregroundMuted}
+          <View
+            style={{ gap: page.gap }}
+            onLayout={(event) => setContentWidth(event.nativeEvent.layout.width)}
+          >
+            {!displayed && (saved.isPending || result.isPending) ? (
+              <LoadingState color={colors.foregroundMuted} />
+            ) : !displayed && (result.isError || saved.isError) ? (
+              <ErrorState error={result.error ?? saved.error} onRetry={() => void result.refetch()} colors={colors} />
+            ) : !mechanism.supported ? null : (
+              groups.map((group) => (
+                <View key={group.scope} style={{ gap: titleGap(compact) }}>
+                  <SectionHeader
+                    title={m.scopes[group.scope]}
+                    count={group.count}
+                    colors={colors}
+                    compact={compact}
                   />
-                ) : (
-                  group.sources.map((source) => (
-                    <View key={source.source} style={{ gap: 2 }}>
-                      <Text style={{ ...TEXT.path, color: colors.foregroundMuted, paddingBottom: 2 }} numberOfLines={1}>
-                        {source.source}
-                      </Text>
-                      {source.entries.map((entry) => (
-                        <EntryRow
-                          key={entry.id}
-                          entry={entry}
-                          selected={selected?.id === entry.id}
-                          onSelect={onSelect}
-                          colors={colors}
-                          m={m}
-                        />
-                      ))}
-                    </View>
-                  ))
-                )}
-              </View>
-            ))
-          )}
+                  {group.count === 0 ? (
+                    <InlineEmpty
+                      text={listNarrowed ? m.noMatches : group.scope === "project" && !projectRoot ? m.noProject : m.emptyScope(m.scopes[group.scope])}
+                      color={colors.foregroundMuted}
+                    />
+                  ) : (
+                    group.sources.map((source) => (
+                      <View key={source.source} style={{ gap: viewLayout === "card" ? GRID.labelGap : 2 }}>
+                        <Text style={{ ...TEXT.path, color: colors.foregroundMuted, paddingBottom: 2 }} numberOfLines={1}>
+                          {source.source}
+                        </Text>
+                        {viewLayout === "card" ? (
+                          <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "stretch", gap: GRID.gap }}>
+                            {source.entries.map((entry) => (
+                              <EntryCard
+                                key={entry.id}
+                                entry={entry}
+                                selected={selected?.id === entry.id}
+                                onSelect={onSelect}
+                                colors={colors}
+                                m={m}
+                                width={cardWidthValue}
+                              />
+                            ))}
+                          </View>
+                        ) : (
+                          source.entries.map((entry) => (
+                            <EntryRow
+                              key={entry.id}
+                              entry={entry}
+                              selected={selected?.id === entry.id}
+                              onSelect={onSelect}
+                              colors={colors}
+                              m={m}
+                            />
+                          ))
+                        )}
+                      </View>
+                    ))
+                  )}
+                </View>
+              ))
+            )}
+          </View>
         </ScrollView>
       </View>
 

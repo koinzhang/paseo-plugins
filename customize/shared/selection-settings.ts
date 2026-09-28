@@ -10,5 +10,6 @@ export const selectionSettings = defineSettings({
   schema: z.object({
     provider: z.enum(PROVIDER_IDS).default("claude"),
     projectRoot: z.string().nullable().default(null),
+    layout: z.enum(["list", "card"]).default("list"),
   }),
 });
