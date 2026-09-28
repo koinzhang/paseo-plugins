@@ -38,4 +38,4 @@ paseo plugin install "$PWD"
 paseo plugin reload mono
 ```
 
-Palettes live in `shared/palette.ts`; Paseo expands each 8-color palette into the full token set. The disposable Web DOM adapters live in `client/web.ts` and `client/model-visibility-web.ts` and use Paseo's semantic test IDs rather than visible labels.
+Palettes live in `shared/palette.ts`; Paseo expands each 8-color palette into the full token set. The disposable Web DOM adapters live in `client/web.ts` and `client/model-visibility-web.ts` and use Paseo's semantic test IDs rather than visible labels. Specs are in [`specs/`](./specs/).
