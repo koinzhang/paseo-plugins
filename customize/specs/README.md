@@ -22,5 +22,6 @@
 | 018 | [`018-search-focus`](./018-search-focus/) | 搜索框聚焦时使用统一的外层边框样式 | 已实现 |
 | 019 | [`019-opencode-v2-skills`](./019-opencode-v2-skills/) | 宿主优先探测 OpenCode 版本，识别 v2 skill 自动发现开关 | 已实现 |
 | 020 | [`020-provider-versions`](./020-provider-versions/) | 全 Provider 版本探测，顶部兼容图标与 Provider 之间展示 | 已实现，页面目视验收待完成 |
+| 021 | [`021-provider-filter-groups`](./021-provider-filter-groups/) | Provider 下拉按 Built-in / ACP 分组，组内按名称排序，组间分割线 | 已实现 |
 
 规则同仓库根 `AGENTS.md`：先改 spec / plan 再改代码；每完成一个 task 在 `tasks.md` 勾选并写验证方式；新功能点新开编号目录。

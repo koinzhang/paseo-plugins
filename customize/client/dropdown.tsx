@@ -1,5 +1,5 @@
 import { Icon } from "@getpaseo/plugin/client/react-native";
-import { useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { CONTROL, FONT_WEIGHT, ICON_SIZE, MENU, RADIUS, TEXT } from "./design-tokens.ts";
 import type { Colors } from "./ui.tsx";
@@ -9,6 +9,8 @@ export interface DropdownOption {
   label: string;
   hint?: string;
   badge?: string;
+  /** Options are rendered in array order; a group change draws a divider. */
+  group?: string;
 }
 
 /**
@@ -92,42 +94,47 @@ export function Dropdown({
             }}
           >
             <ScrollView style={{ maxHeight: MENU.visibleRows * MENU.rowHeight + 8 }} contentContainerStyle={{ paddingVertical: 4 }}>
-              {options.map((option) => {
+              {options.map((option, index) => {
                 const selected = option.id === value;
+                const startsGroup = index > 0 && option.group !== undefined && option.group !== options[index - 1]?.group;
                 return (
-                  <Pressable
-                    key={option.id}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected }}
-                    onPress={() => {
-                      onChange(option.id);
-                      setOpen(false);
-                    }}
-                    style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => ({
-                      flexDirection: "row",
-                      alignItems: "center",
-                      minHeight: MENU.rowHeight,
-                      gap: 8,
-                      marginHorizontal: 4,
-                      paddingHorizontal: 8,
-                      paddingVertical: option.hint ? 4 : 0,
-                      borderRadius: RADIUS.control,
-                      backgroundColor: pressed || hovered ? colors.surface2 : "transparent",
-                    })}
-                  >
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={{ ...TEXT.menu, color: colors.foreground }} numberOfLines={1}>
-                        {option.label}
-                      </Text>
-                      {option.hint ? (
-                        <Text style={{ ...TEXT.caption, color: colors.foregroundMuted }} numberOfLines={1}>
-                          {option.hint}
+                  <Fragment key={option.id}>
+                    {startsGroup ? (
+                      <View style={{ height: 1, marginVertical: 4, marginHorizontal: 4, backgroundColor: colors.border }} />
+                    ) : null}
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                      onPress={() => {
+                        onChange(option.id);
+                        setOpen(false);
+                      }}
+                      style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => ({
+                        flexDirection: "row",
+                        alignItems: "center",
+                        minHeight: MENU.rowHeight,
+                        gap: 8,
+                        marginHorizontal: 4,
+                        paddingHorizontal: 8,
+                        paddingVertical: option.hint ? 4 : 0,
+                        borderRadius: RADIUS.control,
+                        backgroundColor: pressed || hovered ? colors.surface2 : "transparent",
+                      })}
+                    >
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={{ ...TEXT.menu, color: colors.foreground }} numberOfLines={1}>
+                          {option.label}
                         </Text>
-                      ) : null}
-                    </View>
-                    {option.badge ? <Text style={{ ...TEXT.caption, color: colors.foregroundMuted }}>{option.badge}</Text> : null}
-                    {selected ? <Icon name="Check" size={ICON_SIZE.action} color={colors.foreground} /> : null}
-                  </Pressable>
+                        {option.hint ? (
+                          <Text style={{ ...TEXT.caption, color: colors.foregroundMuted }} numberOfLines={1}>
+                            {option.hint}
+                          </Text>
+                        ) : null}
+                      </View>
+                      {option.badge ? <Text style={{ ...TEXT.caption, color: colors.foregroundMuted }}>{option.badge}</Text> : null}
+                      {selected ? <Icon name="Check" size={ICON_SIZE.action} color={colors.foreground} /> : null}
+                    </Pressable>
+                  </Fragment>
                 );
               })}
             </ScrollView>
