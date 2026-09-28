@@ -15,10 +15,11 @@ Commands:
 
 Options come from what the agent's provider reports; nothing is hardcoded. Without an argument,
 a command opens a menu right away, anchored above the composer on desktop and as a sheet on
-mobile, with the current choice checked. Input is matched case-insensitively by ID or label. An exact match wins, then a unique
-prefix. Ambiguous input lists the candidates. `/rename` without a flag renames the current
-tab; `-t` and `--tab` do the same, and `-w` or `--workspace` renames the workspace. `/resend`
-resends the latest prompt as text, appending extra text after one newline.
+mobile, with the current choice checked. Input is matched case-insensitively by ID, label, or
+alias: an exact match wins, then a unique prefix, then a unique substring (models skip the
+substring stage). Ambiguous input lists the candidates. `/rename` without a flag renames the
+current tab; `-t` and `--tab` do the same, and `-w` or `--workspace` renames the workspace.
+`/resend` resends the latest prompt as text, appending extra text after one newline.
 
 Turn individual commands on or off in **Settings → Plugins → commands → Settings**. A disabled command disappears
 from slash autocomplete, so the provider's own command of the same name (if any) takes over.
