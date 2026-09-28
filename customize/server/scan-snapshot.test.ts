@@ -19,8 +19,8 @@ test("saved scans survive a new read, expire after ten minutes, and reject corru
     assert.equal(readSnapshot("opencode", "/other", { directory }).snapshot, null);
     const file = snapshotFile("opencode", "/project", directory);
     assert.equal(statSync(file).mode & 0o777, 0o600);
-    assert.equal(JSON.parse(readFileSync(file, "utf8")).version, 3);
-    writeFileSync(file, JSON.stringify({ version: 2, result }));
+    assert.equal(JSON.parse(readFileSync(file, "utf8")).version, 4);
+    writeFileSync(file, JSON.stringify({ version: 3, result }));
     assert.equal(readSnapshot("opencode", "/project", { directory }).snapshot, null);
     writeFileSync(file, "broken json");
     assert.equal(readSnapshot("opencode", "/project", { directory }).snapshot, null);

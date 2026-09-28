@@ -86,6 +86,7 @@ export const CONTROL = {
   hitSlop: 8,
   pillBadgeHeight: 18,
   searchHeight: 30,
+  providerVersionMaxWidth: 140,
 } as const;
 
 export const iconButton: ViewStyle = {

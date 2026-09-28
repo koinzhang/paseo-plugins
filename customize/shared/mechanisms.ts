@@ -363,16 +363,13 @@ export function mechanismFor(provider: ProviderId, category: Category, compatibi
   let base = MECHANISMS[provider][category];
   if (provider === "opencode" && category === "skills") {
     const version = providerVersion?.version;
-    const detected = version
-      ? L(`OpenCode ${version} detected (${providerVersion?.source === "host" ? "host diagnostic" : "CLI fallback"}).`,
-        `检测到 OpenCode ${version}（${providerVersion?.source === "host" ? "宿主诊断" : "CLI 回退"}）。`)
-      : L("OpenCode version unavailable. Skills with `metadata.opencode/autoinvoke: false` await version confirmation; this switch requires v2.",
-        "无法确认 OpenCode 版本；带 `metadata.opencode/autoinvoke: false` 的技能待版本确认，此开关需要 v2。");
     const invocation = version && Number(version.split(".")[0]) < 2
       ? L("OpenCode v1 advertises every discovered, permitted skill automatically; v2's `metadata.opencode/autoinvoke` and other agents' `disable-model-invocation` are ignored.",
         "OpenCode v1 会自动列出所有已发现且获准使用的技能；忽略 v2 的 `metadata.opencode/autoinvoke` 和其他 agent 的 `disable-model-invocation`。")
       : base.notes[0]!;
-    base = { ...base, notes: [detected, invocation, ...base.notes.slice(1)] };
+    const unknown = L("Skills with `metadata.opencode/autoinvoke: false` await version confirmation; this switch requires v2.",
+      "带 `metadata.opencode/autoinvoke: false` 的技能待版本确认，此开关需要 v2。");
+    base = { ...base, notes: [...(!version ? [unknown] : []), invocation, ...base.notes.slice(1)] };
   }
   if (!compatibility || !(provider === "cursor" && (category === "skills" || category === "subagents")
     || provider === "opencode" && category === "skills")) return base;

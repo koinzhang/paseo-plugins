@@ -103,13 +103,13 @@ test("a changed compatibility switch makes an otherwise fresh snapshot stale", (
   }
 });
 
-test("OpenCode's mechanism explains the detected version, fallback and unknown discovery state", () => {
+test("OpenCode's mechanism preserves version-dependent behavior without repeating the toolbar version", () => {
   const state = { enabled: true, source: "default" };
   const v2 = mechanismFor("opencode", "skills", state, { version: "2.0.18", source: "host" });
-  assert.ok(v2.notes.some((note) => note.en.includes("2.0.18") && note.en.includes("host diagnostic")));
+  assert.equal(v2.notes.some((note) => note.en.includes("2.0.18") || note.en.includes("host diagnostic")), false);
   assert.ok(v2.notes.some((note) => note.zh.includes("仍可按 ID 显式加载")));
   const v1 = mechanismFor("opencode", "skills", state, { version: "1.18.32", source: "cli" });
-  assert.ok(v1.notes.some((note) => note.en.includes("CLI fallback")));
+  assert.equal(v1.notes.some((note) => note.en.includes("CLI fallback") || note.en.includes("1.18.32")), false);
   assert.ok(v1.notes.some((note) => note.en.includes("v1 advertises")));
   assert.equal(v1.notes.some((note) => note.en.includes("can still be loaded explicitly")), false);
   const unknown = mechanismFor("opencode", "skills", state, { version: null, source: "unknown" });

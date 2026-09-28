@@ -199,23 +199,34 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
               zIndex: 30,
             }}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 14, flexShrink: 1, minWidth: 0 }}>
-              {compatibility ? (
-                <View accessible accessibilityRole="image" accessibilityLabel={m.compatibility(compatibilityState)}>
-                  <Icon name={compatibilityState === "off" ? "Link2Off" : "Link2"} size={ICON_SIZE.action} color={compatibilityState === "on" || compatibilityState === "supported" ? colors.statusSuccess : compatibilityState === "off" ? colors.foregroundMuted : colors.statusWarning} />
-                </View>
-              ) : null}
-              <Dropdown
-                label={m.provider}
-                options={providerOptions}
-                value={provider}
-                onChange={setProvider}
-                colors={colors}
-                triggerLabel={m.chooseProvider}
-                closeLabel={m.closeMenu}
-                menuAlign={compact ? "left" : "right"}
-                disabled={settings.saving}
-              />
+            <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end", gap: 14, flexShrink: 1, minWidth: 0 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 1, minWidth: 0 }}>
+                {compatibility ? (
+                  <View accessible accessibilityRole="image" accessibilityLabel={m.compatibility(compatibilityState)}>
+                    <Icon name={compatibilityState === "off" ? "Link2Off" : "Link2"} size={ICON_SIZE.action} color={compatibilityState === "on" || compatibilityState === "supported" ? colors.statusSuccess : compatibilityState === "off" ? colors.foregroundMuted : colors.statusWarning} />
+                  </View>
+                ) : null}
+                {displayed?.providerVersion?.version ? (
+                  <Text
+                    style={{ ...TEXT.meta, color: colors.foregroundMuted, maxWidth: CONTROL.providerVersionMaxWidth, flexShrink: 1 }}
+                    numberOfLines={1}
+                    accessibilityLabel={m.providerVersion(`v${displayed.providerVersion.version}`)}
+                  >
+                    {`v${displayed.providerVersion.version}`}
+                  </Text>
+                ) : null}
+                <Dropdown
+                  label={m.provider}
+                  options={providerOptions}
+                  value={provider}
+                  onChange={setProvider}
+                  colors={colors}
+                  triggerLabel={m.chooseProvider}
+                  closeLabel={m.closeMenu}
+                  menuAlign={compact ? "left" : "right"}
+                  disabled={settings.saving}
+                />
+              </View>
               <Dropdown
                 label={m.project}
                 options={projectOptions}

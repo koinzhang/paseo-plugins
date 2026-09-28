@@ -23,7 +23,7 @@ import { compatibilityFor } from "./compatibility.ts";
 import { mergeSkillAliases } from "./skill-aliases.ts";
 import { parseToml } from "./toml.ts";
 import { parseYaml } from "./yaml-lite.ts";
-import { detectOpencodeVersion } from "./opencode-version.ts";
+import { detectProviderVersion } from "./provider-version.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -72,9 +72,7 @@ export function scanProvider(provider: ProviderId, projectRoot: string | null, e
 
 export async function handleScan(input: RpcInput<typeof scanRpc>, context?: PluginHandlerContext): Promise<RpcOutput<typeof scanRpc>> {
   const home = homedir();
-  const providerVersion = input.provider === "opencode"
-    ? await detectOpencodeVersion(context ? (provider) => context.paseo.providers.diagnostic(provider) : undefined)
-    : undefined;
+  const providerVersion = await detectProviderVersion(input.provider, context ? (provider) => context.paseo.providers.diagnostic(provider) : undefined);
   const entries = scanProvider(input.provider, input.projectRoot, { home, env: process.env, platform: process.platform, providerVersion });
   const ctx: ScanContext = { home, env: process.env, platform: process.platform, projectRoot: input.projectRoot, nested: null };
   for (const entry of entries) allowed.add(entry.path);
@@ -84,7 +82,7 @@ export async function handleScan(input: RpcInput<typeof scanRpc>, context?: Plug
     home,
     entries,
     compatibility: compatibilityFor(input.provider, ctx),
-    ...(providerVersion ? { providerVersion } : {}),
+    providerVersion,
     scannedAt: new Date().toISOString(),
   };
   try {
