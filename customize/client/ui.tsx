@@ -195,7 +195,7 @@ export function CategoryTabs<T extends string>({
   colors: Pick<Colors, "foreground" | "foregroundMuted">;
 }): ReactNode {
   return (
-    <View accessibilityRole="tablist" style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 18 }}>
+    <View accessibilityRole="tablist" style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 18, rowGap: 2, flexShrink: 1, minWidth: 0 }}>
       {options.map((option) => {
         const active = option.id === value;
         return (

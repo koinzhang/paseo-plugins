@@ -260,7 +260,7 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
           </View>
           <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
             <CategoryTabs options={tabs} value={activeCategory} onChange={setCategory} colors={colors} />
-            <View style={{ flexBasis: 220, flexGrow: 1, minWidth: 0, flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center", gap: 8 }}>
+            <View style={{ flexGrow: 1, flexShrink: 1, minWidth: 0, flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center", gap: 8 }}>
               {mechanism.supported && activeCategory === "skills" ? (
                 <SegmentedControl
                   label={m.skillInvocation}
@@ -276,6 +276,7 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
                   style={{
                     width: 220,
                     minWidth: 180,
+                    flexShrink: 1,
                     flexDirection: "row",
                     alignItems: "center",
                     gap: 6,
