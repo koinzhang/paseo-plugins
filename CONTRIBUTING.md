@@ -29,7 +29,7 @@ Each plugin is a standalone npm package with its own `package-lock.json`; there 
 
 ## Spec-driven development
 
-Read [`activity/specs/README.md`](./activity/specs/README.md) first. Each feature lives in a numbered `specs/00N-.../` directory; update the spec / plan before changing code, and check off tasks in `tasks.md` with how they were verified. New features get a new numbered directory instead of extending closed ones.
+Read the plugin's `specs/README.md` first (for example [`activity/specs/README.md`](./activity/specs/README.md)). Each feature lives in a numbered `specs/00N-.../` directory; update the spec / plan before changing code, and check off tasks in `tasks.md` with how they were verified. New features get a new numbered directory instead of extending closed ones.
 
 ## Local checks
 
