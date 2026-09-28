@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import type { RpcInput, RpcOutput } from "@getpaseo/plugin";
+import type { PluginHandlerContext } from "@getpaseo/plugin/server";
 import type { Entry } from "../shared/contracts.ts";
 import { cachedScanRpc, openRpc, previewRpc, scanRpc } from "../shared/contracts.ts";
 import type { ProviderId } from "../shared/providers.ts";
@@ -22,6 +23,7 @@ import { compatibilityFor } from "./compatibility.ts";
 import { mergeSkillAliases } from "./skill-aliases.ts";
 import { parseToml } from "./toml.ts";
 import { parseYaml } from "./yaml-lite.ts";
+import { detectOpencodeVersion } from "./opencode-version.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -62,15 +64,18 @@ function nestedIndex(root: string): NestedIndex {
   return index;
 }
 
-export function scanProvider(provider: ProviderId, projectRoot: string | null, env: Pick<ScanContext, "home" | "env" | "platform">): Entry[] {
+export function scanProvider(provider: ProviderId, projectRoot: string | null, env: Pick<ScanContext, "home" | "env" | "platform" | "providerVersion">): Entry[] {
   const root = projectRoot && isDir(projectRoot) ? path.resolve(projectRoot) : null;
   const ctx: ScanContext = { ...env, projectRoot: root, nested: root ? nestedIndex(root) : null };
   return mergeSkillAliases(provider, SCANNERS[provider](ctx));
 }
 
-export async function handleScan(input: RpcInput<typeof scanRpc>): Promise<RpcOutput<typeof scanRpc>> {
+export async function handleScan(input: RpcInput<typeof scanRpc>, context?: PluginHandlerContext): Promise<RpcOutput<typeof scanRpc>> {
   const home = homedir();
-  const entries = scanProvider(input.provider, input.projectRoot, { home, env: process.env, platform: process.platform });
+  const providerVersion = input.provider === "opencode"
+    ? await detectOpencodeVersion(context ? (provider) => context.paseo.providers.diagnostic(provider) : undefined)
+    : undefined;
+  const entries = scanProvider(input.provider, input.projectRoot, { home, env: process.env, platform: process.platform, providerVersion });
   const ctx: ScanContext = { home, env: process.env, platform: process.platform, projectRoot: input.projectRoot, nested: null };
   for (const entry of entries) allowed.add(entry.path);
   const result = {
@@ -79,6 +84,7 @@ export async function handleScan(input: RpcInput<typeof scanRpc>): Promise<RpcOu
     home,
     entries,
     compatibility: compatibilityFor(input.provider, ctx),
+    ...(providerVersion ? { providerVersion } : {}),
     scannedAt: new Date().toISOString(),
   };
   try {

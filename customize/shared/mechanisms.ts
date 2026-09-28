@@ -1,5 +1,5 @@
 import { ACP_CONFIGS, type AcpConfig, type AcpProviderId } from "./acp-configs.ts";
-import { CATEGORIES, type Category, type Compatibility, type Scope } from "./contracts.ts";
+import { CATEGORIES, type Category, type Compatibility, type ProviderVersion, type Scope } from "./contracts.ts";
 import { PROVIDER_IDS, type ProviderId } from "./providers.ts";
 
 /** Bilingual static copy; the client picks by app language. */
@@ -257,8 +257,8 @@ const BASE_MECHANISMS: Partial<Record<ProviderId, Partial<Record<Category, Mecha
         { scope: "user", path: "~/.claude/skills · ~/.agents/skills" },
       ],
       notes: [
-        L("Every discovered, permitted skill is advertised automatically; there is no per-skill manual-only switch in OpenCode 1.18. The body loads on demand through the skill tool.", "OpenCode 1.18 会自动向模型列出所有已发现且获准使用的技能；不支持单个技能设为仅手动发现。正文仍由 skill 工具按需加载。"),
-        L("`permission.skill` patterns: deny hides a skill, ask prompts first.", "`permission.skill` 通配：deny 隐藏，ask 先确认。"),
+        L("OpenCode v2: `metadata.opencode/autoinvoke: false` hides a skill from the model's available list; it can still be loaded explicitly by ID. Other agents' `disable-model-invocation` is ignored.", "OpenCode v2：`metadata.opencode/autoinvoke: false` 隐藏模型可用列表中的技能，仍可按 ID 显式加载；忽略其他 agent 的 `disable-model-invocation`。"),
+        L("Skill permissions: v1 uses `permission.skill`, v2 uses `permissions[]`. deny hides and blocks loading; ask prompts first. The body loads on demand through the skill tool.", "Skill 权限：v1 使用 `permission.skill`，v2 使用 `permissions[]`。deny 隐藏并禁止加载，ask 先确认；正文仍由 skill 工具按需加载。"),
       ],
     },
     mcp: {
@@ -359,8 +359,21 @@ export const MECHANISMS = Object.fromEntries(PROVIDER_IDS.map((id) => [
 ])) as Record<ProviderId, Record<Category, Mechanism>>;
 
 /** Reflect local compatibility switches in the discovery explanation. */
-export function mechanismFor(provider: ProviderId, category: Category, compatibility: Compatibility | null | undefined): Mechanism {
-  const base = MECHANISMS[provider][category];
+export function mechanismFor(provider: ProviderId, category: Category, compatibility: Compatibility | null | undefined, providerVersion?: ProviderVersion): Mechanism {
+  let base = MECHANISMS[provider][category];
+  if (provider === "opencode" && category === "skills") {
+    const version = providerVersion?.version;
+    const detected = version
+      ? L(`OpenCode ${version} detected (${providerVersion?.source === "host" ? "host diagnostic" : "CLI fallback"}).`,
+        `检测到 OpenCode ${version}（${providerVersion?.source === "host" ? "宿主诊断" : "CLI 回退"}）。`)
+      : L("OpenCode version unavailable. Skills with `metadata.opencode/autoinvoke: false` await version confirmation; this switch requires v2.",
+        "无法确认 OpenCode 版本；带 `metadata.opencode/autoinvoke: false` 的技能待版本确认，此开关需要 v2。");
+    const invocation = version && Number(version.split(".")[0]) < 2
+      ? L("OpenCode v1 advertises every discovered, permitted skill automatically; v2's `metadata.opencode/autoinvoke` and other agents' `disable-model-invocation` are ignored.",
+        "OpenCode v1 会自动列出所有已发现且获准使用的技能；忽略 v2 的 `metadata.opencode/autoinvoke` 和其他 agent 的 `disable-model-invocation`。")
+      : base.notes[0]!;
+    base = { ...base, notes: [detected, invocation, ...base.notes.slice(1)] };
+  }
   if (!compatibility || !(provider === "cursor" && (category === "skills" || category === "subagents")
     || provider === "opencode" && category === "skills")) return base;
   const isCursor = provider === "cursor";

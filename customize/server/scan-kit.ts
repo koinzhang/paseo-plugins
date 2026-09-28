@@ -1,12 +1,13 @@
 import { closeSync, lstatSync, openSync, readdirSync, readSync, statSync } from "node:fs";
 import path from "node:path";
-import type { Category, Entry, ReasonCode, Scope, Status, Tag } from "../shared/contracts.ts";
+import type { Category, Entry, ProviderVersion, ReasonCode, Scope, Status, Tag } from "../shared/contracts.ts";
 import { firstLine, fmString, parseFrontmatter, type Frontmatter } from "./frontmatter.ts";
 
 export interface ScanEnv {
   home: string;
   env: Record<string, string | undefined>;
   platform: NodeJS.Platform;
+  providerVersion?: ProviderVersion;
 }
 
 export interface ScanContext extends ScanEnv {

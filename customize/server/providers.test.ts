@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
-import type { Entry } from "../shared/contracts.ts";
+import type { Entry, ProviderVersion } from "../shared/contracts.ts";
 import type { ProviderId } from "../shared/providers.ts";
 import { PROVIDER_IDS } from "../shared/providers.ts";
 import { mcpPreview, scanProvider } from "./handlers.ts";
@@ -25,8 +25,8 @@ function fixture(name: string, files: Record<string, string>): { home: string; p
   return { home, project };
 }
 
-function scan(provider: ProviderId, fx: { home: string; project: string }, env: Record<string, string> = {}): Entry[] {
-  return scanProvider(provider, fx.project, { home: fx.home, env, platform: "linux" });
+function scan(provider: ProviderId, fx: { home: string; project: string }, env: Record<string, string> = {}, providerVersion?: ProviderVersion): Entry[] {
+  return scanProvider(provider, fx.project, { home: fx.home, env, platform: "linux", providerVersion });
 }
 
 function find(entries: Entry[], category: Entry["category"], name: string): Entry {
@@ -131,6 +131,51 @@ test("opencode: discovered skills stay automatic despite foreign manual-only fro
   assert.equal(find(entries, "skills", "secret").status, "disabled");
   assert.equal(find(entries, "skills", "manual-elsewhere").status, "auto");
   assert.equal(find(entries, "mcp", "m").status, "disabled");
+});
+
+test("opencode: v2 metadata controls model discovery only for verified v2 versions", () => {
+  const fx = fixture("opencode-autoinvoke", {
+    "project/.opencode/skills/native/SKILL.md": skill("native", "metadata:\n  opencode/autoinvoke: false\n"),
+    "home/.config/opencode/skills/global/SKILL.md": skill("global", 'metadata:\n  opencode/autoinvoke: "false"\n'),
+    "project/.agents/skills/shared/SKILL.md": skill("shared", "metadata:\n  opencode/autoinvoke: false\n"),
+    "project/.claude/skills/legacy/SKILL.md": skill("legacy", "metadata:\n  opencode/autoinvoke: false\n"),
+    "project/.opencode/skills/automatic/SKILL.md": skill("automatic", "metadata:\n  opencode/autoinvoke: true\n"),
+    "project/.opencode/skills/foreign/SKILL.md": skill("foreign", "disable-model-invocation: true\n"),
+    "project/.opencode/skills/top-level/SKILL.md": skill("top-level", "opencode/autoinvoke: false\n"),
+  });
+  for (const version of ["2.0.18", "2.0.0-beta.1", "3.0.0", "1.18.32", null]) {
+    const entries = scan("opencode", fx, {}, { version, source: version ? "cli" : "unknown" });
+    const expected = version == null ? "pending" : version.startsWith("1.") ? "auto" : "manual";
+    for (const name of ["native", "global", "shared", "legacy"]) {
+      const entry = find(entries, "skills", name);
+      assert.equal(entry.status, expected, `${version}: ${name}`);
+      if (expected !== "auto") assert.match(entry.reason?.value ?? "", /metadata\.opencode\/autoinvoke: false/);
+    }
+    for (const name of ["automatic", "foreign", "top-level"]) assert.equal(find(entries, "skills", name).status, "auto");
+  }
+});
+
+test("opencode: deny and external-directory switches override v2 manual discovery; ask remains tagged", () => {
+  const fx = fixture("opencode-v2-permissions", {
+    "project/.opencode/skills/secret/SKILL.md": skill("Display Label", "metadata:\n  opencode/autoinvoke: false\n"),
+    "project/.opencode/skills/ask/SKILL.md": skill("ask", "metadata:\n  opencode/autoinvoke: false\n"),
+    "project/.opencode/skills/allowed/SKILL.md": skill("allowed"),
+    "project/.agents/skills/shared/SKILL.md": skill("shared", "metadata:\n  opencode/autoinvoke: false\n"),
+    "project/opencode.json": JSON.stringify({ permissions: [
+      { action: "skill", resource: "*", effect: "deny" },
+      { action: "skill", resource: "a*", effect: "allow" },
+      { action: "skill", resource: "ask", effect: "ask" },
+      { action: "read", resource: "secret", effect: "allow" },
+    ] }),
+  });
+  const entries = scan("opencode", fx, { OPENCODE_DISABLE_EXTERNAL_SKILLS: "1" }, { version: "2.0.18", source: "host" });
+  assert.equal(find(entries, "skills", "Display Label").status, "disabled");
+  assert.match(find(entries, "skills", "Display Label").reason?.value ?? "", /permissions: skill deny/);
+  assert.equal(find(entries, "skills", "ask").status, "manual");
+  assert.ok(find(entries, "skills", "ask").tags.includes("ask"));
+  assert.equal(find(entries, "skills", "allowed").status, "auto");
+  assert.equal(find(entries, "skills", "shared").status, "disabled");
+  assert.equal(find(entries, "skills", "shared").reason?.code, "env");
 });
 
 test("pi: recursive skills, no rules / mcp", () => {

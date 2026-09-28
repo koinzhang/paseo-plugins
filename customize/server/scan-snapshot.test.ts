@@ -9,21 +9,21 @@ import { readSnapshot, SCAN_REFRESH_MS, snapshotFile, writeSnapshot } from "./sc
 test("saved scans survive a new read, expire after ten minutes, and reject corrupt snapshots", () => {
   const directory = mkdtempSync(path.join(tmpdir(), "customize-snapshot-"));
   const scannedAt = "2026-01-01T00:00:00.000Z";
-  const result = { provider: "codex" as const, projectRoot: "/project", home: homedir(), entries: [], compatibility: null, scannedAt };
+  const result = { provider: "opencode" as const, projectRoot: "/project", home: homedir(), entries: [], compatibility: null, providerVersion: { version: "2.0.18", source: "host" as const }, scannedAt };
   const time = Date.parse(scannedAt);
   try {
     writeSnapshot(result, directory);
     assert.equal(statSync(directory).mode & 0o777, 0o700);
-    assert.deepEqual(readSnapshot("codex", "/project", { directory, now: time + SCAN_REFRESH_MS - 1 }), { snapshot: result, stale: false });
-    assert.deepEqual(readSnapshot("codex", "/project", { directory, now: time + SCAN_REFRESH_MS }), { snapshot: result, stale: true });
-    assert.equal(readSnapshot("codex", "/other", { directory }).snapshot, null);
-    const file = snapshotFile("codex", "/project", directory);
+    assert.deepEqual(readSnapshot("opencode", "/project", { directory, now: time + SCAN_REFRESH_MS - 1 }), { snapshot: result, stale: false });
+    assert.deepEqual(readSnapshot("opencode", "/project", { directory, now: time + SCAN_REFRESH_MS }), { snapshot: result, stale: true });
+    assert.equal(readSnapshot("opencode", "/other", { directory }).snapshot, null);
+    const file = snapshotFile("opencode", "/project", directory);
     assert.equal(statSync(file).mode & 0o777, 0o600);
-    assert.equal(JSON.parse(readFileSync(file, "utf8")).version, 2);
-    writeFileSync(file, JSON.stringify({ version: 1, result }));
-    assert.equal(readSnapshot("codex", "/project", { directory }).snapshot, null);
+    assert.equal(JSON.parse(readFileSync(file, "utf8")).version, 3);
+    writeFileSync(file, JSON.stringify({ version: 2, result }));
+    assert.equal(readSnapshot("opencode", "/project", { directory }).snapshot, null);
     writeFileSync(file, "broken json");
-    assert.equal(readSnapshot("codex", "/project", { directory }).snapshot, null);
+    assert.equal(readSnapshot("opencode", "/project", { directory }).snapshot, null);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

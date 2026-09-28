@@ -136,7 +136,7 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
     () => groupEntries(entries, activeCategory, query, skillFilter),
     [entries, activeCategory, query, skillFilter],
   );
-  const mechanism = mechanismFor(provider, activeCategory, displayed?.compatibility);
+  const mechanism = mechanismFor(provider, activeCategory, displayed?.compatibility, displayed?.providerVersion);
   const compatibility = displayed?.compatibility;
   const compatibilityState = compatibility?.source === "builtIn" ? "supported"
     : compatibility?.enabled === true ? "on" : compatibility?.enabled === false ? "off" : "unknown";

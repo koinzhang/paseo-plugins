@@ -20,5 +20,6 @@
 | 016 | [`016-fixed-controls`](./016-fixed-controls/) | 顶部控制区固定，仅 Project/User 内容滚动 | 已实现 |
 | 017 | [`017-inline-mechanism`](./017-inline-mechanism/) | 加载机制入口内联到 Skills 筛选与搜索之间 | 已实现 |
 | 018 | [`018-search-focus`](./018-search-focus/) | 搜索框聚焦时使用统一的外层边框样式 | 已实现 |
+| 019 | [`019-opencode-v2-skills`](./019-opencode-v2-skills/) | 宿主优先探测 OpenCode 版本，识别 v2 skill 自动发现开关 | 已实现 |
 
 规则同仓库根 `AGENTS.md`：先改 spec / plan 再改代码；每完成一个 task 在 `tasks.md` 勾选并写验证方式；新功能点新开编号目录。

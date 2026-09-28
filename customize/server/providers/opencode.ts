@@ -17,6 +17,7 @@ import {
 } from "../scan-kit.ts";
 import type { Entry, Scope } from "../../shared/contracts.ts";
 import { opencodeExternalSkillSwitch } from "../compatibility.ts";
+import { fmBool } from "../frontmatter.ts";
 
 function configDir(ctx: ScanContext): string {
   const xdg = ctx.env.XDG_CONFIG_HOME?.trim();
@@ -54,6 +55,8 @@ export function scanOpencode(ctx: ScanContext): Entry[] {
   const noClaudePrompt = noClaude || truthy(ctx.env.OPENCODE_DISABLE_CLAUDE_CODE_PROMPT);
   const noClaudeSkills = noClaude || truthy(ctx.env.OPENCODE_DISABLE_CLAUDE_CODE_SKILLS);
   const externalSkills = opencodeExternalSkillSwitch(ctx.env);
+  const version = ctx.providerVersion?.version;
+  const v2 = version != null && Number(version.split(".")[0]) >= 2;
 
   const configs: Array<{ file: string; scope: Scope; data: Record<string, unknown> }> = [];
   for (const file of configFiles(globalDir)) {
@@ -147,25 +150,39 @@ export function scanOpencode(ctx: ScanContext): Entry[] {
   // Skills ------------------------------------------------------------------
   const permissions: Array<[string, string]> = [];
   for (const { data } of configs) {
-    const skill = isRecord(data.permission) ? data.permission.skill : undefined;
-    if (typeof skill === "string") permissions.push(["*", skill]);
-    else if (isRecord(skill)) for (const [pattern, action] of Object.entries(skill)) if (typeof action === "string") permissions.push([pattern, action]);
+    if (v2) {
+      for (const rule of Array.isArray(data.permissions) ? data.permissions : []) {
+        if (isRecord(rule) && rule.action === "skill" && typeof rule.resource === "string" && typeof rule.effect === "string") {
+          permissions.push([rule.resource, rule.effect]);
+        }
+      }
+    } else {
+      const skill = isRecord(data.permission) ? data.permission.skill : undefined;
+      if (typeof skill === "string") permissions.push(["*", skill]);
+      else if (isRecord(skill)) for (const [pattern, action] of Object.entries(skill)) if (typeof action === "string") permissions.push([pattern, action]);
+    }
   }
   const skills = (root: string, scope: Scope, external = false, claude = false) => {
     for (const skill of findSkills(root, { recursive: true, maxDepth: 6 })) {
       const base = skillEntry(skill, root, scope);
       const tags = [...(base.tags ?? []), ...(claude ? (["legacy"] as Entry["tags"]) : [])];
-      const permission = skillPermission(permissions, skill.name);
+      const permission = skillPermission(permissions, v2 ? path.basename(skill.dir) : skill.name);
+      const metadata = skill.doc.data.metadata;
+      const noAutoinvoke = isRecord(metadata) && fmBool(metadata, "opencode/autoinvoke") === false;
+      const permittedTags = permission === "ask" ? [...tags, "ask" as const] : tags;
       if (external && !externalSkills.enabled) {
         sink.add({ ...base, tags, status: "disabled", reason: { code: "env", value: externalSkills.disabledBy } });
       } else if (claude && noClaudeSkills) {
         sink.add({ ...base, tags, status: "disabled", reason: { code: "env", value: noClaude ? "OPENCODE_DISABLE_CLAUDE_CODE" : "OPENCODE_DISABLE_CLAUDE_CODE_SKILLS" } });
       } else if (permission === "deny") {
-        sink.add({ ...base, tags, status: "disabled", reason: { code: "config", value: `permission.skill: deny` } });
+        sink.add({ ...base, tags, status: "disabled", reason: { code: "config", value: v2 ? "permissions: skill deny" : "permission.skill: deny" } });
+      } else if (noAutoinvoke && v2) {
+        sink.add({ ...base, tags: permittedTags, status: "manual", reason: { code: "frontmatter", value: "metadata.opencode/autoinvoke: false" } });
+      } else if (noAutoinvoke && !version) {
+        sink.add({ ...base, tags: permittedTags, status: "pending", reason: { code: "frontmatter", value: "metadata.opencode/autoinvoke: false (requires OpenCode >=2; version unknown)" } });
       } else {
-        // OpenCode 1.18 advertises discovered skills automatically. Claude/Cursor
-        // `disable-model-invocation` does not make one manual-only here.
-        sink.add({ ...base, tags: permission === "ask" ? [...tags, "ask"] : tags, status: "auto" });
+        // OpenCode ignores other agents' `disable-model-invocation` switches.
+        sink.add({ ...base, tags: permittedTags, status: "auto" });
       }
     }
   };
