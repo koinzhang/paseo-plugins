@@ -101,7 +101,16 @@ Every plugin is published by a **GitHub Release**, not by pushing `main` alone. 
 
 Workflow: [`.github/workflows/publish.yml`](./.github/workflows/publish.yml). Auth: npm **Trusted Publisher** for that workflow (no `NPM_TOKEN`). Tag must be `{plugin-id}-v{semver}` and match that plugin's `package.json` `version`.
 
-### Activity (`@koinzhang/paseo-plugin-activity`)
+| Plugin | Package | Tag | `publish.yml` job |
+|---|---|---|---|
+| Activity | `@koinzhang/paseo-plugin-activity` | `activity-vX.Y.Z` | `publish-activity` |
+| Mono | `@koinzhang/paseo-plugin-mono` | `mono-vX.Y.Z` | `publish-mono` |
+| Customize | `@koinzhang/paseo-plugin-customize` | `customize-vX.Y.Z` | `publish-customize` |
+| Commands | `@koinzhang/paseo-plugin-commands` | `commands-vX.Y.Z` | `publish-commands` |
+
+### Release steps (any plugin)
+
+The examples use `activity`; substitute the plugin id, package name, and tag for another plugin.
 
 1. Bump version and land it on `main`, including the changelog:
 
@@ -109,10 +118,12 @@ Workflow: [`.github/workflows/publish.yml`](./.github/workflows/publish.yml). Au
    cd activity
    npm version patch --no-git-tag-version   # or minor / major
    # edit CHANGELOG.md: rename [Unreleased] to [X.Y.Z] - YYYY-MM-DD
-   git add package.json package-lock.json CHANGELOG.md
-   git commit -m "chore(activity): release X.Y.Z"
-   git push origin main
+   jj commit -m "chore(activity): release X.Y.Z"
+   jj bookmark set main -r @-
+   jj git push
    ```
+
+   This repo is jj-colocated: commit and push with jj, and use git only as the remote / PR contract.
 
 2. Create a tag and publish a GitHub Release (tag form: `activity-vX.Y.Z`), using that changelog section as the release notes:
 
@@ -133,11 +144,11 @@ Workflow: [`.github/workflows/publish.yml`](./.github/workflows/publish.yml). Au
 
 Do not republish an existing version; bump again if the publish failed after the version was taken.
 
-For future plugins using GitHub Release publication: add a job (or matrix entry) in `publish.yml`, use tag `{id}-v*`, and register the same workflow as a Trusted Publisher on that npm package.
+### Local first releases
 
-### Customize (`@koinzhang/paseo-plugin-customize`)
+Commands 0.1.0 was published locally before npm Trusted Publisher existed; the `publish-commands` job skips the `commands-v0.1.0` tag. Customize 0.1.0 predates `publish-customize` and was published locally too. Do not republish either version.
 
-Customize 0.2.0 and later publish through the same GitHub Release flow as Activity: follow the steps above with `customize` in place of `activity` and tag `customize-vX.Y.Z`. The `publish-customize` job in `publish.yml` picks it up automatically. (0.1.0 predates that job and was published locally; do not republish it.)
+For a new plugin using GitHub Release publication: add a job in `publish.yml`, use tag `{id}-v*`, and register the same workflow as a Trusted Publisher on that npm package.
 
 ## Reporting issues and vulnerabilities
 

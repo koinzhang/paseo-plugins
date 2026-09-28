@@ -12,8 +12,8 @@ A monorepo for Paseo plugins. Each plugin lives in its own directory with its ow
 | Plugin | ID | Description |
 |---|---|---|
 | [Activity](./activity/) | `activity` | Local usage analytics **and** workspace agent ops (Explorer fleet list, live attention, terminals) |
-| [Mono](./mono/) | `mono` | Neutral gray light and dark themes |
-| [Customize](./customize/) | `customize` | Per-provider board of instructions, rules, skills, and MCP servers with auto-discovery status |
+| [Mono](./mono/) | `mono` | Neutral gray light and dark themes, plus optional layout tweaks |
+| [Customize](./customize/) | `customize` | Per-provider board of instructions, rules, skills, MCP servers, commands, subagents, and plugins with auto-discovery status |
 | [Commands](./commands/) | `commands` | `/model` `/effort` `/profile` `/mode` `/feature` `/rename` `/cancel` `/resend` for the current agent |
 
 ## Activity
