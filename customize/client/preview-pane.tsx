@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { Text, View } from "react-native";
 import { openRpc, previewRpc, type Entry } from "../shared/contracts.ts";
 import { formatBytes, formatTokenCount, type Messages } from "../shared/i18n.ts";
-import { RADIUS, TEXT } from "./design-tokens.ts";
+import { ICON_SIZE, RADIUS, TEXT } from "./design-tokens.ts";
 import { entryMeta } from "./entry-row.tsx";
 import { ErrorState, IconButton, LoadingState, StatusBadge, TextButton, TokenBadge, type Colors } from "./ui.tsx";
 
@@ -61,6 +61,7 @@ export function PreviewPane({
           icon="Copy"
           label={m.preview.copyPath}
           color={colors.foregroundMuted}
+          size={ICON_SIZE.inline}
           onPress={() => {
             copyText(entry.path).then(() => toast.show(m.preview.copied), () => {});
           }}
