@@ -3,3 +3,6 @@
 **/coverage/
 **/dist/
 **/*.log
+
+# Agents
+.agents/plan/**
