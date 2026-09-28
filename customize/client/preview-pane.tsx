@@ -51,8 +51,11 @@ export function PreviewPane({
           {entry.name}
         </Text>
         <StatusBadge status={entry.status} label={m.statuses[entry.status]} colors={colors} />
-        {entry.tokens ? (
-          <TokenBadge label={m.tokens(formatTokenCount(entry.tokens))} hint={m.tokensHint(formatTokenCount(entry.tokens))} colors={colors} />
+        {entry.tokens?.atRest ? (
+          <TokenBadge label={m.tokens(formatTokenCount(entry.tokens.atRest))} hint={m.tokensHint(formatTokenCount(entry.tokens.atRest))} colors={colors} />
+        ) : null}
+        {entry.tokens?.onInvoke ? (
+          <TokenBadge label={m.tokensOnInvoke(formatTokenCount(entry.tokens.onInvoke))} hint={m.tokensOnInvokeHint(formatTokenCount(entry.tokens.onInvoke))} colors={colors} />
         ) : null}
         <View style={{ flex: 1 }} />
         <TextButton icon="ExternalLink" label={m.preview.open} onPress={() => run(false)} colors={colors} />

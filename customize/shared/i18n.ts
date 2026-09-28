@@ -46,7 +46,9 @@ export interface Messages {
   tags: Record<Tag, string>;
   agentPluginLabel: (version: string, validation: "valid" | "unsupported") => string;
   tokens: (value: string) => string;
+  tokensOnInvoke: (value: string) => string;
   tokensHint: (value: string) => string;
+  tokensOnInvokeHint: (value: string) => string;
   reason: (code: ReasonCode, value: string | undefined) => string;
   howItWorks: string;
   showDetails: string;
@@ -125,7 +127,9 @@ const en: Messages = {
   },
   agentPluginLabel: (version, validation) => `Agent Plugins ${version}${validation === "unsupported" ? " (unverified)" : ""}`,
   tokens: (value) => `≈${value} tok`,
-  tokensHint: (value) => `Estimated content tokens: ${value}. Skills, commands, and subagents load on demand; MCP is not counted.`,
+  tokensOnInvoke: (value) => `+${value} on invoke`,
+  tokensHint: (value) => `Estimated tokens loaded without an action: ${value}. Skills, commands, and agents load their body only when used; MCP is not counted.`,
+  tokensOnInvokeHint: (value) => `Estimated tokens added when this entry is invoked: ${value}.`,
   reason: (code, value) => {
     switch (code) {
       case "frontmatter":
@@ -237,7 +241,9 @@ const zh: Messages = {
   },
   agentPluginLabel: (version, validation) => `Agent Plugins ${version}${validation === "unsupported" ? "（未校验）" : ""}`,
   tokens: (value) => `≈${value} tok`,
-  tokensHint: (value) => `内容 token 估算：${value}。Skills、命令与子代理按需加载；MCP 不计入。`,
+  tokensOnInvoke: (value) => `+${value} 调用时`,
+  tokensHint: (value) => `无需操作即加载的 token 估算：${value}。Skills、命令与子代理只在被调用时加载正文；MCP 不计入。`,
+  tokensOnInvokeHint: (value) => `被调用时额外加载的 token 估算：${value}。`,
   reason: (code, value) => {
     switch (code) {
       case "frontmatter":

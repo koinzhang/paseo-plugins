@@ -41,12 +41,13 @@ export const EntryRow = memo(function EntryRow({
   m: Messages;
 }): ReactNode {
   const muted = entry.status === "inactive" || entry.status === "disabled";
-  const tokens = entry.tokens ? formatTokenCount(entry.tokens) : null;
+  const atRest = entry.tokens?.atRest ? formatTokenCount(entry.tokens.atRest) : null;
+  const onInvoke = entry.tokens?.onInvoke ? formatTokenCount(entry.tokens.onInvoke) : null;
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      accessibilityLabel={`${entry.name}, ${m.statuses[entry.status]}${tokens ? `, ${m.tokens(tokens)}` : ""}${entry.agentPlugin ? `, ${m.agentPluginLabel(entry.agentPlugin.version, entry.agentPlugin.validation)}` : ""}`}
+      accessibilityLabel={`${entry.name}, ${m.statuses[entry.status]}${atRest ? `, ${m.tokens(atRest)}` : ""}${onInvoke ? `, ${m.tokensOnInvoke(onInvoke)}` : ""}${entry.agentPlugin ? `, ${m.agentPluginLabel(entry.agentPlugin.version, entry.agentPlugin.validation)}` : ""}`}
       onPress={() => onSelect(entry)}
       style={({ hovered, pressed }: { hovered?: boolean; pressed: boolean }) => ({
         flexDirection: "row",
@@ -71,7 +72,8 @@ export const EntryRow = memo(function EntryRow({
             {entry.name}
           </Text>
           <StatusBadge status={entry.status} label={m.statuses[entry.status]} colors={colors} />
-          {tokens ? <TokenBadge label={m.tokens(tokens)} hint={m.tokensHint(tokens)} colors={colors} /> : null}
+          {atRest ? <TokenBadge label={m.tokens(atRest)} hint={m.tokensHint(atRest)} colors={colors} /> : null}
+          {onInvoke ? <TokenBadge label={m.tokensOnInvoke(onInvoke)} hint={m.tokensOnInvokeHint(onInvoke)} colors={colors} /> : null}
           {entry.agentPlugin ? (
             <View style={{ borderRadius: RADIUS.control, borderWidth: 1, borderColor: entry.agentPlugin.validation === "valid" ? colors.accent : colors.statusWarning, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 }}>
               <Text style={{ ...TEXT.pillBadge, color: entry.agentPlugin.validation === "valid" ? colors.accent : colors.statusWarning }} numberOfLines={1}>{m.agentPluginLabel(entry.agentPlugin.version, entry.agentPlugin.validation)}</Text>

@@ -54,6 +54,14 @@ export const TAGS = [
 ] as const;
 export type Tag = (typeof TAGS)[number];
 
+export const TokenCostSchema = z.object({
+  /** Loaded without any action: full text for instructions / rules, name + description for on-demand entries. */
+  atRest: z.number(),
+  /** Added when the entry is invoked (skill body, command body, agent body). Zero for always-on content. */
+  onInvoke: z.number(),
+});
+export type TokenCost = z.infer<typeof TokenCostSchema>;
+
 export const EntrySchema = z.object({
   id: z.string(),
   category: z.enum(CATEGORIES),
@@ -69,7 +77,7 @@ export const EntrySchema = z.object({
   agentPlugin: z.object({ version: z.string(), validation: z.enum(["valid", "unsupported"]) }).optional(),
   mcp: z.object({ name: z.string(), transport: z.string(), target: z.string() }).optional(),
   /** Script-aware estimate of the entry's own content; not a live context measurement. */
-  tokens: z.number().optional(),
+  tokens: TokenCostSchema.optional(),
 });
 export type Entry = z.infer<typeof EntrySchema>;
 
