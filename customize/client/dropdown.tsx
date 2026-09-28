@@ -131,8 +131,8 @@ export function Dropdown({
                           </Text>
                         ) : null}
                       </View>
-                      {option.badge ? <Text style={{ ...TEXT.caption, color: colors.foregroundMuted }}>{option.badge}</Text> : null}
                       {selected ? <Icon name="Check" size={ICON_SIZE.action} color={colors.foreground} /> : null}
+                      {option.badge ? <Text style={{ ...TEXT.caption, color: colors.foregroundMuted }}>{option.badge}</Text> : null}
                     </Pressable>
                   </Fragment>
                 );
