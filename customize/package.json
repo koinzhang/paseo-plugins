@@ -1,6 +1,6 @@
 {
   "name": "@koinzhang/paseo-plugin-customize",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Inspect local instructions, rules, skills, MCP servers, commands, subagents, and plugins for Paseo providers.",
   "license": "MIT",
   "type": "module",
