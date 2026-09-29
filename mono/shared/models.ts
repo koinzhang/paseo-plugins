@@ -90,3 +90,11 @@ export function providerIdsByTitle(providers: readonly ProviderTitleSource[]): M
   }
   return result;
 }
+
+/** Settings is scoped by /settings/hosts/<serverId>; Electron may use a hash route. */
+export function modelVisibilityRouteHost(pathname: string, hash: string): string | null {
+  const route = hash.startsWith("#/") ? hash.slice(1) : pathname;
+  const match = /^\/settings\/hosts\/([^/?#]+)(?:\/|$)/.exec(route);
+  if (!match) return null;
+  try { return decodeURIComponent(match[1]); } catch { return null; }
+}

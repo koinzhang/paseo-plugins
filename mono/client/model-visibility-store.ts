@@ -1,5 +1,6 @@
 import { settingsRpc } from "@getpaseo/plugin";
 import type { PluginClientContext } from "@getpaseo/plugin/client";
+import { modelVisibilityHostRpc } from "../shared/model-host";
 import { providerIdsByTitle, setModelHidden, type ModelRef } from "../shared/models";
 import { MODEL_VISIBILITY_SETTINGS } from "../shared/settings";
 
@@ -11,6 +12,7 @@ const rpc = settingsRpc(MODEL_VISIBILITY_SETTINGS.id);
 let api: Api | null = null;
 let hidden: readonly ModelRef[] = [];
 let revision: string | null = null;
+let hostId: string | null = null;
 let providerTitles = new Map<string, string>();
 let providerModels = new Map<string, ReadonlySet<string>>();
 let writes: Promise<void> = Promise.resolve();
@@ -57,15 +59,27 @@ async function persist(ref: ModelRef, hide: boolean): Promise<void> {
 
 export function installModelVisibility(client: Api): () => void {
   api = client;
+  client.rpc(modelVisibilityHostRpc, {})
+    .then((result) => {
+      if (api !== client) return;
+      hostId = result.serverId;
+      publish();
+    })
+    .catch(() => {});
   load().catch(() => {});
   refreshProviders();
   return () => {
     api = null;
     hidden = [];
     revision = null;
+    hostId = null;
     providerTitles = new Map();
     providerModels = new Map();
   };
+}
+
+export function getModelVisibilityHostId(): string | null {
+  return hostId;
 }
 
 export function knownModelIds(provider: string): ReadonlySet<string> | undefined {

@@ -50,14 +50,14 @@ async function runBrowser(source, space) {
     const create = new Function(
       "Platform", "getHiddenModels", "knownModelIds", "providerIdForTitle", "refreshProviders",
       "setModelVisible", "subscribeModelVisibility", "queueMicrotask", "requestAnimationFrame",
-      "cancelAnimationFrame", `${source}\nreturn installModelVisibilityWeb();`,
+      "cancelAnimationFrame", "getModelVisibilityHostId", `${source}\nreturn installModelVisibilityWeb();`,
     );
     function install(ids) {
       let hidden = ids.map((modelId) => ({ provider: "codex", modelId }));
       let listener;
       const cleanup = create(
         { OS: "web" }, () => hidden, () => undefined, () => null, () => {}, () => {},
-        (fn) => { listener = fn; return () => { listener = null; }; }, queue, frame, cancelFrame,
+        (fn) => { listener = fn; return () => { listener = null; }; }, queue, frame, cancelFrame, () => null,
       );
       return {
         cleanup,
@@ -138,6 +138,83 @@ async function runBrowser(source, space) {
   assert.equal(result.clean, true);
   assert.ok(result.stats.cancelled > 0, "unloading must cancel the queued frame");
   console.log("PASS model visibility: multi-host convergence, host text update, CSS, accessibility, cleanup", result.stats);
+  const switches = await page.evaluate(async (source) => {
+    document.body.innerHTML = `<div data-testid="provider-settings-sheet"><div role="dialog">
+      <span dir="auto">Cursor</span><div id="models"></div></div></div>`;
+    const list = document.querySelector("#models");
+    const models = ["auto-smart", "grok-4.7", "grok-4.6", "composer-2.5"];
+    function add(id) {
+      const row = document.createElement("div"); row.setAttribute("data-model-id", id);
+      row.innerHTML = `<span dir="auto">${id}</span><span data-pmono="">${id}</span>`;
+      list.append(row); return row;
+    }
+    models.forEach(add);
+    const frames = new Map(); let frameId = 0;
+    const frame = (fn) => { frames.set(++frameId, fn); return frameId; };
+    const route = { location: { pathname: "/settings/hosts/local/providers", hash: "" } };
+    const create = new Function(
+      "Platform", "getHiddenModels", "knownModelIds", "providerIdForTitle", "refreshProviders",
+      "setModelVisible", "subscribeModelVisibility", "requestAnimationFrame", "cancelAnimationFrame",
+      "getModelVisibilityHostId", "window", `${source}\nreturn installModelVisibilityWeb();`,
+    );
+    function install(hostId, ids) {
+      let hidden = ids.map((modelId) => ({ provider: "cursor", modelId })); let listener;
+      const writes = [];
+      const cleanup = create({ OS: "web" }, () => hidden, () => new Set(models),
+        (title) => title === "Cursor" ? "cursor" : null, () => {},
+        (ref, visible) => {
+          writes.push({ ...ref, visible });
+          hidden = hidden.filter((item) => item.modelId !== ref.modelId);
+          if (!visible) hidden.push(ref);
+          listener?.();
+        }, (fn) => { listener = fn; return () => { listener = null; }; },
+        frame, (id) => frames.delete(id), () => hostId, route);
+      return { cleanup, writes, publish: () => listener?.() };
+    }
+    async function settle() {
+      for (let i = 0; i < 4; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        const callbacks = [...frames.values()]; frames.clear(); callbacks.forEach((fn) => fn());
+      }
+    }
+    function view() {
+      return Object.fromEntries([...list.children].map((row) => [row.getAttribute("data-model-id"),
+        row.querySelector('[role="switch"]')?.getAttribute("aria-checked")]));
+    }
+    const remote = install("remote", []);
+    const local = install("local", ["grok-4.6", "composer-2.5"]);
+    await settle(); const initial = view();
+    const firstButton = list.children[0].querySelector('[role="switch"]');
+    const legacy = firstButton.cloneNode(true); legacy.removeAttribute("data-mono-model-owner");
+    legacy.addEventListener("click", () => remote.writes.push({ legacy: true }));
+    firstButton.replaceWith(legacy); await settle();
+    for (const button of list.querySelectorAll('[role="switch"]')) button.setAttribute("aria-checked", "true");
+    await Promise.resolve(); await Promise.resolve(); const afterLegacy = view();
+    list.children[1].querySelector('[role="switch"]').click(); await settle(); const clicked = view();
+    list.prepend(list.lastElementChild); const newRow = add("glm-5p3-flash"); await settle();
+    newRow.querySelector('[role="switch"]').click(); await settle(); const refreshed = view();
+    remote.publish(); await settle(); const stable = view();
+    // The replaced legacy button must now use the local callback.
+    list.querySelector('[data-model-id="auto-smart"] [role="switch"]').click(); await settle();
+    local.cleanup(); remote.cleanup(); await settle();
+    return { initial, afterLegacy, clicked, refreshed, stable, localWrites: local.writes,
+      remoteWrites: remote.writes.length,
+      clean: !document.querySelector('[data-mono-model-toggle], [data-mono-owned]') };
+  }, source);
+  const expected = { "auto-smart": "true", "grok-4.7": "true", "grok-4.6": "false", "composer-2.5": "false" };
+  assert.deepEqual(switches.initial, expected, "only the routed host may display model settings");
+  assert.deepEqual(switches.afterLegacy, expected, "legacy writes must be corrected before paint");
+  assert.deepEqual(switches.clicked, { ...expected, "grok-4.7": "false" });
+  assert.equal(switches.refreshed["glm-5p3-flash"], "false");
+  assert.deepEqual(switches.stable, switches.refreshed, "another host must not flip any switch");
+  assert.equal(switches.remoteWrites, 0, "clicks must only persist on the routed host");
+  assert.deepEqual(switches.localWrites, [
+    { provider: "cursor", modelId: "grok-4.7", visible: false },
+    { provider: "cursor", modelId: "glm-5p3-flash", visible: false },
+    { provider: "cursor", modelId: "auto-smart", visible: false },
+  ]);
+  assert.equal(switches.clean, true);
+  console.log("PASS model switches: host ownership, legacy takeover, independent clicks, refreshed list, cleanup");
   await task.finish({ keep: [] });
 }
 const space = process.env.MONO_BROWSER_SPACE ? Number(process.env.MONO_BROWSER_SPACE) : "Mono model picker regression";

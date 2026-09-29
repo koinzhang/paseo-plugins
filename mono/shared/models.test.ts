@@ -4,6 +4,7 @@ import {
   hiddenModelsCss,
   isModelHidden,
   modelRowSelector,
+  modelVisibilityRouteHost,
   parseModelCount,
   providerIdsByTitle,
   rewriteModelCount,
@@ -72,4 +73,12 @@ test("provider titles fall back to id and drop ambiguous labels", () => {
   assert.equal(map.get("Claude"), "claude");
   assert.equal(map.get("codex"), "codex");
   assert.equal(map.has("Same"), false);
+});
+
+test("model dialog host follows desktop and hash routes without guessing", () => {
+  assert.equal(modelVisibilityRouteHost("/settings/hosts/local/providers", ""), "local");
+  assert.equal(modelVisibilityRouteHost("/index.html", "#/settings/hosts/remote/providers"), "remote");
+  assert.equal(modelVisibilityRouteHost("/settings/hosts/a%20b/providers", ""), "a b");
+  assert.equal(modelVisibilityRouteHost("/settings/providers", ""), null);
+  assert.equal(modelVisibilityRouteHost("/settings/hosts/%/providers", ""), null);
 });

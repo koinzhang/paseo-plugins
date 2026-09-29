@@ -2,12 +2,14 @@ import { Platform } from "react-native";
 import {
   hiddenModelsCss,
   isModelHidden,
+  modelVisibilityRouteHost,
   parseModelCount,
   rewriteModelCount,
   visibleModelCount,
 } from "../shared/models";
 import {
   getHiddenModels,
+  getModelVisibilityHostId,
   knownModelIds,
   providerIdForTitle,
   refreshProviders,
@@ -44,17 +46,23 @@ interface DomDocument {
 }
 
 declare const document: DomDocument;
-declare const window: object;
+declare const window: { location: { pathname: string; hash: string } };
 declare function getComputedStyle(element: DomElement): {
   color: string;
   backgroundColor: string;
   fontSize: string;
 };
 declare class MutationObserver {
-  constructor(callback: () => void);
+  constructor(callback: (records: ArrayLike<{ type: string }>) => void);
   observe(
     target: DomElement,
-    options: { childList?: boolean; subtree?: boolean; characterData?: boolean },
+    options: {
+      childList?: boolean;
+      subtree?: boolean;
+      characterData?: boolean;
+      attributes?: boolean;
+      attributeFilter?: string[];
+    },
   ): void;
   disconnect(): void;
 }
@@ -66,6 +74,7 @@ const MODEL_ID_SELECTOR = "[data-pmono]";
 const TEXT_SELECTOR = '[dir="auto"]';
 const PROVIDER_ROW_PREFIX = "model-provider-";
 const TOGGLE_ATTRIBUTE = "data-mono-model-toggle";
+const TOGGLE_OWNER_ATTRIBUTE = "data-mono-model-owner";
 const HOST_SWITCH_SELECTOR = `[role="switch"]:not([${TOGGLE_ATTRIBUTE}])`;
 const PROVIDER_ATTRIBUTE = "data-mono-provider";
 const MODEL_ATTRIBUTE = "data-mono-model";
@@ -101,6 +110,7 @@ export function installModelVisibilityWeb(): () => void {
 
   const toggles = new Set<DomElement>();
   const counts = new Set<DomElement>();
+  const toggleOwner = Math.random().toString(36).slice(2);
   const countOwner = Math.random().toString(36).slice(2);
   // Host switch colors persist across dialogs so a sheet opened without host switches still matches.
   const sampled: Partial<Record<SwitchColor, string>> = {};
@@ -152,6 +162,7 @@ export function installModelVisibilityWeb(): () => void {
     toggle.setAttribute("type", "button");
     toggle.setAttribute("role", "switch");
     toggle.setAttribute(TOGGLE_ATTRIBUTE, "");
+    toggle.setAttribute(TOGGLE_OWNER_ATTRIBUTE, toggleOwner);
     toggle.setAttribute("title", "Show in model picker");
     toggle.setAttribute("aria-label", `Show ${modelId} in model picker`);
     toggle.addEventListener("click", (event) => {
@@ -180,6 +191,12 @@ export function installModelVisibilityWeb(): () => void {
       if (!dialog || !toggle.parentElement) toggles.delete(toggle);
     }
     if (!dialog) return;
+    const host = getModelVisibilityHostId();
+    if (!host || modelVisibilityRouteHost(window.location.pathname, window.location.hash) !== host) {
+      for (const toggle of toggles) toggle.remove();
+      toggles.clear();
+      return;
+    }
 
     const provider = findProviderId(dialog);
     if (!provider) return;
@@ -197,6 +214,10 @@ export function installModelVisibilityWeb(): () => void {
       }
 
       let toggle = row.querySelector(`[${TOGGLE_ATTRIBUTE}]`);
+      if (toggle && toggle.getAttribute(TOGGLE_OWNER_ATTRIBUTE) !== toggleOwner) {
+        toggle.remove();
+        toggle = null;
+      }
       if (!toggle) {
         toggle = createToggle(provider, modelId);
         // Always last so switches line up across discovered and custom (delete button) rows.
@@ -294,11 +315,18 @@ export function installModelVisibilityWeb(): () => void {
     renderCss();
     schedule();
   });
-  const observer = new MutationObserver(schedule);
+  const observer = new MutationObserver((records) => {
+    // Older host bundles still write checked states. Restore the routed host's
+    // state at the mutation checkpoint so those values never reach a paint.
+    if (Array.from(records).some((record) => record.type === "attributes")) syncDialog();
+    else schedule();
+  });
   observer.observe(document.documentElement, {
     childList: true,
     subtree: true,
     characterData: true,
+    attributes: true,
+    attributeFilter: ["aria-checked"],
   });
   reconcile();
 
