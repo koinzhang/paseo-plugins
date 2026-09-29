@@ -15,6 +15,7 @@ A monorepo for Paseo plugins. Each plugin lives in its own directory with its ow
 | [Mono](./mono/) | `mono` | Neutral gray light and dark themes, plus optional layout tweaks |
 | [Customize](./customize/) | `customize` | Per-provider board of instructions, rules, skills, MCP servers, commands, subagents, and plugins with auto-discovery status |
 | [Commands](./commands/) | `commands` | `/model` `/effort` `/profile` `/mode` `/feature` `/rename` `/cancel` `/resend` for the current agent |
+| [Inbox](./inbox/) | `inbox` | Personal inbox: starred agents (kept through archive, unarchive in place), notes, project records, and `/inbox` scratch captures |
 
 ## Activity
 

@@ -15,6 +15,7 @@ Paseo 插件 monorepo。所有插件独立目录、独立 `paseo-plugin.json`，
 | [Mono](./mono/) | `mono` | Neutral 灰阶深色 / 浅色主题 + 可选布局微调 |
 | [Customize](./customize/) | `customize` | 按 provider 展示 instructions / rules / skills / MCP / commands / subagents / plugins 及自动发现状态的看板 |
 | [Commands](./commands/) | `commands` | 控制当前 agent 的 `/model` `/effort` `/profile` `/mode` `/feature` `/rename` `/cancel` `/resend` |
+| [Inbox](./inbox/) | `inbox` | 个人收件箱：收藏 agent（归档后保留、可反归档）、笔记、按 project 归组的记录、`/inbox` 临时记录 |
 
 ## Activity
 
