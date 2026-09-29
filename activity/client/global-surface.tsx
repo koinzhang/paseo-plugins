@@ -33,7 +33,7 @@ import { useAppLanguage } from "./use-app-language.ts";
 import { buildActivityInsights, buildActivityKpi } from "../shared/insights.ts";
 import { fixedWindowFrom } from "./range.ts";
 import { useRegisterOpenAgent } from "./open-agent.ts";
-import { ICON_SIZE, ROW_PADDING, TEXT, pageLayout, titleGap } from "./design-tokens.ts";
+import { CONTROL, ICON_SIZE, ROW_PADDING, TEXT, pageLayout, titleGap } from "./design-tokens.ts";
 import { messagesFor, type Messages } from "../shared/i18n.ts";
 import {
   ErrorState,
@@ -121,6 +121,7 @@ function RankList({
   items: RankItem[];
   empty: string;
   styles: {
+    columnHeader: ViewStyle;
     rankRow: ViewStyle;
     rankName: TextStyle;
     rankMeta: TextStyle;
@@ -139,7 +140,7 @@ function RankList({
   const [rowHeight, setRowHeight] = useState(0);
   return (
     <View style={{ gap: ROW_GAP }}>
-      <View style={{ marginBottom: titleGap(compact) - 2 }}>
+      <View style={styles.columnHeader}>
         <SectionHeader title={title} colors={colors} compact={compact}>
           {headerAction ? (
             <IconButton
@@ -556,6 +557,12 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
         minWidth: 0,
         width: layout.compact ? ("100%" as const) : undefined,
       },
+      // Reserve the rank switch button's height in both columns (083).
+      columnHeader: {
+        minHeight: CONTROL.iconButton,
+        justifyContent: "center" as const,
+        marginBottom: titleGap(layout.compact) - ROW_GAP,
+      },
       insightRow: {
         flexDirection: "row" as const,
         alignItems: "baseline" as const,
@@ -692,8 +699,8 @@ export function GlobalUsageSurface({ theme, layout, navigation }: PluginSurfaceP
       {showContent ? (
         <View style={styles.columns}>
           <View style={styles.column}>
-            <View style={{ gap: 2 }}>
-              <View style={{ marginBottom: titleGap(layout.compact) - 2 }}>
+            <View style={{ gap: ROW_GAP }}>
+              <View style={styles.columnHeader}>
                 <SectionHeader title={m.insights.title} colors={theme.colors} compact={layout.compact} />
               </View>
               {insights.map((row) => (

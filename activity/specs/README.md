@@ -109,6 +109,7 @@
 | [080-insights-streak-weekday-reorder](./080-insights-streak-weekday-reorder/) | 已实现 | Insights：Longest streak / Peak weekday 前移到第 3、4 位（Workspaces 上方） |
 | [081-ranking-bar-animation](./081-ranking-bar-animation/) | 已实现，页面验收待完成 | Global 图表动画：排行条与 Daily Activity 柱从 0 增长、切换时平滑过渡；Activity Calendar 按周列扫入；Hourly Activity 自基线增长 |
 | [082-rank-list-insights-limit](./082-rank-list-insights-limit/) | 已实现，页面验收待完成 | Most used skills / MCP / models 展示全部，可视高度对齐 Insights 行数，超出滚动（隐藏滚动条） |
+| [083-insights-rank-header-alignment](./083-insights-rank-header-alignment/) | 已实现，页面验收待完成 | Global 底部 Insights / Most used 标题区高度统一，修复右栏整体偏下 |
 ## 约定
 
 每个编号目录通常含：
