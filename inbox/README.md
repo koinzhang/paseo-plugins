@@ -15,6 +15,14 @@ A personal inbox for Paseo: star agents, keep notes per project, and capture scr
 
 Requires Paseo >= 0.9.0 and a daemon Node runtime with `node:sqlite`.
 
+## Install
+
+```bash
+paseo plugin add npm:@koinzhang/paseo-plugin-inbox
+```
+
+To install from GitHub, use `paseo plugin add koinzhang/paseo-plugins --path inbox`.
+
 ## Development
 
 ```bash

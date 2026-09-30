@@ -107,6 +107,7 @@ Workflow: [`.github/workflows/publish.yml`](./.github/workflows/publish.yml). Au
 | Mono | `@koinzhang/paseo-plugin-mono` | `mono-vX.Y.Z` | `publish-mono` |
 | Customize | `@koinzhang/paseo-plugin-customize` | `customize-vX.Y.Z` | `publish-customize` |
 | Commands | `@koinzhang/paseo-plugin-commands` | `commands-vX.Y.Z` | `publish-commands` |
+| Inbox | `@koinzhang/paseo-plugin-inbox` | `inbox-vX.Y.Z` | `publish-inbox` |
 
 ### Release steps (any plugin)
 
@@ -146,7 +147,7 @@ Do not republish an existing version; bump again if the publish failed after the
 
 ### Local first releases
 
-Commands 0.1.0 was published locally before npm Trusted Publisher existed; the `publish-commands` job skips the `commands-v0.1.0` tag. Customize 0.1.0 predates `publish-customize` and was published locally too. Do not republish either version.
+Commands 0.1.0 was published locally before npm Trusted Publisher existed; the `publish-commands` job skips the `commands-v0.1.0` tag. Customize 0.1.0 predates `publish-customize` and was published locally too. Inbox 0.1.0 is the same kind of first publish: `publish-inbox` skips `inbox-v0.1.0`. Do not republish any of these versions.
 
 For a new plugin using GitHub Release publication: add a job in `publish.yml`, use tag `{id}-v*`, and register the same workflow as a Trusted Publisher on that npm package.
 

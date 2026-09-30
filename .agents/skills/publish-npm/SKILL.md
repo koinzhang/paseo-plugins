@@ -3,7 +3,7 @@ name: publish-npm
 description: >-
   Publish paseo-plugins packages to npm via GitHub Release tags.
   Use when the user asks to release, publish, bump and ship an npm package,
-  create an activity-v*, mono-v*, customize-v*, or commands-v* tag, or run the Publish workflow.
+  create an activity-v*, mono-v*, customize-v*, commands-v*, or inbox-v* tag, or run the Publish workflow.
 ---
 
 # Publish npm (paseo-plugins)
@@ -13,7 +13,7 @@ Canonical human doc: [CONTRIBUTING.md § Publishing to npm](../../../CONTRIBUTIN
 ## Rules
 
 - Every plugin publishes through a **published GitHub Release**, not by push-to-`main` alone. The release tag triggers the matching job in `publish.yml`.
-- Tag shape: `{plugin-id}-v{semver}` (Activity: `activity-v0.4.0`, Mono: `mono-v0.2.1`, Customize: `customize-v0.3.0`, Commands: `commands-v0.1.0`).
+- Tag shape: `{plugin-id}-v{semver}` (Activity: `activity-v0.4.0`, Mono: `mono-v0.2.1`, Customize: `customize-v0.3.0`, Commands: `commands-v0.1.0`, Inbox: `inbox-v0.1.0`).
 - Tag semver **must** equal that plugin's `package.json` `version`.
 - Do not force-republish an existing npm version; bump again if needed.
 - Do not create a release unless the user asked to publish/release (version bump on `main` can land without a tag).
@@ -27,6 +27,7 @@ Canonical human doc: [CONTRIBUTING.md § Publishing to npm](../../../CONTRIBUTIN
 | Mono | `@koinzhang/paseo-plugin-mono` | `mono/` | `mono-vX.Y.Z` | `publish-mono` |
 | Customize | `@koinzhang/paseo-plugin-customize` | `customize/` | `customize-vX.Y.Z` | `publish-customize` |
 | Commands | `@koinzhang/paseo-plugin-commands` | `commands/` | `commands-vX.Y.Z` | `publish-commands` |
+| Inbox | `@koinzhang/paseo-plugin-inbox` | `inbox/` | `inbox-vX.Y.Z` | `publish-inbox` |
 
 ## Release checklist
 
@@ -66,10 +67,11 @@ Substitute the plugin id, directory, package name, and tag prefix from the table
 
 - npm auth is **Trusted Publisher** on workflow file `publish.yml` (OIDC). No `NPM_TOKEN` in this repo.
 - If publish fails with auth errors: npm package → Trusted Publisher → repo `koinzhang/paseo-plugins`, workflow `publish.yml`, allow `npm publish`.
-- If the job is skipped: tag must start with the plugin's prefix (`activity-v`, `mono-v`, `customize-v`, `commands-v`).
+- If the job is skipped: tag must start with the plugin's prefix (`activity-v`, `mono-v`, `customize-v`, `commands-v`, `inbox-v`). `commands-v0.1.0` and `inbox-v0.1.0` are skipped on purpose.
 - If the job fails at version check: tag and that plugin's `package.json` version disagree.
 
 ## Other plugins
 
 - **Mono** (`@koinzhang/paseo-plugin-mono`, tag `mono-vX.Y.Z`, `publish-mono`) and **Customize** (`@koinzhang/paseo-plugin-customize`, tag `customize-vX.Y.Z`, `publish-customize`) publish through GitHub Release like Activity. Customize 0.1.0 predates the workflow job and was published locally — do not republish it.
 - **Commands** (`@koinzhang/paseo-plugin-commands`, tag `commands-vX.Y.Z`, `publish-commands`) is wired to the same flow. Commands 0.1.0 was published locally before npm Trusted Publisher existed; the job skips the `commands-v0.1.0` tag — do not republish it.
+- **Inbox** (`@koinzhang/paseo-plugin-inbox`, tag `inbox-vX.Y.Z`, `publish-inbox`) is wired to the same flow. Inbox 0.1.0 is published locally before npm Trusted Publisher can be configured; the job skips the `inbox-v0.1.0` tag — do not republish it.

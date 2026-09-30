@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-30
+
+Requires Paseo **>= 0.9.0**.
+
 ### Added
 
 - Each workspace header has an Inbox icon that opens that workspace's Inbox in the Explorer, and hides while the panel is open.
@@ -21,3 +25,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tags of archived projects and workspaces are struck through; their items are no longer hidden.
 - Empty notes are never kept: a new note is saved only once it has a title or text, and a note left empty is removed.
 - Items grouped by project: git remote URL, falling back to the repository root path.
+
+[Unreleased]: https://github.com/koinzhang/paseo-plugins/compare/inbox-v0.1.0...HEAD
+[0.1.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/inbox-v0.1.0

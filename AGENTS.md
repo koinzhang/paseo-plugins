@@ -111,7 +111,7 @@ jj undo / jj op log / jj op restore         # 恢复
 
 ## 发 npm 包
 
-**不要**只靠 push `main` 发版。流程：bump `<plugin>/package.json` version → 合进 `main` → 打 tag `{plugin-id}-vX.Y.Z`（如 `activity-v0.7.0`、`commands-v0.1.0`）→ `gh release create` → `.github/workflows/publish.yml` 用 npm Trusted Publisher 自动 `npm publish`（activity / mono / customize / commands 均已接入 publish.yml，commands-v0.1.0 为本地首发例外；新插件接入需加对应 job，并在 npm 该包下把同一 workflow 注册为 Trusted Publisher）。
+**不要**只靠 push `main` 发版。流程：bump `<plugin>/package.json` version → 合进 `main` → 打 tag `{plugin-id}-vX.Y.Z`（如 `activity-v0.7.0`、`inbox-v0.1.0`）→ `gh release create` → `.github/workflows/publish.yml` 用 npm Trusted Publisher 自动 `npm publish`（activity / mono / customize / commands / inbox 均已接入 publish.yml；commands-v0.1.0 与 inbox-v0.1.0 为本地首发例外，对应 job 会跳过这两个 tag；新插件接入需加对应 job，并在 npm 该包下把同一 workflow 注册为 Trusted Publisher）。
 
 完整步骤见 [`CONTRIBUTING.md` § Publishing to npm](./CONTRIBUTING.md#publishing-to-npm)；用户说「发版 / publish / release npm」时读 [`.agents/skills/publish-npm/SKILL.md`](./.agents/skills/publish-npm/SKILL.md) 并按其执行。
 

@@ -1,7 +1,6 @@
 {
   "name": "@koinzhang/paseo-plugin-inbox",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "description": "Personal inbox for Paseo: star agents, keep notes per project, and capture scratch text.",
   "license": "MIT",
   "type": "module",
