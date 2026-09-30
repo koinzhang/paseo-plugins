@@ -15,6 +15,7 @@ import {
   CONTROL,
   FONT_WEIGHT,
   ICON_SIZE,
+  PRESS,
   RADIUS,
   TEXT,
   iconButton,
@@ -65,7 +66,12 @@ export function IconButton({
       hitSlop={CONTROL.hitSlop}
       onPress={onPress}
       pointerEvents={hidden ? "none" : "auto"}
-      style={[iconButton, hidden ? { opacity: 0 } : null, style]}
+      style={({ pressed }) => [
+        iconButton,
+        hidden ? { opacity: 0 } : null,
+        pressed ? { opacity: PRESS.opacity, transform: [{ scale: PRESS.scale }] } : null,
+        style,
+      ]}
     >
       {busy ? (
         <ActivityIndicator size={size} color={color} style={{ width: size, height: size }} />
@@ -131,7 +137,10 @@ export function ErrorState({
           accessibilityRole="button"
           hitSlop={CONTROL.hitSlop}
           onPress={onRetry}
-          style={{ alignSelf: "flex-start", paddingVertical: 2 }}
+          style={({ pressed }) => [
+            { alignSelf: "flex-start", paddingVertical: 2 },
+            pressed ? { opacity: PRESS.textOpacity } : null,
+          ]}
         >
           <Text style={{ ...TEXT.small, fontWeight: FONT_WEIGHT.medium, color: colors.accent }}>
             {m.common.retry}
@@ -190,7 +199,10 @@ export function TextTabs<T extends string>({
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
             onPress={() => onChange(option.id)}
-            style={{ paddingVertical: 6 }}
+            style={({ pressed }) => [
+              { paddingVertical: 6 },
+              pressed ? { opacity: PRESS.textOpacity } : null,
+            ]}
           >
             <Text style={{ ...text, color: active ? colors.foreground : colors.foregroundMuted }}>{option.label}</Text>
           </Pressable>
@@ -223,7 +235,7 @@ export function MetricStepper({
       toValue: 0,
       duration: CHART_MOTION.step,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
+      useNativeDriver: true,
     }).start();
   };
   return (

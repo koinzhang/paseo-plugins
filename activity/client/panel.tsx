@@ -32,6 +32,7 @@ import {
 } from "./ui.tsx";
 import {
   ICON_SIZE,
+  PRESS,
   RADIUS,
   ROW_PADDING,
   TEXT,
@@ -260,7 +261,10 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
             clearPendingSkillOpen(agentId);
             setSkillDetail(null);
           }}
-          style={styles.backRow}
+          style={({ pressed }) => [
+            styles.backRow,
+            pressed ? { opacity: PRESS.textOpacity } : null,
+          ]}
         >
           <Icon name="ChevronLeft" size={ICON_SIZE.action} color={theme.colors.foregroundMuted} />
           <Text style={styles.back}>{m.common.skills}</Text>
@@ -343,6 +347,9 @@ export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPa
                     accessibilityLabel={`Open ${name} SKILL.md`}
                     onPress={() =>
                       setSkillDetail({ skillName: item.skillName, path: item.skillPath! })
+                    }
+                    style={({ pressed }) =>
+                      pressed ? { opacity: PRESS.textOpacity } : undefined
                     }
                   >
                     <Text style={styles.listLink} numberOfLines={1}>

@@ -429,6 +429,9 @@ export function WorkspaceActivityPanel({
         gap: 12,
         paddingVertical: ROW_PADDING.dense,
       },
+      listRowPressed: {
+        backgroundColor: theme.colors.surface2,
+      },
       timelineMarker: {
         width: 18,
         alignSelf: "stretch" as const,
@@ -534,6 +537,9 @@ export function WorkspaceActivityPanel({
         alignItems: "center" as const,
         gap: 10,
         paddingVertical: ROW_PADDING.dense,
+      },
+      terminalRowPressed: {
+        backgroundColor: theme.colors.surface2,
       },
       terminalPreview: {
         marginLeft: 28,

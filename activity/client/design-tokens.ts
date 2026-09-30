@@ -121,6 +121,16 @@ export const CONTROL = {
   pillBadgeHeight: 18,
 } as const;
 
+/** Press feedback (084): compact controls scale down, text-only targets dim. */
+export const PRESS = {
+  /** Icon / compact controls (icon buttons, row actions). */
+  scale: 0.94,
+  /** Opacity for controls that also scale. */
+  opacity: 0.7,
+  /** Opacity for text-only targets (tabs, links, text buttons). */
+  textOpacity: 0.6,
+} as const;
+
 export const iconButton: ViewStyle = {
   width: CONTROL.iconButton,
   height: CONTROL.iconButton,
@@ -134,12 +144,14 @@ export const iconButton: ViewStyle = {
  * Global chart motion (081): `grow` for bars reaching a new value, `reveal` /
  * `refresh` for the heatmap's first column sweep and later metric / range
  * switches. `refreshFloor` is the lowest column opacity during a refresh.
- * `disclose` is the ranking Show more / Show less height transition.
- * `step` / `stepOffset` slide the metric switch label in from the pressed side.
+ * `disclose` is the ranking Show more / Show less height transition; exits
+ * (`discloseClose`) stay faster than enters. `step` / `stepOffset` slide the
+ * metric switch label in from the pressed side.
  */
 export const CHART_MOTION = {
   grow: 400,
   disclose: 250,
+  discloseClose: 180,
   step: 200,
   stepOffset: 12,
   reveal: 700,

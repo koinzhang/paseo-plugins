@@ -26,6 +26,7 @@ export type RankSectionStyles = {
   headerActions: ViewStyle;
   panel: ViewStyle;
   listRow: ViewStyle;
+  listRowPressed: ViewStyle;
   timelineMarker: ViewStyle;
   timelineLineTop: ViewStyle;
   timelineLineBottom: ViewStyle;
@@ -126,7 +127,7 @@ export function RankSection({
                   accessibilityState={{ disabled: !canOpen }}
                   disabled={!canOpen}
                   onPress={canOpen ? () => openAgent({ agentId: item.agentId }) : undefined}
-                  style={styles.listRow}
+                  style={({ pressed }) => [styles.listRow, pressed ? styles.listRowPressed : null]}
                 >
                   <View style={styles.timelineMarker}>
                     {index > 0 ? <View style={styles.timelineLineTop} /> : null}
@@ -169,7 +170,7 @@ export function RankSection({
                     accessibilityState={{ disabled: !canOpen }}
                     disabled={!canOpen}
                     onPress={canOpen ? () => openAgent({ agentId: item.agentId }) : undefined}
-                    style={styles.listRow}
+                    style={({ pressed }) => [styles.listRow, pressed ? styles.listRowPressed : null]}
                   >
                     <View style={styles.timelineMarker}>
                       {index > 0 ? <View style={styles.timelineLineTop} /> : null}

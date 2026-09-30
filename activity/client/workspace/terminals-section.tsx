@@ -14,7 +14,7 @@ import {
 import { collapseHomePath } from "../../shared/home-path.ts";
 import { TERMINAL_PREVIEW_LINES, TERMINAL_REFETCH_MS } from "./constants.ts";
 import { terminalPreviewLines } from "./terminal-preview.ts";
-import { CONTROL, ICON_SIZE } from "../design-tokens.ts";
+import { CONTROL, ICON_SIZE, PRESS } from "../design-tokens.ts";
 import { useMessages } from "../use-app-language.ts";
 
 export type TerminalListItem = {
@@ -30,6 +30,7 @@ export type TerminalsSectionStyles = {
   sectionTitle: TextStyle;
   panel: ViewStyle;
   terminalRow: ViewStyle;
+  terminalRowPressed: ViewStyle;
   listMain: ViewStyle;
   listTitle: TextStyle;
   listMeta: TextStyle;
@@ -100,7 +101,10 @@ export function TerminalsSection({
                 }
                 accessibilityState={{ expanded }}
                 onPress={() => setExpandedId(expanded ? null : item.id)}
-                style={styles.terminalRow}
+                style={({ pressed }) => [
+                  styles.terminalRow,
+                  pressed ? styles.terminalRowPressed : null,
+                ]}
                 {...(Platform.OS === "web"
                   ? ({
                       onMouseEnter: () => setHoveredId(item.id),
@@ -126,7 +130,11 @@ export function TerminalsSection({
                   hitSlop={CONTROL.hitSlop}
                   onPress={() => onClose(item)}
                   pointerEvents={showClose ? "auto" : "none"}
-                  style={[styles.titleAction, { opacity: showClose ? 1 : 0 }]}
+                  style={({ pressed }) => [
+                    styles.titleAction,
+                    { opacity: showClose ? 1 : 0 },
+                    pressed ? { opacity: PRESS.opacity, transform: [{ scale: PRESS.scale }] } : null,
+                  ]}
                 >
                   {busy ? (
                     <ActivityIndicator size="small" color={mutedColor} />

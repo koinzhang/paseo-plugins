@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } 
 import {
   Animated,
   Easing,
-  Pressable,
   Text,
   View,
   type TextStyle,
@@ -18,6 +17,7 @@ import {
   countSubAgentsByParent,
   isAgentRunning,
   SEARCH_ANIM_MS,
+  SEARCH_CLOSE_ANIM_MS,
   SEARCH_TITLE_GAP,
   type AgentGroup,
   type AgentShowField,
@@ -26,7 +26,8 @@ import {
 } from "./constants.ts";
 import { formatAgentMeta } from "./filters.ts";
 import type { WorkspaceTheme } from "./constants.ts";
-import { CONTROL, ICON_SIZE } from "../design-tokens.ts";
+import { ICON_SIZE } from "../design-tokens.ts";
+import { IconButton } from "../ui.tsx";
 import { useMessages } from "../use-app-language.ts";
 
 export type AgentsSectionStyles = AgentRowStyles & {
@@ -201,8 +202,8 @@ export function AgentsSection({
     if (!agentSearchOpen) return;
     Animated.timing(searchProgress, {
       toValue: 0,
-      duration: SEARCH_ANIM_MS,
-      easing: Easing.in(Easing.cubic),
+      duration: SEARCH_CLOSE_ANIM_MS,
+      easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
     }).start(({ finished }) => {
       if (!finished) return;
@@ -315,34 +316,24 @@ export function AgentsSection({
             </Animated.View>
           </View>
           <View style={styles.headerActions}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={agentSearchOpen ? m.workspace.closeSearch : m.workspace.openSearch}
-              accessibilityState={{ expanded: agentSearchOpen }}
-              hitSlop={CONTROL.hitSlop}
+            <IconButton
+              icon={agentSearchOpen ? "X" : "Search"}
+              label={agentSearchOpen ? m.workspace.closeSearch : m.workspace.openSearch}
+              expanded={agentSearchOpen}
               onPress={() => {
                 if (agentSearchOpen) closeAgentSearch();
                 else openAgentSearch();
               }}
-              style={styles.titleAction}
-            >
-              <Icon
-                name={agentSearchOpen ? "X" : "Search"}
-                size={ICON_SIZE.action}
+              color={theme.colors.foregroundMuted}
+            />
+            <View ref={triggerRef} collapsable={false}>
+              <IconButton
+                icon="Settings2"
+                label={m.workspace.displayOptions}
+                expanded={menuOpen}
+                onPress={onToggleMenu}
                 color={theme.colors.foregroundMuted}
               />
-            </Pressable>
-            <View ref={triggerRef} collapsable={false}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={m.workspace.displayOptions}
-                accessibilityState={{ expanded: menuOpen }}
-                hitSlop={CONTROL.hitSlop}
-                onPress={onToggleMenu}
-                style={styles.titleAction}
-              >
-                <Icon name="Settings2" size={ICON_SIZE.action} color={theme.colors.foregroundMuted} />
-              </Pressable>
             </View>
           </View>
         </View>
@@ -365,34 +356,25 @@ export function AgentsSection({
         ) : null}
         {showPager ? (
           <View style={styles.pagerRow}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={m.workspace.previousPage}
-              accessibilityState={{ disabled: safePage === 0 }}
-              disabled={safePage === 0}
-              hitSlop={CONTROL.hitSlop}
+            <IconButton
+              icon="ChevronLeft"
+              label={m.workspace.previousPage}
               onPress={() => setPageIndex((p) => Math.max(0, p - 1))}
-              style={[styles.pagerButton, safePage === 0 ? styles.pagerButtonDisabled : null]}
-            >
-              <Icon name="ChevronLeft" size={ICON_SIZE.action} color={theme.colors.foregroundMuted} />
-            </Pressable>
+              color={theme.colors.foregroundMuted}
+              disabled={safePage === 0}
+              style={safePage === 0 ? styles.pagerButtonDisabled : undefined}
+            />
             <Text style={styles.pagerLabel}>
               {safePage + 1} / {pageCount}
             </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={m.workspace.nextPage}
-              accessibilityState={{ disabled: safePage >= pageCount - 1 }}
-              disabled={safePage >= pageCount - 1}
-              hitSlop={CONTROL.hitSlop}
+            <IconButton
+              icon="ChevronRight"
+              label={m.workspace.nextPage}
               onPress={() => setPageIndex((p) => Math.min(pageCount - 1, p + 1))}
-              style={[
-                styles.pagerButton,
-                safePage >= pageCount - 1 ? styles.pagerButtonDisabled : null,
-              ]}
-            >
-              <Icon name="ChevronRight" size={ICON_SIZE.action} color={theme.colors.foregroundMuted} />
-            </Pressable>
+              color={theme.colors.foregroundMuted}
+              disabled={safePage >= pageCount - 1}
+              style={safePage >= pageCount - 1 ? styles.pagerButtonDisabled : undefined}
+            />
           </View>
         ) : null}
       </View>

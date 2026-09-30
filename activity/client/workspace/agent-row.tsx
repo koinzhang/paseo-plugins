@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import type { AgentAttentionKind, WorkspaceTheme } from "./constants.ts";
 import { RunningIndicator } from "./running-indicator.tsx";
-import { CONTROL, ICON_SIZE } from "../design-tokens.ts";
+import { CONTROL, ICON_SIZE, PRESS } from "../design-tokens.ts";
 import { useMessages } from "../use-app-language.ts";
 
 export type AgentRowStyles = {
@@ -145,7 +145,11 @@ export function AgentRow({
           hitSlop={CONTROL.hitSlop}
           onPress={onArchiveToggle}
           pointerEvents={showAction ? "auto" : "none"}
-          style={[styles.titleAction, { opacity: showAction ? 1 : 0 }]}
+          style={({ pressed }) => [
+            styles.titleAction,
+            { opacity: showAction ? 1 : 0 },
+            pressed ? { opacity: PRESS.opacity, transform: [{ scale: PRESS.scale }] } : null,
+          ]}
         >
           {busy ? (
             <ActivityIndicator
@@ -171,7 +175,10 @@ export function AgentRow({
         accessibilityRole="link"
         accessibilityLabel={`${m.common.openConversation(label)}${stateSuffix}`}
         onPress={onOpen}
-        style={styles.agentListRow}
+        style={({ pressed }) => [
+          styles.agentListRow,
+          pressed ? { backgroundColor: theme.colors.surface2 } : null,
+        ]}
         {...hoverProps}
       >
         {body}

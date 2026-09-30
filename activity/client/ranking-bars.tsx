@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Animated, Easing, Pressable, Text, View } from "react-native";
 import { metricValue, type ActivityMetric } from "../shared/activity.ts";
 import { messagesFor } from "../shared/i18n.ts";
-import { CHART_MOTION, CONTROL, ICON_SIZE, RADIUS, ROW_PADDING, TEXT, pillRadius, sectionTitle, titleGap } from "./design-tokens.ts";
+import { CHART_MOTION, CONTROL, ICON_SIZE, PRESS, RADIUS, ROW_PADDING, TEXT, pillRadius, sectionTitle, titleGap } from "./design-tokens.ts";
 import { InlineEmpty, MetricStepper } from "./ui.tsx";
 
 const BAR_HEIGHT = 6;
@@ -133,7 +133,10 @@ export function RankingBars({ title, empty, entries, highlight, colors, compact,
               accessibilityState={{ expanded }}
               hitSlop={CONTROL.hitSlop}
               onPress={toggle}
-              style={{ alignSelf: "flex-end", flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: ROW_PADDING.dense }}
+              style={({ pressed }) => [
+                { alignSelf: "flex-end", flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: ROW_PADDING.dense },
+                pressed ? { opacity: PRESS.textOpacity } : null,
+              ]}
             >
               <Text style={{ ...TEXT.body, color: colors.foregroundMuted }}>{toggleLabel}</Text>
               <Animated.View
@@ -203,8 +206,8 @@ type RankedRow = RankingEntry & { value: number };
 function discloseTiming(value: Animated.Value, open: boolean): Animated.CompositeAnimation {
   return Animated.timing(value, {
     toValue: open ? 1 : 0,
-    duration: CHART_MOTION.disclose,
-    easing: open ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
+    duration: open ? CHART_MOTION.disclose : CHART_MOTION.discloseClose,
+    easing: Easing.out(Easing.cubic),
     useNativeDriver: false,
   });
 }

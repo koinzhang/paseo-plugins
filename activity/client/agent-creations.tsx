@@ -13,7 +13,7 @@ import type { ActivityDay, AgentCreationDay } from "../shared/usage.ts";
 import { creationBarColor } from "./color-mix.ts";
 import { chartColorScheme, creationProviderColors } from "./rank-color.ts";
 import { fixedWindowFrom } from "./range.ts";
-import { CHART_MOTION, RADIUS, TEXT, sectionTitle, titleGap } from "./design-tokens.ts";
+import { CHART_MOTION, PRESS, RADIUS, TEXT, sectionTitle, titleGap } from "./design-tokens.ts";
 import { messagesFor } from "../shared/i18n.ts";
 import { ChartTooltip, InlineEmpty, MetricStepper } from "./ui.tsx";
 
@@ -127,12 +127,13 @@ export function AgentCreations({ days, activityDays, windowDays, colors, compact
                   onFocus={() => setHovered(bucket.key)}
                   onBlur={() => setHovered(null)}
                   onPress={() => setSelected((prev) => (prev === bucket.key ? null : bucket.key))}
-                  style={{
+                  style={({ pressed }) => ({
                     flex: 1,
                     minWidth: 3,
                     height: chartHeight,
                     justifyContent: "flex-end",
-                  }}
+                    opacity: pressed ? PRESS.opacity : 1,
+                  })}
                 >
                   <DayBar
                     height={

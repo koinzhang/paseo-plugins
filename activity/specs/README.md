@@ -110,6 +110,7 @@
 | [081-ranking-bar-animation](./081-ranking-bar-animation/) | 已实现，页面验收待完成 | Global 图表动画：排行条与 Daily Activity 柱从 0 增长、切换时平滑过渡；Activity Calendar 按周列扫入；Hourly Activity 自基线增长 |
 | [082-rank-list-insights-limit](./082-rank-list-insights-limit/) | 已实现，页面验收待完成 | Most used skills / MCP / models 展示全部，可视高度对齐 Insights 行数，超出滚动（隐藏滚动条） |
 | [083-insights-rank-header-alignment](./083-insights-rank-header-alignment/) | 已实现，页面验收待完成 | Global 底部 Insights / Most used 标题区高度统一，修复右栏整体偏下 |
+| [084-press-feedback-and-motion-fixes](./084-press-feedback-and-motion-fixes/) | 已实现，页面验收待完成 | 按压反馈（IconButton / 列表行 / 文本目标）；transform·opacity 动画改原生驱动；两处退出动画去 ease-in |
 ## 约定
 
 每个编号目录通常含：

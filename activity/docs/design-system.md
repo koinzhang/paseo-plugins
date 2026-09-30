@@ -54,7 +54,7 @@ Global KPI 的上一窗口对比与 label 共用 `label` 12 的字体角色，�
 - **Provider 筛选**（Global，069）：`ProviderDropdown` 触发器 `body` 14（`Provider:` muted + 当前值 semibold + `ChevronDown`），菜单行 `TEXT.menu`
 - **指标切换**（图表 / 排行，070）：`MetricStepper` = `‹ 指标名 ›`，指标名 `body` 14 muted、`minWidth` 84，箭头用 `IconButton`（`ICON_SIZE.action`），颜色与指标名同为 `foregroundMuted`；切换时新指标名从所按箭头一侧滑入并淡入（081，`CHART_MOTION.step` 200ms / `stepOffset` 12）
 - `TextTabs`（`filter` / `chart`）保留在 `ui.tsx`；069 之后 Global 已无时间 / 图表模式 tab
-- **排行展开 / 收起**（078）：行尾右对齐按钮，`body` 14 `foregroundMuted` + `ChevronUp` / `ChevronDown`（`ICON_SIZE.inline`），`ROW_PADDING.dense`；展开 / 收起用高度 + 透明度过渡、chevron 旋转（081，`CHART_MOTION.disclose` 250ms）
+- **排行展开 / 收起**（078）：行尾右对齐按钮，`body` 14 `foregroundMuted` + `ChevronUp` / `ChevronDown`（`ICON_SIZE.inline`），`ROW_PADDING.dense`；展开 / 收起用高度 + 透明度过渡、chevron 旋转（081，展开 `CHART_MOTION.disclose` 250ms / 收起 `discloseClose` 180ms，均 ease-out——退出快于进入）
 
 ## 3. 布局与间距
 
@@ -100,6 +100,7 @@ Global KPI 的上一窗口对比与 label 共用 `label` 12 的字体角色，�
 
 - 图标按钮统一 `iconButton`：24×24、`RADIUS.control`、`hitSlop={CONTROL.hitSlop}`（8）→ 触控区 40
 - 胶囊徽标高 `CONTROL.pillBadgeHeight`（18）
+- **按压反馈（084）**：紧凑控件按下时 `PRESS.scale` 0.94 + `PRESS.opacity` 0.7；纯文本目标（tab、链接、文本按钮）`PRESS.textOpacity` 0.6；列表行按下时 `surface2` 背景高亮。所有 Pressable 必须至少有其一
 
 ## 6. 浮层
 

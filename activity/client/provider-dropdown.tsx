@@ -1,7 +1,7 @@
 import { Icon } from "@getpaseo/plugin/client/react-native";
 import { useState, type ReactNode } from "react";
 import { Platform, Pressable, ScrollView, Text, View } from "react-native";
-import { CONTROL, FONT_WEIGHT, ICON_SIZE, RADIUS, TEXT } from "./design-tokens.ts";
+import { CONTROL, FONT_WEIGHT, ICON_SIZE, PRESS, RADIUS, TEXT } from "./design-tokens.ts";
 
 const MENU_MIN_WIDTH = 200;
 const MENU_ROW_HEIGHT = 28;
@@ -49,7 +49,10 @@ export function ProviderDropdown({
         accessibilityState={{ expanded: open }}
         hitSlop={CONTROL.hitSlop}
         onPress={() => setOpen((prev) => !prev)}
-        style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 6 }}
+        style={({ pressed }) => [
+          { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 6 },
+          pressed ? { opacity: PRESS.textOpacity } : null,
+        ]}
       >
         <Text style={{ ...TEXT.body, color: colors.foregroundMuted }}>{label}:</Text>
         <Text style={{ ...TEXT.body, fontWeight: FONT_WEIGHT.semibold, color: colors.foreground }} numberOfLines={1}>

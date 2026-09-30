@@ -81,6 +81,8 @@ export type MenuOption = { id: string; label: string; icon: string };
 /** Agents header row / search pill height — keep fixed to avoid layout jump. */
 export const AGENT_HEADER_HEIGHT = 28;
 export const SEARCH_ANIM_MS = 220;
+/** Closing stays faster than opening (084). */
+export const SEARCH_CLOSE_ANIM_MS = 160;
 export const SEARCH_TITLE_GAP = 8;
 /** Host MenuFlyout overlap between root surface and submenu (`SUBMENU_OVERLAP`). */
 export const MENU_SUBMENU_OVERLAP = 5;

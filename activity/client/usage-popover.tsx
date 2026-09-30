@@ -23,6 +23,7 @@ import {
 } from "./ui.tsx";
 import {
   ICON_SIZE,
+  PRESS,
   RADIUS,
   ROW_PADDING,
   TEXT,
@@ -178,7 +179,10 @@ function UsagePopoverAgent(
           <Pressable
             accessibilityRole="button"
             onPress={() => setSkillDetail(null)}
-            style={styles.backRow}
+            style={({ pressed }) => [
+              styles.backRow,
+              pressed ? { opacity: PRESS.textOpacity } : null,
+            ]}
           >
             <Icon name="ChevronLeft" size={ICON_SIZE.action} color={theme.colors.foregroundMuted} />
             <Text style={styles.back}>{m.common.skills}</Text>
@@ -259,7 +263,10 @@ function UsagePopoverAgent(
                   onPress={() =>
                     setSkillDetail({ skillName: item.skillName, path: item.skillPath! })
                   }
-                  style={rowStyle}
+                  style={({ pressed }) => [
+                    rowStyle,
+                    pressed ? { backgroundColor: theme.colors.surface2 } : null,
+                  ]}
                 >
                   {content}
                 </Pressable>

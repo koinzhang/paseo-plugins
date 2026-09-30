@@ -21,7 +21,7 @@ export function RunningIndicator({
         toValue: 1,
         duration: SPIN_DURATION_MS,
         easing: Easing.linear,
-        useNativeDriver: false,
+        useNativeDriver: true,
       }),
     );
     animation.start();

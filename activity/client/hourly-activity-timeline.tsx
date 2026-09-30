@@ -236,7 +236,7 @@ export function HourlyActivityTimeline({
       toValue: 1,
       duration: first ? CHART_MOTION.reveal : CHART_MOTION.refresh,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
+      useNativeDriver: true,
     });
     animation.start(() => {
       revealedRef.current = true;
