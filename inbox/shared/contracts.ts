@@ -180,6 +180,8 @@ export const agentStates = defineRpc({
     states: z.record(z.string(), AgentState),
     /** Only agents the host still knows. */
     live: z.record(z.string(), AgentLive).optional(),
+    /** A starred agent was renamed on the host and the stored title updated; the list is stale. */
+    titlesChanged: z.boolean().optional(),
   }),
 });
 

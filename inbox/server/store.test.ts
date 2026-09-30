@@ -32,6 +32,21 @@ test("starring the same agent twice keeps one item", () => {
   });
 });
 
+test("refreshing agent titles follows a rename without touching updatedAt", () => {
+  withStore((store) => {
+    const { item } = store.starAgent("a1", snapshot, project);
+    assert.equal(store.refreshAgentTitles(new Map([["a1", "Fix signup"]])), true);
+    const renamed = store.findByAgent("a1")!;
+    assert.equal(renamed.agentSnapshot?.title, "Fix signup");
+    assert.equal(renamed.title, "Fix signup");
+    assert.equal(renamed.agentSnapshot?.cwd, "/repo");
+    assert.equal(renamed.updatedAt, item.updatedAt);
+    assert.equal(store.list({ query: "signup" }).length, 1);
+    assert.equal(store.list({ query: "login" }).length, 0);
+    assert.equal(store.refreshAgentTitles(new Map([["a1", "Fix signup"]])), false);
+  });
+});
+
 test("pinned items sort first, then most recently updated", () => {
   withStore((store) => {
     const a = store.createNote({ kind: "note", body: "a" });

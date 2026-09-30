@@ -130,9 +130,13 @@ export function registerHandlers(server: PluginServerContext, { store, resolvePr
     const entries = await Promise.all(
       agentIds.map(async (id) => [id, await agentState(paseo, id)] as const),
     );
+    const titlesChanged = store.refreshAgentTitles(
+      new Map(entries.flatMap(([id, { title }]) => (title?.trim() ? [[id, title]] : []))),
+    );
     return {
       states: Object.fromEntries(entries.map(([id, { state }]) => [id, state])),
       live: Object.fromEntries(entries.flatMap(([id, { live }]) => (live ? [[id, live]] : []))),
+      ...(titlesChanged ? { titlesChanged } : {}),
     };
   });
 

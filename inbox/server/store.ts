@@ -267,6 +267,20 @@ export class InboxStore {
     for (const [id, label] of workspaces) workspace.run(label, id, label);
   }
 
+  /** Writes current agent titles into starred agents; true when any title changed. */
+  refreshAgentTitles(titles: ReadonlyMap<string, string>): boolean {
+    const update = this.db.prepare(
+      `UPDATE items SET title = ?, agent_snapshot = json_set(agent_snapshot, '$.title', ?)
+       WHERE kind = 'agent' AND agent_id = ? AND agent_snapshot IS NOT NULL
+         AND json_extract(agent_snapshot, '$.title') IS NOT ?`,
+    );
+    let changed = false;
+    for (const [agentId, title] of titles) {
+      if (Number(update.run(title, title, agentId, title).changes) > 0) changed = true;
+    }
+    return changed;
+  }
+
   createNote(input: NoteInput): Item {
     if (isEmptyNote(input.title, input.body)) throw new Error("Empty notes are not saved");
     if (input.workspace && !input.project) throw new Error("A workspace tag needs its project");

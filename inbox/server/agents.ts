@@ -53,10 +53,10 @@ export async function lookupAgent(paseo: PaseoApi, agentId: string): Promise<Age
 export async function agentState(
   paseo: PaseoApi,
   agentId: string,
-): Promise<{ state: AgentState; live: AgentLive | null }> {
+): Promise<{ state: AgentState; live: AgentLive | null; title: string | null }> {
   const found = await lookupAgent(paseo, agentId);
-  if (!found) return { state: "missing", live: null };
-  return { state: found.archived ? "archived" : "active", live: found.live };
+  if (!found) return { state: "missing", live: null, title: null };
+  return { state: found.archived ? "archived" : "active", live: found.live, title: found.snapshot.title };
 }
 
 /** Unarchived agents of one workspace. */

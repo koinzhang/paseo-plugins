@@ -39,6 +39,7 @@ import { itemTitle } from "../shared/item-title.ts";
 import { isEmptyNote } from "../shared/note.ts";
 import {
   type DraftTags,
+  notifyItemsChanged,
   onItemsChanged,
   onSelectionRequest,
   type SelectionRequest,
@@ -1158,6 +1159,9 @@ export function InboxView({
     enabled: agentIds.length > 0,
     refetchInterval: 10_000,
   });
+  useEffect(() => {
+    if (statesQuery.data?.titlesChanged) notifyItemsChanged();
+  }, [statesQuery.data]);
   const agentState = (item: Item) =>
     item.agentId ? statesQuery.data?.states[item.agentId] : undefined;
   const agentLive = (item: Item) =>

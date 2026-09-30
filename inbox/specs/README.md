@@ -18,5 +18,6 @@
 | 013 | [`013-note-scope-chips`](./013-note-scope-chips/) | 全局页面 Notes / Scratch 也显示 project / workspace 筛选；project 行放在 workspace 行上方。取代 010 | 实现中 |
 | 014 | [`014-all-scope-chips`](./014-all-scope-chips/) | 全局页面 All 下也显示并应用 project / workspace 筛选；New note 清除筛选。取代 013 决策 1 | 实现中 |
 | 015 | [`015-chip-wheel-scroll`](./015-chip-wheel-scroll/) | web 上鼠标滚轮可横向滚动 project / workspace chip 行，到头后不拦截 | 实现中 |
+| 016 | [`016-agent-title-sync`](./016-agent-title-sync/) | 收藏 agent 改名后，列表 / 搜索 / 名称排序跟随最新名称 | 实现中 |
 
 规则同仓库根 `AGENTS.md`：先改 spec / plan 再改代码；每完成一个 task 在 `tasks.md` 勾选并写验证方式；新功能点新开编号目录。
