@@ -1,5 +1,13 @@
+/** Tags a new note gets when it is first saved. */
+export interface DraftTags {
+  /** Tag this workspace and its project. */
+  workspaceId?: string;
+  /** Tag only this workspace's project. */
+  projectOfWorkspace?: string;
+}
+
 /** What the Inbox surface should open next; set by commands before `openSurface`. */
-export type SelectionRequest = { itemId: string } | { draftCwd: string | null };
+export type SelectionRequest = { itemId: string } | { draft: DraftTags };
 
 let pending: SelectionRequest | null = null;
 const listeners = new Set<() => void>();
@@ -14,8 +22,8 @@ export function requestSelection(itemId: string): void {
 }
 
 /** Opens an unsaved note; nothing is stored until it has a title or body. */
-export function requestDraft(cwd: string | null): void {
-  request({ draftCwd: cwd });
+export function requestDraft(draft: DraftTags = {}): void {
+  request({ draft });
 }
 
 export function takeSelection(): SelectionRequest | null {

@@ -47,23 +47,21 @@ export default function contribute(client: PluginClientContext) {
       keywords: ["note", "inbox", "capture"],
       context: "workspace",
       onSelect({ workspace, openSurface }) {
-        requestDraft(workspace.directory);
+        requestDraft({ projectOfWorkspace: workspace.id });
         openSurface(SURFACE);
       },
     }),
     client.addSlashCommand({
       name: "inbox",
-      description:
-        "Add this agent to the Inbox, or save text as a scratch note. Pass -w or --workspace to use this workspace's Inbox.",
-      argumentHint: "[-w] [text]",
+      description: "Add this agent to the Inbox, or save text as a scratch note tagged with this project.",
+      argumentHint: "[text]",
       context: "agent",
       async onSubmit({ args, agent, workspace, rpc }) {
         const command = parseInboxCommand(args);
-        const workspaceId = command.workspace ? workspace.id : undefined;
         if (!command.text) {
-          await rpc(starAgent, { agentId: agent.id, workspaceId });
+          await rpc(starAgent, { agentId: agent.id });
         } else {
-          await rpc(saveNote, { kind: "scratch", body: command.text, cwd: workspace.directory, workspaceId });
+          await rpc(saveNote, { kind: "scratch", body: command.text, projectOfWorkspace: workspace.id });
         }
         notifyItemsChanged();
       },

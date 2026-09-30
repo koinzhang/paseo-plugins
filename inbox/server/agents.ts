@@ -59,21 +59,6 @@ export async function agentState(
   return { state: found.archived ? "archived" : "active", live: found.live };
 }
 
-/** Active workspace id → display name; archived workspaces are not listed by the daemon. */
-export async function activeWorkspaces(paseo: PaseoApi): Promise<Map<string, string>> {
-  const names = new Map<string, string>();
-  let cursor: string | undefined;
-  for (let pages = 0; pages < MAX_PAGES; pages++) {
-    const page = await paseo.workspaces.list({
-      page: { limit: PAGE_LIMIT, ...(cursor ? { cursor } : {}) },
-    });
-    for (const workspace of page.entries) names.set(workspace.id, workspace.name);
-    if (!page.pageInfo.hasMore || !page.pageInfo.nextCursor) break;
-    cursor = page.pageInfo.nextCursor;
-  }
-  return names;
-}
-
 /** Unarchived agents of one workspace. */
 export async function workspaceAgents(paseo: PaseoApi, workspaceId: string): Promise<AgentCandidate[]> {
   const agents: AgentCandidate[] = [];

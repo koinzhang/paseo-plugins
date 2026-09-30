@@ -1,5 +1,7 @@
 # 002 Workspace Inbox
 
+> 决策 1–3 已被 [012](../012-tag-scoped-workspace-inbox/spec.md) 取代：`workspace_id` 改为标签，面板按标签过滤全局数据，归档不再隐藏而是加删除线。
+
 ## 目标
 
 - 在右侧 Explorer 增加 **workspace 级别的 Inbox** 面板：收藏本 workspace 的 agent、记笔记（note / scratch），数据只归属该 workspace。

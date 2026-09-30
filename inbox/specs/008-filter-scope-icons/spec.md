@@ -7,9 +7,10 @@
 ## 已定决策
 
 1. 图标画在 chip 文字前面，只加在 workspace chip 与 project chip 上。分组 chip（All / Agents / Notes / Scratch）不加图标。
-2. 图标沿用 Paseo 侧边栏与设置里的字形：
-   - workspace：`Folder`（侧边栏普通 workspace）
+2. 图标：
+   - workspace：`GitBranch`。原先用 `Folder`，与 project 的 `FolderGit2` 只差一个小 git 角标，12px 下难以分辨；Paseo 侧边栏里 `Folder` / `FolderGit2` 也都表示 workspace 种类，不适合拿来区分 project 与 workspace
    - project：`FolderGit2`（设置里的 Projects）
+   - note / scratch 行内的 project / workspace 标签 chip（013）用同一对图标
 3. 未选中时图标为 `foregroundMuted`，选中时与 chip 文字同为 `accentForeground`。
 4. 无障碍标签仍是 `Filter by workspace …` / `Filter by project …`，图标不单独朗读。
 
@@ -20,6 +21,6 @@
 
 ## 验收
 
-- [ ] Agents 分组下，每个 workspace chip 文字前有文件夹图标。
+- [ ] Agents 分组下，每个 workspace chip 文字前有分支图标。
 - [ ] 每个 project chip 文字前有带 git 标记的文件夹图标。
 - [ ] 选中 chip 时，图标与文字一起变成强调色。

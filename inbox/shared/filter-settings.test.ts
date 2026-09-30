@@ -29,24 +29,26 @@ test("a document saved before sort existed defaults to updated", () => {
   );
 });
 
-test("global workspace and project chips apply only while viewing agents", () => {
+test("global workspace and project chips apply to every kind except all", () => {
   const filters: InboxFilters = {
-    kind: "note",
+    kind: "all",
     projectKey: "repo",
     workspaceId: "ws",
     panelKind: "agent",
     sort: "name",
   };
   assert.deepEqual(visibleInboxFilters(filters, {}), {
-    kind: "note",
+    kind: "all",
     projectKey: null,
     workspaceId: null,
   });
-  assert.deepEqual(visibleInboxFilters({ ...filters, kind: "agent" }, {}), {
-    kind: "agent",
-    projectKey: "repo",
-    workspaceId: "ws",
-  });
+  for (const kind of ["agent", "note", "scratch"] as const) {
+    assert.deepEqual(visibleInboxFilters({ ...filters, kind }, {}), {
+      kind,
+      projectKey: "repo",
+      workspaceId: "ws",
+    });
+  }
 });
 
 test("explorer panel uses its own group and ignores the global chips", () => {

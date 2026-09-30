@@ -14,5 +14,7 @@
 | 009 | [`009-explorer-toolbar`](./009-explorer-toolbar/) | Command Center 标题改为 Inbox；Explorer 笔记与收藏 agent 放到搜索框右侧，收藏为纯图标 | 实现中 |
 | 010 | [`010-agents-scope-chips`](./010-agents-scope-chips/) | 全局页面的 workspace / project 筛选只在 Agents 分组下显示并生效 | 实现中 |
 | 011 | [`011-workspace-header-button`](./011-workspace-header-button/) | 每个 workspace header 增加 Inbox 图标按钮，点击在 Explorer 打开 Workspace Inbox；面板挂载时隐藏 | 实现中 |
+| 012 | [`012-tag-scoped-workspace-inbox`](./012-tag-scoped-workspace-inbox/) | 只有全局数据：note / scratch 可打 project / workspace 标签（校验一致），Workspace Inbox 按标签过滤；移除 `/inbox -w`；归档标签加删除线。取代 002 部分决策与 004 | 实现中 |
+| 013 | [`013-note-scope-chips`](./013-note-scope-chips/) | 全局页面 Notes / Scratch 也显示 project / workspace 筛选；project 行放在 workspace 行上方。取代 010 | 实现中 |
 
 规则同仓库根 `AGENTS.md`：先改 spec / plan 再改代码；每完成一个 task 在 `tasks.md` 勾选并写验证方式；新功能点新开编号目录。

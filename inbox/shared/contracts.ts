@@ -24,8 +24,10 @@ export const Item = z.object({
   projectLabel: z.string().nullable(),
   agentId: z.string().nullable(),
   agentSnapshot: AgentSnapshot.nullable(),
-  /** Null for the global Inbox; otherwise the workspace whose Inbox owns the item. */
+  /** Workspace tag; always within the project tag. */
   workspaceId: z.string().nullable(),
+  /** Last known workspace name, kept for archived workspaces. */
+  workspaceLabel: z.string().nullable(),
   pinned: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -36,6 +38,7 @@ export const ProjectSummary = z.object({
   key: z.string(),
   label: z.string(),
   count: z.number(),
+  archived: z.boolean(),
 });
 export type ProjectSummary = z.infer<typeof ProjectSummary>;
 
@@ -43,6 +46,7 @@ export const WorkspaceSummary = z.object({
   id: z.string(),
   label: z.string(),
   count: z.number(),
+  archived: z.boolean(),
 });
 export type WorkspaceSummary = z.infer<typeof WorkspaceSummary>;
 
@@ -62,16 +66,23 @@ export const listItems = defineRpc({
     kind: ItemKind.optional(),
     projectKey: z.string().optional(),
     query: z.string().optional(),
-    /** Omitted: everything visible; null: global Inbox only; id: that workspace's Inbox. */
-    workspaceId: z.string().nullable().optional(),
+    /** Items tagged with exactly this workspace. */
+    workspaceId: z.string().optional(),
+    /**
+     * A workspace's Inbox: items tagged with this workspace, plus items tagged
+     * only with its project.
+     */
+    inboxOf: z.string().optional(),
     /** Defaults to `updated`. Pinned items always come first. */
     sort: ItemSort.optional(),
   }),
   output: z.object({
     items: z.array(Item),
     projects: z.array(ProjectSummary),
-    /** Active workspaces that own items of the requested kind; archived workspaces are hidden. */
+    /** Workspaces tagged on items of the requested kind, archived ones included. */
     workspaces: z.array(WorkspaceSummary),
+    /** Tags of the listed items that are no longer active on the host. */
+    archived: z.object({ projects: z.array(z.string()), workspaces: z.array(z.string()) }),
   }),
 });
 
@@ -82,12 +93,39 @@ export const saveNote = defineRpc({
     kind: z.enum(["note", "scratch"]),
     title: z.string().nullable().optional(),
     body: z.string(),
-    /** Resolve the project from this directory when creating an item. */
-    cwd: z.string().optional(),
-    /** Only applies when creating an item. */
+    /** On create: tag this workspace and its project. */
     workspaceId: z.string().optional(),
+    /** On create: tag only this workspace's project. */
+    projectOfWorkspace: z.string().optional(),
   }),
   output: z.object({ item: Item }),
+});
+
+/**
+ * Sets a note's tags. A workspace must belong to the project; with only a
+ * workspace, the project follows it. Agents' tags come from the agent itself.
+ */
+export const tagItem = defineRpc({
+  name: "items.tag",
+  input: z.object({
+    id: z.string(),
+    projectKey: z.string().nullable(),
+    workspaceId: z.string().nullable(),
+  }),
+  output: z.object({ item: Item }),
+});
+
+export const TagProject = z.object({ key: z.string(), label: z.string() });
+export type TagProject = z.infer<typeof TagProject>;
+
+export const TagWorkspace = z.object({ id: z.string(), label: z.string(), projectKey: z.string() });
+export type TagWorkspace = z.infer<typeof TagWorkspace>;
+
+/** Active projects and workspaces that can be picked as tags. */
+export const tagOptions = defineRpc({
+  name: "tags.options",
+  input: z.object({}),
+  output: z.object({ projects: z.array(TagProject), workspaces: z.array(TagWorkspace) }),
 });
 
 export const updateItem = defineRpc({
@@ -109,11 +147,8 @@ export const deleteItem = defineRpc({
 
 export const starAgent = defineRpc({
   name: "agents.star",
-  input: z.object({
-    agentId: z.string(),
-    /** Moves an already starred global item into this workspace's Inbox. */
-    workspaceId: z.string().optional(),
-  }),
+  /** Tags follow the agent's own workspace and project. */
+  input: z.object({ agentId: z.string() }),
   output: z.object({ item: Item, created: z.boolean() }),
 });
 

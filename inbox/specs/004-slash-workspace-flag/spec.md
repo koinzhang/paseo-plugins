@@ -1,5 +1,7 @@
 # 004 `/inbox -w`：记到当前 workspace
 
+> 已被 [012](../012-tag-scoped-workspace-inbox/spec.md) 取代：`-w` 已移除。
+
 ## 目标
 
 `/inbox` 默认仍写入全局 Inbox；加 `-w` / `--workspace` 时写入当前 workspace 的 Inbox（Explorer 面板），与 002 的 workspace 归属一致。

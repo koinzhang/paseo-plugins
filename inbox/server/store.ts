@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { AgentSnapshot, Item, ItemKind, ItemSort, ProjectSummary } from "../shared/contracts.ts";
+import type { AgentSnapshot, Item, ItemKind, ItemSort } from "../shared/contracts.ts";
 import { itemTitle } from "../shared/item-title.ts";
 import { PLUGIN_ID } from "../shared/plugin-id.ts";
 import { isEmptyNote } from "../shared/note.ts";
@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS items (
   agent_id       TEXT,
   agent_snapshot TEXT,
   workspace_id   TEXT,
+  workspace_label TEXT,
   pinned         INTEGER NOT NULL DEFAULT 0,
   created_at     TEXT NOT NULL,
   updated_at     TEXT NOT NULL
@@ -44,19 +45,25 @@ interface Row {
   agent_id: string | null;
   agent_snapshot: string | null;
   workspace_id: string | null;
+  workspace_label: string | null;
   pinned: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface WorkspaceRef {
+  id: string;
+  label: string;
 }
 
 export interface ListFilter {
   kind?: ItemKind;
   projectKey?: string;
   query?: string;
-  /** Undefined: any; null: global Inbox only; string: that workspace only. */
-  workspaceId?: string | null;
-  /** Items of these workspaces are left out, e.g. archived workspaces. */
-  hiddenWorkspaceIds?: readonly string[];
+  /** Items tagged with exactly this workspace. */
+  workspaceId?: string;
+  /** A workspace's Inbox: its workspace tag, or no workspace tag and its project tag. */
+  inboxOf?: { workspaceId: string; projectKey: string | null };
   sort?: ItemSort;
 }
 
@@ -65,7 +72,12 @@ export interface NoteInput {
   title?: string | null;
   body: string;
   project?: ProjectRef | null;
-  workspaceId?: string | null;
+  workspace?: WorkspaceRef | null;
+}
+
+export interface Tags {
+  project: ProjectRef | null;
+  workspace: WorkspaceRef | null;
 }
 
 export function defaultDataDir(): string {
@@ -91,6 +103,7 @@ function toItem(row: Row): Item {
     agentId: row.agent_id,
     agentSnapshot: row.agent_snapshot ? (JSON.parse(row.agent_snapshot) as AgentSnapshot) : null,
     workspaceId: row.workspace_id,
+    workspaceLabel: row.workspace_label,
     pinned: row.pinned === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -121,14 +134,6 @@ function sortItems(items: Item[], sort: ItemSort): Item[] {
   });
 }
 
-function hiddenClause(hidden: readonly string[] | undefined): { sql: string; params: string[] } {
-  if (!hidden?.length) return { sql: "", params: [] };
-  return {
-    sql: `(workspace_id IS NULL OR workspace_id NOT IN (${hidden.map(() => "?").join(", ")}))`,
-    params: [...hidden],
-  };
-}
-
 export class InboxStore {
   private readonly db: Database;
   private readonly now: () => string;
@@ -151,6 +156,14 @@ export class InboxStore {
     if (!columns.some((column) => column.name === "workspace_id")) {
       this.db.exec("ALTER TABLE items ADD COLUMN workspace_id TEXT");
     }
+    if (!columns.some((column) => column.name === "workspace_label")) {
+      this.db.exec("ALTER TABLE items ADD COLUMN workspace_label TEXT");
+    }
+    // Agents starred into the old global Inbox are tagged with their own workspace.
+    this.db.exec(
+      `UPDATE items SET workspace_id = json_extract(agent_snapshot, '$.workspaceId')
+       WHERE kind = 'agent' AND workspace_id IS NULL AND agent_snapshot IS NOT NULL`,
+    );
   }
 
   /** Drops notes / scratch with no title or text, e.g. left behind by an interrupted editor. */
@@ -191,16 +204,19 @@ export class InboxStore {
       where.push("project_key = ?");
       params.push(filter.projectKey);
     }
-    if (filter.workspaceId === null) {
-      where.push("workspace_id IS NULL");
-    } else if (filter.workspaceId !== undefined) {
+    if (filter.workspaceId) {
       where.push("workspace_id = ?");
       params.push(filter.workspaceId);
     }
-    const hidden = hiddenClause(filter.hiddenWorkspaceIds);
-    if (hidden.sql) {
-      where.push(hidden.sql);
-      params.push(...hidden.params);
+    if (filter.inboxOf) {
+      const { workspaceId, projectKey } = filter.inboxOf;
+      if (projectKey) {
+        where.push("(workspace_id = ? OR (workspace_id IS NULL AND project_key = ?))");
+        params.push(workspaceId, projectKey);
+      } else {
+        where.push("workspace_id = ?");
+        params.push(workspaceId);
+      }
     }
     const query = filter.query?.trim();
     if (query) {
@@ -216,48 +232,50 @@ export class InboxStore {
     return sortItems(items, filter.sort ?? "updated");
   }
 
-  projects(hiddenWorkspaceIds?: readonly string[], kind?: ItemKind): ProjectSummary[] {
-    const hidden = hiddenClause(hiddenWorkspaceIds);
+  projects(kind?: ItemKind): Array<{ key: string; label: string; count: number }> {
     const rows = this.db
       .prepare(
         `SELECT project_key AS key, MAX(project_label) AS label, COUNT(*) AS count
-         FROM items WHERE project_key IS NOT NULL ${hidden.sql ? `AND ${hidden.sql}` : ""}
-         ${kind ? "AND kind = ?" : ""}
+         FROM items WHERE project_key IS NOT NULL ${kind ? "AND kind = ?" : ""}
          GROUP BY project_key ORDER BY MAX(updated_at) DESC`,
       )
-      .all(...hidden.params, ...(kind ? [kind] : [])) as Array<{ key: string; label: string | null; count: number }>;
+      .all(...(kind ? [kind] : [])) as Array<{ key: string; label: string | null; count: number }>;
     return rows.map((row) => ({ key: row.key, label: row.label ?? row.key, count: Number(row.count) }));
   }
 
-  /** Item counts per owning workspace, most recently updated first. */
-  workspaces(hiddenWorkspaceIds?: readonly string[], kind?: ItemKind): Array<{ id: string; count: number }> {
-    const hidden = hiddenClause(hiddenWorkspaceIds);
+  /** Item counts per workspace tag, most recently updated first. */
+  workspaces(kind?: ItemKind): Array<{ id: string; label: string; count: number }> {
     const rows = this.db
       .prepare(
-        `SELECT workspace_id AS id, COUNT(*) AS count
-         FROM items WHERE workspace_id IS NOT NULL ${hidden.sql ? `AND ${hidden.sql}` : ""}
-         ${kind ? "AND kind = ?" : ""}
+        `SELECT workspace_id AS id, MAX(workspace_label) AS label, COUNT(*) AS count
+         FROM items WHERE workspace_id IS NOT NULL ${kind ? "AND kind = ?" : ""}
          GROUP BY workspace_id ORDER BY MAX(updated_at) DESC`,
       )
-      .all(...hidden.params, ...(kind ? [kind] : [])) as Array<{ id: string; count: number }>;
-    return rows.map((row) => ({ id: row.id, count: Number(row.count) }));
+      .all(...(kind ? [kind] : [])) as Array<{ id: string; label: string | null; count: number }>;
+    return rows.map((row) => ({ id: row.id, label: row.label ?? row.id, count: Number(row.count) }));
   }
 
-  workspaceIds(): string[] {
-    const rows = this.db
-      .prepare("SELECT DISTINCT workspace_id AS id FROM items WHERE workspace_id IS NOT NULL")
-      .all() as Array<{ id: string }>;
-    return rows.map((row) => row.id);
+  /** Writes current names of active projects / workspaces into the snapshots. */
+  refreshLabels(projects: ReadonlyMap<string, string>, workspaces: ReadonlyMap<string, string>): void {
+    const project = this.db.prepare(
+      "UPDATE items SET project_label = ? WHERE project_key = ? AND project_label IS NOT ?",
+    );
+    for (const [key, label] of projects) project.run(label, key, label);
+    const workspace = this.db.prepare(
+      "UPDATE items SET workspace_label = ? WHERE workspace_id = ? AND workspace_label IS NOT ?",
+    );
+    for (const [id, label] of workspaces) workspace.run(label, id, label);
   }
 
   createNote(input: NoteInput): Item {
     if (isEmptyNote(input.title, input.body)) throw new Error("Empty notes are not saved");
+    if (input.workspace && !input.project) throw new Error("A workspace tag needs its project");
     const id = randomUUID();
     const now = this.now();
     this.db
       .prepare(
-        `INSERT INTO items (id, kind, title, body, project_key, project_label, workspace_id, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO items (id, kind, title, body, project_key, project_label, workspace_id, workspace_label, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
@@ -266,7 +284,8 @@ export class InboxStore {
         input.body,
         input.project?.key ?? null,
         input.project?.label ?? null,
-        input.workspaceId ?? null,
+        input.workspace?.id ?? null,
+        input.workspace?.label ?? null,
         now,
         now,
       );
@@ -279,6 +298,26 @@ export class InboxStore {
     this.db
       .prepare("UPDATE items SET kind = ?, title = ?, body = ?, updated_at = ? WHERE id = ?")
       .run(patch.kind, patch.title === undefined ? existing.title : patch.title, patch.body, this.now(), id);
+    return this.require(id);
+  }
+
+  setTags(id: string, tags: Tags): Item {
+    const existing = this.require(id);
+    if (existing.kind === "agent") throw new Error("A starred agent's tags follow the agent");
+    if (tags.workspace && !tags.project) throw new Error("A workspace tag needs its project");
+    this.db
+      .prepare(
+        `UPDATE items SET project_key = ?, project_label = ?, workspace_id = ?, workspace_label = ?, updated_at = ?
+         WHERE id = ?`,
+      )
+      .run(
+        tags.project?.key ?? null,
+        tags.project?.label ?? null,
+        tags.workspace?.id ?? null,
+        tags.workspace?.label ?? null,
+        this.now(),
+        id,
+      );
     return this.require(id);
   }
 
@@ -298,32 +337,21 @@ export class InboxStore {
     return this.require(id);
   }
 
-  /**
-   * Stars an agent once. A repeat star keeps the existing item, moving it into
-   * `workspaceId` when one is given and differs.
-   */
+  /** Stars an agent once; a repeat star returns the existing item unchanged. */
   starAgent(
     agentId: string,
     snapshot: AgentSnapshot,
     project: ProjectRef | null,
-    workspaceId?: string,
+    workspace: WorkspaceRef | null = null,
   ): { item: Item; created: boolean } {
     const existing = this.findByAgent(agentId);
-    if (existing) {
-      if (workspaceId === undefined || existing.workspaceId === workspaceId) {
-        return { item: existing, created: false };
-      }
-      this.db
-        .prepare("UPDATE items SET workspace_id = ?, updated_at = ? WHERE id = ?")
-        .run(workspaceId, this.now(), existing.id);
-      return { item: this.require(existing.id), created: false };
-    }
+    if (existing) return { item: existing, created: false };
     const id = randomUUID();
     const now = this.now();
     this.db
       .prepare(
-        `INSERT INTO items (id, kind, title, body, project_key, project_label, agent_id, agent_snapshot, workspace_id, created_at, updated_at)
-         VALUES (?, 'agent', ?, '', ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO items (id, kind, title, body, project_key, project_label, agent_id, agent_snapshot, workspace_id, workspace_label, created_at, updated_at)
+         VALUES (?, 'agent', ?, '', ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
@@ -332,7 +360,8 @@ export class InboxStore {
         project?.label ?? null,
         agentId,
         JSON.stringify(snapshot),
-        workspaceId ?? null,
+        workspace?.id ?? null,
+        workspace?.label ?? null,
         now,
         now,
       );

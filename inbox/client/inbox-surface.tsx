@@ -2,7 +2,7 @@ import type { PluginTheme } from "@getpaseo/plugin";
 import { type PluginSurfaceProps, usePaseo, useRpc } from "@getpaseo/plugin/client";
 import { Icon, ScrollView, TextInput, useToast } from "@getpaseo/plugin/client/react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ComponentProps, useEffect, useMemo, useRef, useState } from "react";
+import { type ComponentProps, Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { PanResponder, Platform, Pressable, Text, View } from "react-native";
 import {
   agentCandidates,
@@ -16,6 +16,8 @@ import {
   listItems,
   saveNote,
   starAgent,
+  tagItem,
+  tagOptions,
   unarchiveAgent,
   updateItem,
 } from "../shared/contracts.ts";
@@ -26,17 +28,23 @@ import { AgentIcon, PermissionBadge } from "./agent-status.tsx";
 import { inboxListSort, visibleInboxFilters } from "../shared/filter-settings.ts";
 import { itemTitle } from "../shared/item-title.ts";
 import { isEmptyNote } from "../shared/note.ts";
-import { onItemsChanged, onSelectionRequest, type SelectionRequest, takeSelection } from "./selection.ts";
+import {
+  type DraftTags,
+  onItemsChanged,
+  onSelectionRequest,
+  type SelectionRequest,
+  takeSelection,
+} from "./selection.ts";
 import { useInboxFilters } from "./use-inbox-filters.ts";
 import { trackHorizontalDrag } from "./web.ts";
 
 /**
- * `id` is the open item; `draftCwd` is non-null for an unsaved note ("" = no project).
+ * `id` is the open item; `draft` is non-null for an unsaved note.
  * `session` keys the editor so it survives a draft turning into a saved note.
  */
 interface Selection {
   id: string | null;
-  draftCwd: string | null;
+  draft: DraftTags | null;
   session: number;
   fromDraft?: boolean;
 }
@@ -46,13 +54,20 @@ const nextSession = () => ++sessionCounter;
 
 function toSelection(request: SelectionRequest | null): Selection | null {
   if (!request) return null;
-  if ("itemId" in request) return { id: request.itemId, draftCwd: null, session: nextSession() };
-  return { id: null, draftCwd: request.draftCwd ?? "", session: nextSession() };
+  if ("itemId" in request) return { id: request.itemId, draft: null, session: nextSession() };
+  return { id: null, draft: request.draft, session: nextSession() };
+}
+
+/** Project keys and workspace ids no longer active on the host. */
+interface Archived {
+  projects: ReadonlySet<string>;
+  workspaces: ReadonlySet<string>;
 }
 
 const LIST_KEY = ["inbox", "items"] as const;
 const STATES_KEY = ["inbox", "agent-states"] as const;
 const CANDIDATES_KEY = ["inbox", "agent-candidates"] as const;
+const TAG_OPTIONS_KEY = ["inbox", "tag-options"] as const;
 const SAVE_DELAY_MS = 600;
 
 const FILTERS: Array<{ id: ItemKind | "all"; label: string }> = [
@@ -161,6 +176,7 @@ function createStyles(theme: PluginTheme, compact: boolean) {
     }),
     itemTitle: { color: c.foreground, fontSize: 14, flex: 1 },
     muted: { color: c.foregroundMuted, fontSize: 12 },
+    struck: { textDecorationLine: "line-through" as const },
     badge: (tone: "warning" | "danger" | "success") => ({
       color:
         tone === "warning" ? c.statusWarning : tone === "danger" ? c.statusDanger : c.statusSuccess,
@@ -257,12 +273,25 @@ function Button({
 
 const KIND_ICON: Record<ItemKind, string> = { agent: "Bot", note: "NotebookText", scratch: "StickyNote" };
 
+/** Project and workspace tags of an item; archived ones are marked. */
+function itemTags(item: Item, archived: Archived): Array<{ label: string; archived: boolean }> {
+  const tags: Array<{ label: string; archived: boolean }> = [];
+  if (item.projectKey) {
+    tags.push({ label: item.projectLabel ?? item.projectKey, archived: archived.projects.has(item.projectKey) });
+  }
+  if (item.workspaceId) {
+    tags.push({ label: item.workspaceLabel ?? item.workspaceId, archived: archived.workspaces.has(item.workspaceId) });
+  }
+  return tags;
+}
+
 function ItemRow({
   item,
   selected,
   state,
   live,
-  workspaceLabel,
+  archived,
+  hideWorkspaceId,
   styles,
   theme,
   onPress,
@@ -271,21 +300,25 @@ function ItemRow({
   selected: boolean;
   state: AgentState | undefined;
   live: AgentLive | undefined;
-  workspaceLabel: string | null;
+  archived: Archived;
+  /** The panel's own workspace, left out of the subtitle. */
+  hideWorkspaceId: string | null;
   styles: Styles;
   theme: PluginTheme;
   onPress: () => void;
 }) {
   const agentState = state;
   const status = item.kind === "agent" ? describeAgentStatus(agentState, live) : null;
+  const tags = itemTags(
+    hideWorkspaceId && item.workspaceId === hideWorkspaceId ? { ...item, workspaceId: null } : item,
+    archived,
+  );
   const subtitle = [
-    item.projectLabel,
-    workspaceLabel,
-    item.kind === "agent" ? item.agentSnapshot?.provider : null,
-    new Date(item.updatedAt).toLocaleDateString(),
-  ]
-    .filter(Boolean)
-    .join(" · ");
+    ...tags,
+    ...[item.kind === "agent" ? item.agentSnapshot?.provider : null, new Date(item.updatedAt).toLocaleDateString()]
+      .filter((label): label is string => Boolean(label))
+      .map((label) => ({ label, archived: false })),
+  ];
   return (
     <Pressable
       accessibilityRole="button"
@@ -306,7 +339,12 @@ function ItemRow({
         {item.kind === "agent" ? <PermissionBadge state={agentState} live={live} theme={theme} /> : null}
       </View>
       <Text style={styles.muted} numberOfLines={1}>
-        {subtitle}
+        {subtitle.map((part, index) => (
+          <Fragment key={index}>
+            {index ? " · " : ""}
+            <Text style={part.archived ? styles.struck : null}>{part.label}</Text>
+          </Fragment>
+        ))}
       </Text>
     </Pressable>
   );
@@ -318,14 +356,12 @@ function ItemRow({
  */
 function NoteEditor({
   item,
-  draftCwd,
-  workspaceId,
+  draft,
   styles,
   onCreated,
 }: {
   item: Item | null;
-  draftCwd: string | null;
-  workspaceId: string | null;
+  draft: DraftTags;
   styles: Styles;
   onCreated: (id: string) => void;
 }) {
@@ -358,12 +394,7 @@ function NoteEditor({
       } else {
         if (t === saved.current.title && b === saved.current.body && idRef.current) return;
         const { item: next } = await save({
-          ...(idRef.current
-            ? { id: idRef.current }
-            : {
-                ...(draftCwd ? { cwd: draftCwd } : {}),
-                ...(workspaceId ? { workspaceId } : {}),
-              }),
+          ...(idRef.current ? { id: idRef.current } : draft),
           kind,
           title: t.trim() ? t : null,
           body: b,
@@ -562,7 +593,6 @@ function AgentDetail({
   const facts = [
     ["Status", describeAgentStatus(agentState, live)?.label],
     ["Provider", [snapshot?.provider, snapshot?.model].filter(Boolean).join(" / ")],
-    ["Project", item.projectLabel],
     ["Directory", snapshot?.cwd],
     ["Starred", new Date(item.createdAt).toLocaleString()],
   ] as const;
@@ -591,10 +621,200 @@ function AgentDetail({
   );
 }
 
+function TagOption({
+  label,
+  detail,
+  selected,
+  disabled,
+  styles,
+  theme,
+  onPress,
+}: {
+  label: string;
+  detail?: string;
+  selected: boolean;
+  disabled: boolean;
+  styles: Styles;
+  theme: PluginTheme;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected, disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={[styles.row, { paddingVertical: 6 }, disabled ? { opacity: 0.4 } : null]}
+    >
+      <Icon name="Check" size={14} color={selected ? theme.colors.accent : "transparent"} />
+      <Text style={styles.itemTitle} numberOfLines={1}>
+        {label}
+      </Text>
+      {detail ? <Text style={styles.muted}>{detail}</Text> : null}
+    </Pressable>
+  );
+}
+
+/**
+ * Project and workspace tags. Notes and scratch can change them; a workspace
+ * must sit in the tagged project, so other projects are off while one is set.
+ * A starred agent's tags follow the agent and are read-only.
+ */
+function TagEditor({
+  item,
+  archived,
+  styles,
+  theme,
+}: {
+  item: Item;
+  archived: Archived;
+  styles: Styles;
+  theme: PluginTheme;
+}) {
+  const options = useRpc(tagOptions);
+  const tag = useRpc(tagItem);
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const [open, setOpen] = useState<"project" | "workspace" | null>(null);
+  const editable = item.kind !== "agent";
+  const optionsQuery = useQuery({
+    queryKey: TAG_OPTIONS_KEY,
+    queryFn: () => options({}),
+    enabled: open !== null,
+  });
+  const mutation = useMutation({
+    mutationFn: (next: { projectKey: string | null; workspaceId: string | null }) =>
+      tag({ id: item.id, ...next }),
+    onSuccess: () => {
+      setOpen(null);
+      void queryClient.invalidateQueries({ queryKey: LIST_KEY });
+    },
+    onError: (error) => toast.error(errorText(error)),
+  });
+  const choose = (next: { projectKey: string | null; workspaceId: string | null }) => {
+    if (next.projectKey === item.projectKey && next.workspaceId === item.workspaceId) setOpen(null);
+    else mutation.mutate(next);
+  };
+
+  const projectArchived = Boolean(item.projectKey && archived.projects.has(item.projectKey));
+  const workspaceArchived = Boolean(item.workspaceId && archived.workspaces.has(item.workspaceId));
+  const chip = (kind: "project" | "workspace") => {
+    const isProject = kind === "project";
+    const value = isProject
+      ? item.projectKey && (item.projectLabel ?? item.projectKey)
+      : item.workspaceId && (item.workspaceLabel ?? item.workspaceId);
+    const struck = isProject ? projectArchived : workspaceArchived;
+    const active = open === kind;
+    const label = value || (isProject ? "No project" : "No workspace");
+    const content = (
+      <>
+        <Icon
+          name={isProject ? "FolderGit2" : "GitBranch"}
+          size={12}
+          color={active ? theme.colors.accentForeground : theme.colors.foregroundMuted}
+        />
+        <Text style={[styles.chipText(active), struck ? styles.struck : null]} numberOfLines={1}>
+          {label}
+          {struck ? " (archived)" : ""}
+        </Text>
+      </>
+    );
+    if (!editable) {
+      return value ? <View style={styles.chip(false)}>{content}</View> : null;
+    }
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${isProject ? "Project" : "Workspace"}: ${label}`}
+        onPress={() => setOpen(active ? null : kind)}
+        style={styles.chip(active)}
+      >
+        {content}
+      </Pressable>
+    );
+  };
+
+  const projectChip = chip("project");
+  const workspaceChip = chip("workspace");
+  if (!projectChip && !workspaceChip) return null;
+
+  const data = optionsQuery.data;
+  const projectLabels = new Map(data?.projects.map((project) => [project.key, project.label]));
+  const workspaces = data?.workspaces.filter((entry) => !item.projectKey || entry.projectKey === item.projectKey);
+  const busy = mutation.isPending;
+
+  return (
+    <View style={{ gap: 6 }}>
+      <View style={styles.wrap}>
+        {projectChip}
+        {workspaceChip}
+      </View>
+      {open && optionsQuery.isPending ? <Text style={styles.muted}>Loading…</Text> : null}
+      {open && optionsQuery.isError ? (
+        <Text style={styles.badge("danger")}>{errorText(optionsQuery.error)}</Text>
+      ) : null}
+      {open === "project" && data ? (
+        <View style={{ gap: 2 }}>
+          {item.workspaceId ? (
+            <Text style={styles.muted}>Clear the workspace tag to pick another project.</Text>
+          ) : null}
+          <TagOption
+            label="No project"
+            selected={!item.projectKey}
+            disabled={busy || Boolean(item.workspaceId)}
+            styles={styles}
+            theme={theme}
+            onPress={() => choose({ projectKey: null, workspaceId: null })}
+          />
+          {data.projects.map((project) => (
+            <TagOption
+              key={project.key}
+              label={project.label}
+              selected={item.projectKey === project.key}
+              disabled={busy || Boolean(item.workspaceId && item.projectKey !== project.key)}
+              styles={styles}
+              theme={theme}
+              onPress={() => choose({ projectKey: project.key, workspaceId: item.workspaceId })}
+            />
+          ))}
+        </View>
+      ) : null}
+      {open === "workspace" && data && workspaces ? (
+        <View style={{ gap: 2 }}>
+          <TagOption
+            label="No workspace"
+            selected={!item.workspaceId}
+            disabled={busy}
+            styles={styles}
+            theme={theme}
+            onPress={() => choose({ projectKey: item.projectKey, workspaceId: null })}
+          />
+          {workspaces.map((entry) => (
+            <TagOption
+              key={entry.id}
+              label={entry.label}
+              detail={item.projectKey ? undefined : projectLabels.get(entry.projectKey)}
+              selected={item.workspaceId === entry.id}
+              disabled={busy}
+              styles={styles}
+              theme={theme}
+              onPress={() => choose({ projectKey: item.projectKey, workspaceId: entry.id })}
+            />
+          ))}
+          {workspaces.length === 0 ? (
+            <Text style={styles.muted}>No active workspace in this project.</Text>
+          ) : null}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 function Detail({
   item,
-  draftCwd,
-  workspaceId,
+  draft,
+  archived,
   state,
   live,
   styles,
@@ -605,8 +825,8 @@ function Detail({
   onDeleted,
 }: {
   item: Item | null;
-  draftCwd: string | null;
-  workspaceId: string | null;
+  draft: DraftTags;
+  archived: Archived;
   onCreated: (id: string) => void;
   state: AgentState | undefined;
   live: AgentLive | undefined;
@@ -678,16 +898,11 @@ function Detail({
           />
         </View>
       ) : null}
+      {item ? <TagEditor item={item} archived={archived} styles={styles} theme={theme} /> : null}
       {item?.kind === "agent" ? (
         <AgentDetail item={item} state={state} live={live} styles={styles} />
       ) : (
-        <NoteEditor
-          item={item}
-          draftCwd={draftCwd}
-          workspaceId={workspaceId}
-          styles={styles}
-          onCreated={onCreated}
-        />
+        <NoteEditor item={item} draft={draft} styles={styles} onCreated={onCreated} />
       )}
     </ScrollView>
   );
@@ -713,8 +928,8 @@ function AgentPicker({
     queryFn: () => candidates({ workspaceId }),
   });
   const mutation = useMutation({
-    mutationFn: (agentId: string) => star({ agentId, workspaceId }),
-    onSuccess: ({ item }) => {
+    mutationFn: (agentId: string) => star({ agentId }),
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: LIST_KEY });
       void queryClient.invalidateQueries({ queryKey: CANDIDATES_KEY });
       onStarred();
@@ -726,7 +941,7 @@ function AgentPicker({
   if (query.isError) return <Text style={styles.badge("danger")}>{errorText(query.error)}</Text>;
   if (query.isPending) return <Text style={styles.muted}>Loading agents…</Text>;
   if (agents.length === 0) {
-    return <Text style={styles.muted}>Every agent in this workspace is already in its Inbox.</Text>;
+    return <Text style={styles.muted}>Every agent in this workspace is already in the Inbox.</Text>;
   }
   return (
     <View style={{ gap: 4 }}>
@@ -734,7 +949,7 @@ function AgentPicker({
         <Pressable
           key={agent.id}
           accessibilityRole="button"
-          accessibilityLabel={`Add ${agent.title || "Untitled agent"} to this workspace's Inbox`}
+          accessibilityLabel={`Add ${agent.title || "Untitled agent"} to the Inbox`}
           disabled={mutation.isPending}
           onPress={() => mutation.mutate(agent.id)}
           style={[styles.row, { paddingVertical: 6 }]}
@@ -755,6 +970,7 @@ function Chip({
   icon,
   accessibilityLabel,
   active,
+  struck,
   styles,
   theme,
   onPress,
@@ -763,6 +979,8 @@ function Chip({
   icon?: string;
   accessibilityLabel: string;
   active: boolean;
+  /** Archived project / workspace. */
+  struck?: boolean;
   styles: Styles;
   theme: PluginTheme;
   onPress: () => void;
@@ -776,7 +994,7 @@ function Chip({
       style={styles.chip(active)}
     >
       {icon ? <Icon name={icon} size={12} color={color} /> : null}
-      <Text style={styles.chipText(active)}>{label}</Text>
+      <Text style={[styles.chipText(active), struck ? styles.struck : null]}>{label}</Text>
     </Pressable>
   );
 }
@@ -844,7 +1062,7 @@ export function InboxView({
     workspace ? null : toSelection(takeSelection()),
   );
   const selectedId = selection?.id ?? null;
-  const select = (id: string | null) => setSelection(id ? { id, draftCwd: null, session: nextSession() } : null);
+  const select = (id: string | null) => setSelection(id ? { id, draft: null, session: nextSession() } : null);
 
   // A command can request a selection while the surface is already mounted.
   useEffect(() => {
@@ -872,7 +1090,7 @@ export function InboxView({
     ? {
         ...(shown.kind === "all" ? {} : { kind: shown.kind }),
         ...(shown.projectKey ? { projectKey: shown.projectKey } : {}),
-        ...(shown.workspaceId ? { workspaceId: shown.workspaceId } : {}),
+        ...(workspace ? { inboxOf: workspace.id } : shown.workspaceId ? { workspaceId: shown.workspaceId } : {}),
         ...(query.trim() ? { query: query.trim() } : {}),
         ...(sort === "updated" ? {} : { sort }),
       }
@@ -885,14 +1103,25 @@ export function InboxView({
   const items = itemsQuery.data?.items ?? [];
   const projects = itemsQuery.data?.projects ?? [];
   const workspaces = itemsQuery.data?.workspaces ?? [];
-  const workspaceLabels = new Map(workspaces.map((entry) => [entry.id, entry.label]));
+  const archivedData = itemsQuery.data?.archived;
+  const archived = useMemo<Archived>(
+    () => ({ projects: new Set(archivedData?.projects), workspaces: new Set(archivedData?.workspaces) }),
+    [archivedData],
+  );
 
-  // The selected workspace was archived: its chip is gone, so clear the saved choice.
+  // No item of this kind carries the selected tag: its chip is gone, so clear the saved choice.
   useEffect(() => {
     const current = filters.values;
-    if (workspace || !itemsQuery.data || !current || current.kind !== "agent" || !current.workspaceId) return;
-    if (!itemsQuery.data.workspaces.some((entry) => entry.id === current.workspaceId)) {
-      updateFilters.current({ workspaceId: null });
+    if (workspace || !itemsQuery.data || !current || current.kind === "all") return;
+    const staleProject =
+      current.projectKey && !itemsQuery.data.projects.some((entry) => entry.key === current.projectKey);
+    const staleWorkspace =
+      current.workspaceId && !itemsQuery.data.workspaces.some((entry) => entry.id === current.workspaceId);
+    if (staleProject || staleWorkspace) {
+      updateFilters.current({
+        ...(staleProject ? { projectKey: null } : {}),
+        ...(staleWorkspace ? { workspaceId: null } : {}),
+      });
     }
   }, [filters.values, itemsQuery.data, workspace]);
 
@@ -910,13 +1139,13 @@ export function InboxView({
 
   const selected = items.find((item) => item.id === selectedId) ?? null;
   // A draft, or a note just created from one, stays open while the list catches up.
-  const editing = selection && (selected || selection.draftCwd !== null || selection.fromDraft);
+  const editing = selection && (selected || selection.draft !== null || selection.fromDraft);
   const showList = !compact || !editing;
   const showDetail = !compact || Boolean(editing);
 
   const createNote = () => {
     filters.update(workspace ? { panelKind: "all" } : { kind: "all" });
-    setSelection({ id: null, draftCwd: workspace?.directory ?? "", session: nextSession() });
+    setSelection({ id: null, draft: workspace ? { workspaceId: workspace.id } : {}, session: nextSession() });
   };
 
   const noteButton = (
@@ -991,29 +1220,7 @@ export function InboxView({
                 />
               ))}
             </View>
-            {!workspace && kind === "agent" && workspaces.length > 0 ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={styles.row}>
-                  {workspaces.map((entry) => (
-                    <Chip
-                      key={entry.id}
-                      icon="Folder"
-                      label={`${entry.label} · ${entry.count}`}
-                      accessibilityLabel={`Filter by workspace ${entry.label}`}
-                      active={scope === entry.id}
-                      styles={styles}
-                      theme={theme}
-                      onPress={() =>
-                        filters.update({
-                          workspaceId: filters.values?.workspaceId === entry.id ? null : entry.id,
-                        })
-                      }
-                    />
-                  ))}
-                </View>
-              </ScrollView>
-            ) : null}
-            {!workspace && kind === "agent" && projects.length > 0 ? (
+            {!workspace && kind !== "all" && projects.length > 0 ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.row}>
                   {projects.map((project) => {
@@ -1023,14 +1230,38 @@ export function InboxView({
                         key={project.key}
                         icon="FolderGit2"
                         label={`${project.label} · ${project.count}`}
-                        accessibilityLabel={`Filter by project ${project.label}`}
+                        accessibilityLabel={`Filter by project ${project.label}${project.archived ? " (archived)" : ""}`}
                         active={active}
+                        struck={project.archived}
                         styles={styles}
                         theme={theme}
                         onPress={() => filters.update({ projectKey: active ? null : project.key })}
                       />
                     );
                   })}
+                </View>
+              </ScrollView>
+            ) : null}
+            {!workspace && kind !== "all" && workspaces.length > 0 ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.row}>
+                  {workspaces.map((entry) => (
+                    <Chip
+                      key={entry.id}
+                      icon="GitBranch"
+                      label={`${entry.label} · ${entry.count}`}
+                      accessibilityLabel={`Filter by workspace ${entry.label}${entry.archived ? " (archived)" : ""}`}
+                      active={scope === entry.id}
+                      struck={entry.archived}
+                      styles={styles}
+                      theme={theme}
+                      onPress={() =>
+                        filters.update({
+                          workspaceId: filters.values?.workspaceId === entry.id ? null : entry.id,
+                        })
+                      }
+                    />
+                  ))}
                 </View>
               </ScrollView>
             ) : null}
@@ -1045,7 +1276,7 @@ export function InboxView({
                 <Icon name="Inbox" size={28} color={theme.colors.foregroundMuted} />
                 <Text style={styles.muted}>
                   {workspace
-                    ? "Nothing in this workspace's Inbox yet. Add a note or star an agent."
+                    ? "Nothing tagged with this workspace or its project yet. Add a note or star an agent."
                     : "Nothing here yet. Star an agent from ⌘K or type /inbox in a composer."}
                 </Text>
               </View>
@@ -1057,9 +1288,8 @@ export function InboxView({
                   selected={item.id === selectedId}
                   state={agentState(item)}
                   live={agentLive(item)}
-                  workspaceLabel={
-                    !workspace && item.workspaceId ? (workspaceLabels.get(item.workspaceId) ?? null) : null
-                  }
+                  archived={archived}
+                  hideWorkspaceId={workspace?.id ?? null}
                   styles={styles}
                   theme={theme}
                   onPress={() => select(item.id)}
@@ -1080,8 +1310,8 @@ export function InboxView({
             <Detail
               key={selection.session}
               item={selected}
-              draftCwd={selection.draftCwd || null}
-              workspaceId={workspace?.id ?? null}
+              draft={selection.draft ?? {}}
+              archived={archived}
               state={selected ? agentState(selected) : undefined}
               live={selected ? agentLive(selected) : undefined}
               styles={styles}
