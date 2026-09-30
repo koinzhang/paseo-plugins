@@ -52,3 +52,33 @@ export function trackHorizontalDrag(
   window.addEventListener("mouseup", end);
   window.addEventListener("blur", end);
 }
+
+interface WheelEvent {
+  deltaX: number;
+  deltaY: number;
+  preventDefault(): void;
+}
+export interface HorizontalScrollNode {
+  scrollLeft: number;
+  scrollWidth: number;
+  clientWidth: number;
+  addEventListener(type: "wheel", listener: (event: WheelEvent) => void, options: { passive: boolean }): void;
+  removeEventListener(type: "wheel", listener: (event: WheelEvent) => void): void;
+}
+
+/**
+ * Lets a vertical mouse wheel scroll a horizontal strip. At either end the
+ * event is left alone so the surrounding page keeps scrolling. Returns cleanup.
+ */
+export function wheelScrollsHorizontally(node: HorizontalScrollNode): () => void {
+  const onWheel = (event: WheelEvent) => {
+    if (Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+    const max = node.scrollWidth - node.clientWidth;
+    const next = Math.max(0, Math.min(max, node.scrollLeft + event.deltaY));
+    if (next === node.scrollLeft) return;
+    event.preventDefault();
+    node.scrollLeft = next;
+  };
+  node.addEventListener("wheel", onWheel, { passive: false });
+  return () => node.removeEventListener("wheel", onWheel);
+}

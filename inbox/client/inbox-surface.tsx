@@ -2,7 +2,16 @@ import type { PluginTheme } from "@getpaseo/plugin";
 import { type PluginSurfaceProps, usePaseo, useRpc } from "@getpaseo/plugin/client";
 import { Icon, ScrollView, TextInput, useToast } from "@getpaseo/plugin/client/react-native";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ComponentProps, Fragment, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ComponentProps,
+  type ComponentRef,
+  Fragment,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { PanResponder, Platform, Pressable, Text, View } from "react-native";
 import {
   agentCandidates,
@@ -36,7 +45,7 @@ import {
   takeSelection,
 } from "./selection.ts";
 import { useInboxFilters } from "./use-inbox-filters.ts";
-import { trackHorizontalDrag } from "./web.ts";
+import { type HorizontalScrollNode, trackHorizontalDrag, wheelScrollsHorizontally } from "./web.ts";
 
 /**
  * `id` is the open item; `draft` is non-null for an unsaved note.
@@ -999,6 +1008,21 @@ function Chip({
   );
 }
 
+/** A single-line chip row; on web the mouse wheel scrolls it sideways. */
+function ChipStrip({ styles, children }: { styles: Styles; children: ReactNode }) {
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const node = scrollRef.current?.getScrollableNode() as HorizontalScrollNode | null | undefined;
+    return node ? wheelScrollsHorizontally(node) : undefined;
+  }, []);
+  return (
+    <ScrollView ref={scrollRef} horizontal showsHorizontalScrollIndicator={false}>
+      <View style={styles.row}>{children}</View>
+    </ScrollView>
+  );
+}
+
 /**
  * The Inbox list and editor. Without `workspace` it is the global page (every
  * visible item, workspace filter, ⌘K selection requests); with it, the list is
@@ -1223,49 +1247,45 @@ export function InboxView({
               ))}
             </View>
             {!workspace && projects.length > 0 ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={styles.row}>
-                  {projects.map((project) => {
-                    const active = projectKey === project.key;
-                    return (
-                      <Chip
-                        key={project.key}
-                        icon="Folder"
-                        label={`${project.label} · ${project.count}`}
-                        accessibilityLabel={`Filter by project ${project.label}${project.archived ? " (archived)" : ""}`}
-                        active={active}
-                        struck={project.archived}
-                        styles={styles}
-                        theme={theme}
-                        onPress={() => filters.update({ projectKey: active ? null : project.key })}
-                      />
-                    );
-                  })}
-                </View>
-              </ScrollView>
-            ) : null}
-            {!workspace && workspaces.length > 0 ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={styles.row}>
-                  {workspaces.map((entry) => (
+              <ChipStrip styles={styles}>
+                {projects.map((project) => {
+                  const active = projectKey === project.key;
+                  return (
                     <Chip
-                      key={entry.id}
-                      icon="GitBranch"
-                      label={`${entry.label} · ${entry.count}`}
-                      accessibilityLabel={`Filter by workspace ${entry.label}${entry.archived ? " (archived)" : ""}`}
-                      active={scope === entry.id}
-                      struck={entry.archived}
+                      key={project.key}
+                      icon="Folder"
+                      label={`${project.label} · ${project.count}`}
+                      accessibilityLabel={`Filter by project ${project.label}${project.archived ? " (archived)" : ""}`}
+                      active={active}
+                      struck={project.archived}
                       styles={styles}
                       theme={theme}
-                      onPress={() =>
-                        filters.update({
-                          workspaceId: filters.values?.workspaceId === entry.id ? null : entry.id,
-                        })
-                      }
+                      onPress={() => filters.update({ projectKey: active ? null : project.key })}
                     />
-                  ))}
-                </View>
-              </ScrollView>
+                  );
+                })}
+              </ChipStrip>
+            ) : null}
+            {!workspace && workspaces.length > 0 ? (
+              <ChipStrip styles={styles}>
+                {workspaces.map((entry) => (
+                  <Chip
+                    key={entry.id}
+                    icon="GitBranch"
+                    label={`${entry.label} · ${entry.count}`}
+                    accessibilityLabel={`Filter by workspace ${entry.label}${entry.archived ? " (archived)" : ""}`}
+                    active={scope === entry.id}
+                    struck={entry.archived}
+                    styles={styles}
+                    theme={theme}
+                    onPress={() =>
+                      filters.update({
+                        workspaceId: filters.values?.workspaceId === entry.id ? null : entry.id,
+                      })
+                    }
+                  />
+                ))}
+              </ChipStrip>
             ) : null}
           </View>
           <ScrollView style={{ flex: 1 }}>
