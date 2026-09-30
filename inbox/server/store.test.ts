@@ -127,6 +127,7 @@ test("workspace scope: global, one workspace, and hidden workspaces", () => {
     store.starAgent("a1", snapshot, project, "w1");
     assert.deepEqual(store.workspaces([], "agent"), [{ id: "w1", count: 1 }]);
     assert.deepEqual(store.projects(["w2"]), [{ key: project.key, label: "repo", count: 3 }]);
+    assert.deepEqual(store.projects(["w2"], "agent"), [{ key: project.key, label: "repo", count: 1 }]);
   });
 });
 

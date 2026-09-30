@@ -10,7 +10,7 @@ Inbox 的筛选选择写入 host settings，重新打开页面、重载插件或
 2. 记住的字段：
    - `kind`：全局页面分组（All / Agents / Notes / Scratch），默认 `all`。
    - `workspaceId`：全局页面的 workspace chip；`null` 表示未选。只在 `kind` 为 `agent` 时作用在列表上。离开 Agents 后选择仍保留，回到 Agents 时恢复（覆盖 002「切走即清除」）。
-   - `projectKey`：全局页面的 project chip；`null` 表示未选。只作用于全局页面。
+   - `projectKey`：全局页面的 project chip；`null` 表示未选。只作用于全局页面。010 起与 `workspaceId` 相同：只在 `kind` 为 `agent` 时作用在列表上，离开 Agents 后选择仍保留。
    - `panelKind`：Explorer 面板的分组，默认 `all`。面板不使用 `kind` / `workspaceId` / `projectKey`。
    - `sort`：全局页面排序（Updated / Starred / Created / Name），默认 `updated`。点排序按钮即保存。Explorer 面板不显示该按钮，列表仍按修改时间。已保存的 version 1 文档没有此字段，读取时补上 `updated` 并写成 version 2。
 3. 当前选中的 workspace 已不在活动列表里（归档）时，清除 `workspaceId` 并写回。

@@ -31,7 +31,7 @@
 - 侧边栏 surface「Inbox」：分组 All / Agents / Notes / Scratch，project 筛选，搜索（标题 + 正文），置顶，删除。
 - Note / scratch 编辑：标题（可选）+ 纯文本 / Markdown 正文，自动保存；scratch 可「转为 note」。
 - **空笔记不保存**：新建 note 先是本地草稿，标题或正文有非空白内容后才写入；离开编辑器时标题和正文都为空的 note 会被删除；server 拒绝创建空 note，并在启动时清理残留的空 note / scratch。
-- Command Center：`Add agent to Inbox`（agent context）、`Quick note`（workspace / global context）、`Open Inbox`。
+- Command Center：`Add agent to Inbox`（agent context）、`Quick note`（workspace / global context）、`Inbox`（009 起，原 `Open Inbox`）。
 - Slash command：`/inbox [text]`（agent context）。带文本存为 scratch；不带参数把当前 agent 加入 Inbox（幂等）。
   - 同一插件不能注册两个同名 slash command（`Duplicate client slash command`），workspace context 又拿不到当前 agent，所以 `/inbox` 只在已有 agent 的 composer 中可用；草稿 composer 用 Command Center 的 "New Inbox note"。
 - 收藏的 agent：保存快照（agentId、title、provider、model、workspaceId、cwd、projectKey、starredAt），并与实时状态合并（运行中 / 空闲 / 已归档 / 不存在）。

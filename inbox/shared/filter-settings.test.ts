@@ -29,7 +29,7 @@ test("a document saved before sort existed defaults to updated", () => {
   );
 });
 
-test("global workspace chip applies only while viewing agents", () => {
+test("global workspace and project chips apply only while viewing agents", () => {
   const filters: InboxFilters = {
     kind: "note",
     projectKey: "repo",
@@ -39,7 +39,7 @@ test("global workspace chip applies only while viewing agents", () => {
   };
   assert.deepEqual(visibleInboxFilters(filters, {}), {
     kind: "note",
-    projectKey: "repo",
+    projectKey: null,
     workspaceId: null,
   });
   assert.deepEqual(visibleInboxFilters({ ...filters, kind: "agent" }, {}), {

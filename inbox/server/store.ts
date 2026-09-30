@@ -216,15 +216,16 @@ export class InboxStore {
     return sortItems(items, filter.sort ?? "updated");
   }
 
-  projects(hiddenWorkspaceIds?: readonly string[]): ProjectSummary[] {
+  projects(hiddenWorkspaceIds?: readonly string[], kind?: ItemKind): ProjectSummary[] {
     const hidden = hiddenClause(hiddenWorkspaceIds);
     const rows = this.db
       .prepare(
         `SELECT project_key AS key, MAX(project_label) AS label, COUNT(*) AS count
          FROM items WHERE project_key IS NOT NULL ${hidden.sql ? `AND ${hidden.sql}` : ""}
+         ${kind ? "AND kind = ?" : ""}
          GROUP BY project_key ORDER BY MAX(updated_at) DESC`,
       )
-      .all(...hidden.params) as Array<{ key: string; label: string | null; count: number }>;
+      .all(...hidden.params, ...(kind ? [kind] : [])) as Array<{ key: string; label: string | null; count: number }>;
     return rows.map((row) => ({ key: row.key, label: row.label ?? row.key, count: Number(row.count) }));
   }
 

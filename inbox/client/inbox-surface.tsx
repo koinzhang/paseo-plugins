@@ -944,8 +944,16 @@ export function InboxView({
                 placeholder="Search"
                 accessibilityLabel="Search Inbox"
               />
-              {workspace ? null : noteButton}
-              {workspace ? null : (
+              {noteButton}
+              {workspace ? (
+                <Button
+                  styles={styles}
+                  theme={theme}
+                  icon={picking ? "X" : "Star"}
+                  accessibilityLabel={picking ? "Done" : "Add agent"}
+                  onPress={() => setPicking((open) => !open)}
+                />
+              ) : (
                 <Button
                   styles={styles}
                   theme={theme}
@@ -958,18 +966,6 @@ export function InboxView({
                 />
               )}
             </View>
-            {workspace ? (
-              <View style={styles.wrap}>
-                {noteButton}
-                <Button
-                  styles={styles}
-                  theme={theme}
-                  icon={picking ? "X" : "Star"}
-                  label={picking ? "Done" : "Agent"}
-                  onPress={() => setPicking((open) => !open)}
-                />
-              </View>
-            ) : null}
             {workspace && picking ? (
               <AgentPicker
                 workspaceId={workspace.id}
@@ -1017,7 +1013,7 @@ export function InboxView({
                 </View>
               </ScrollView>
             ) : null}
-            {!workspace && projects.length > 0 ? (
+            {!workspace && kind === "agent" && projects.length > 0 ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.row}>
                   {projects.map((project) => {

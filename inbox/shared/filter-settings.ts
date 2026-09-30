@@ -17,6 +17,7 @@ export const inboxFilterSettings = defineSettings({
   version: 2,
   schema: z.object({
     kind: FilterKind.default("all"),
+    /** Selected project chip on the global page. Applied only while `kind` is `agent`. */
     projectKey: z.string().nullable().default(null),
     /** Selected workspace chip on the global page. Applied only while `kind` is `agent`. */
     workspaceId: z.string().nullable().default(null),
@@ -69,9 +70,10 @@ export function visibleInboxFilters(
   if (surface.workspaceId) {
     return { kind: filters.panelKind, projectKey: null, workspaceId: surface.workspaceId };
   }
+  const agents = filters.kind === "agent";
   return {
     kind: filters.kind,
-    projectKey: filters.projectKey,
-    workspaceId: filters.kind === "agent" ? filters.workspaceId : null,
+    projectKey: agents ? filters.projectKey : null,
+    workspaceId: agents ? filters.workspaceId : null,
   };
 }

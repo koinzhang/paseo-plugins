@@ -35,7 +35,7 @@ export function registerHandlers(server: PluginServerContext, { store, resolvePr
     const hidden = active ? store.workspaceIds().filter((id) => !active.has(id)) : [];
     return {
       items: store.list({ ...filter, hiddenWorkspaceIds: hidden }),
-      projects: store.projects(hidden),
+      projects: store.projects(hidden, filter.kind),
       workspaces: store
         .workspaces(hidden, filter.kind)
         .map(({ id, count }) => ({ id, label: active?.get(id) ?? id, count })),

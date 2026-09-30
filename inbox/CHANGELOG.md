@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Each workspace header has an Inbox icon that opens that workspace's Inbox in the Explorer, and hides while the panel is open.
 - A starred agent's detail shows its latest user prompt and agent reply from the host timeline.
 - Inbox sidebar surface with Agents / Notes / Scratch groups, project filter, and search.
 - Star the current agent from the Command Center; starred agents survive archiving and can be unarchived from the Inbox (restoring an archived workspace first).

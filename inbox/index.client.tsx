@@ -1,4 +1,5 @@
 import type { PluginClientContext } from "@getpaseo/plugin/client";
+import { contributeHeaderButtons } from "./client/header-button.ts";
 import { InboxSurface } from "./client/inbox-surface.tsx";
 import { notifyItemsChanged, requestDraft, requestSelection } from "./client/selection.ts";
 import { WorkspaceInboxPanel } from "./client/workspace-panel.tsx";
@@ -21,8 +22,9 @@ export default function contribute(client: PluginClientContext) {
     }),
     client.addCommandCenterItem({
       id: "open",
-      title: "Open Inbox",
+      title: "Inbox",
       icon: "Inbox",
+      keywords: ["open"],
       context: "global",
       onSelect: ({ openSurface }) => openSurface(SURFACE),
     }),
@@ -66,6 +68,7 @@ export default function contribute(client: PluginClientContext) {
         notifyItemsChanged();
       },
     }),
+    contributeHeaderButtons(client),
   ];
   return () => {
     for (const remove of removers) remove();
