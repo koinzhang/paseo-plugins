@@ -17,9 +17,9 @@ export const inboxFilterSettings = defineSettings({
   version: 2,
   schema: z.object({
     kind: FilterKind.default("all"),
-    /** Selected project chip on the global page. Not applied while `kind` is `all`. */
+    /** Selected project chip on the global page. */
     projectKey: z.string().nullable().default(null),
-    /** Selected workspace chip on the global page. Not applied while `kind` is `all`. */
+    /** Selected workspace chip on the global page. */
     workspaceId: z.string().nullable().default(null),
     panelKind: FilterKind.default("all"),
     /** Global page sort. The Explorer panel always lists by last update. */
@@ -70,10 +70,5 @@ export function visibleInboxFilters(
   if (surface.workspaceId) {
     return { kind: filters.panelKind, projectKey: null, workspaceId: surface.workspaceId };
   }
-  const scoped = filters.kind !== "all";
-  return {
-    kind: filters.kind,
-    projectKey: scoped ? filters.projectKey : null,
-    workspaceId: scoped ? filters.workspaceId : null,
-  };
+  return { kind: filters.kind, projectKey: filters.projectKey, workspaceId: filters.workspaceId };
 }

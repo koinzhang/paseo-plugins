@@ -1,7 +1,7 @@
 import type { PluginTheme } from "@getpaseo/plugin";
 import { type PluginSurfaceProps, usePaseo, useRpc } from "@getpaseo/plugin/client";
 import { Icon, ScrollView, TextInput, useToast } from "@getpaseo/plugin/client/react-native";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ComponentProps, Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { PanResponder, Platform, Pressable, Text, View } from "react-native";
 import {
@@ -681,7 +681,7 @@ function TagEditor({
   const optionsQuery = useQuery({
     queryKey: TAG_OPTIONS_KEY,
     queryFn: () => options({}),
-    enabled: open !== null,
+    enabled: editable,
   });
   const mutation = useMutation({
     mutationFn: (next: { projectKey: string | null; workspaceId: string | null }) =>
@@ -710,7 +710,7 @@ function TagEditor({
     const content = (
       <>
         <Icon
-          name={isProject ? "FolderGit2" : "GitBranch"}
+          name={isProject ? "Folder" : "GitBranch"}
           size={12}
           color={active ? theme.colors.accentForeground : theme.colors.foregroundMuted}
         />
@@ -1099,6 +1099,8 @@ export function InboxView({
     queryKey: [...LIST_KEY, filter],
     queryFn: () => list(filter!),
     enabled: filter !== null,
+    // The filter chips render from this result; without the previous data they unmount on every uncached filter.
+    placeholderData: keepPreviousData,
   });
   const items = itemsQuery.data?.items ?? [];
   const projects = itemsQuery.data?.projects ?? [];
@@ -1112,7 +1114,7 @@ export function InboxView({
   // No item of this kind carries the selected tag: its chip is gone, so clear the saved choice.
   useEffect(() => {
     const current = filters.values;
-    if (workspace || !itemsQuery.data || !current || current.kind === "all") return;
+    if (workspace || !itemsQuery.data || itemsQuery.isPlaceholderData || !current) return;
     const staleProject =
       current.projectKey && !itemsQuery.data.projects.some((entry) => entry.key === current.projectKey);
     const staleWorkspace =
@@ -1123,7 +1125,7 @@ export function InboxView({
         ...(staleWorkspace ? { workspaceId: null } : {}),
       });
     }
-  }, [filters.values, itemsQuery.data, workspace]);
+  }, [filters.values, itemsQuery.data, itemsQuery.isPlaceholderData, workspace]);
 
   const agentIds = items.flatMap((item) => (item.agentId ? [item.agentId] : [])).sort();
   const statesQuery = useQuery({
@@ -1144,7 +1146,7 @@ export function InboxView({
   const showDetail = !compact || Boolean(editing);
 
   const createNote = () => {
-    filters.update(workspace ? { panelKind: "all" } : { kind: "all" });
+    filters.update(workspace ? { panelKind: "all" } : { kind: "all", projectKey: null, workspaceId: null });
     setSelection({ id: null, draft: workspace ? { workspaceId: workspace.id } : {}, session: nextSession() });
   };
 
@@ -1220,7 +1222,7 @@ export function InboxView({
                 />
               ))}
             </View>
-            {!workspace && kind !== "all" && projects.length > 0 ? (
+            {!workspace && projects.length > 0 ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.row}>
                   {projects.map((project) => {
@@ -1228,7 +1230,7 @@ export function InboxView({
                     return (
                       <Chip
                         key={project.key}
-                        icon="FolderGit2"
+                        icon="Folder"
                         label={`${project.label} · ${project.count}`}
                         accessibilityLabel={`Filter by project ${project.label}${project.archived ? " (archived)" : ""}`}
                         active={active}
@@ -1242,7 +1244,7 @@ export function InboxView({
                 </View>
               </ScrollView>
             ) : null}
-            {!workspace && kind !== "all" && workspaces.length > 0 ? (
+            {!workspace && workspaces.length > 0 ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.row}>
                   {workspaces.map((entry) => (

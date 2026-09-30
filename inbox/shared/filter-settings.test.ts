@@ -29,7 +29,7 @@ test("a document saved before sort existed defaults to updated", () => {
   );
 });
 
-test("global workspace and project chips apply to every kind except all", () => {
+test("global workspace and project chips apply to every kind", () => {
   const filters: InboxFilters = {
     kind: "all",
     projectKey: "repo",
@@ -37,12 +37,7 @@ test("global workspace and project chips apply to every kind except all", () => 
     panelKind: "agent",
     sort: "name",
   };
-  assert.deepEqual(visibleInboxFilters(filters, {}), {
-    kind: "all",
-    projectKey: null,
-    workspaceId: null,
-  });
-  for (const kind of ["agent", "note", "scratch"] as const) {
+  for (const kind of ["all", "agent", "note", "scratch"] as const) {
     assert.deepEqual(visibleInboxFilters({ ...filters, kind }, {}), {
       kind,
       projectKey: "repo",
