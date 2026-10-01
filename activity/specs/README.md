@@ -111,6 +111,7 @@
 | [082-rank-list-insights-limit](./082-rank-list-insights-limit/) | 已实现，页面验收待完成 | Most used skills / MCP / models 展示全部，可视高度对齐 Insights 行数，超出滚动（隐藏滚动条） |
 | [083-insights-rank-header-alignment](./083-insights-rank-header-alignment/) | 已实现，页面验收待完成 | Global 底部 Insights / Most used 标题区高度统一，修复右栏整体偏下 |
 | [084-press-feedback-and-motion-fixes](./084-press-feedback-and-motion-fixes/) | 已实现，页面验收待完成 | 按压反馈（IconButton / 列表行 / 文本目标）；transform·opacity 动画改原生驱动；两处退出动画去 ease-in |
+| [085-hourly-metric-exit-animation](./085-hourly-metric-exit-animation/) | 已实现，页面验收待完成 | Hourly Activity 切换指标时旧折线向下收回基线，再展开新折线 |
 ## 约定
 
 每个编号目录通常含：

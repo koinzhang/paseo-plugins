@@ -152,6 +152,8 @@ export function HourlyActivityTimeline({
   const [hovered, setHovered] = useState<string | null>(null);
   const [plotTop, setPlotTop] = useState(0);
   const [metric, setMetric] = useState<ActivityMetric>("sessions");
+  // Keep the outgoing metric visible until its plot reaches the baseline.
+  const [displayedMetric, setDisplayedMetric] = useState<ActivityMetric>("sessions");
   const m = messagesFor(locale);
 
   const plotHeight = compact ? 67 : 89;
@@ -198,9 +200,9 @@ export function HourlyActivityTimeline({
   }, [resetKey]);
 
   const { values, peak } = useMemo(() => {
-    const values = hours.map((hour) => metricValue(hour, metric));
+    const values = hours.map((hour) => metricValue(hour, displayedMetric));
     return { values, peak: values.reduce((max, value) => Math.max(max, value), 0) };
-  }, [hours, metric]);
+  }, [hours, displayedMetric]);
 
   /** Local midnights become axis ticks. */
   const dayTicks = useMemo(
@@ -228,21 +230,36 @@ export function HourlyActivityTimeline({
   const ready = hours.length > 0 && slot > 0;
   const grow = useRef(new Animated.Value(0)).current;
   const revealedRef = useRef(false);
+  const previousResetKey = useRef(resetKey);
   useEffect(() => {
-    if (!ready) return;
+    if (!ready) {
+      grow.setValue(0);
+      return;
+    }
+    const providerChanged = previousResetKey.current !== resetKey;
+    previousResetKey.current = resetKey;
+    let cancelled = false;
     const first = !revealedRef.current;
-    grow.setValue(0);
+    const exiting = metric !== displayedMetric;
+    if (providerChanged && !exiting) grow.setValue(0);
     const animation = Animated.timing(grow, {
-      toValue: 1,
-      duration: first ? CHART_MOTION.reveal : CHART_MOTION.refresh,
+      toValue: exiting ? 0 : 1,
+      duration: exiting
+        ? CHART_MOTION.discloseClose
+        : first ? CHART_MOTION.reveal : CHART_MOTION.refresh,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     });
-    animation.start(() => {
+    animation.start(({ finished }) => {
+      if (cancelled || !finished) return;
       revealedRef.current = true;
+      if (exiting) setDisplayedMetric(metric);
     });
-    return () => animation.stop();
-  }, [ready, metric, resetKey, grow]);
+    return () => {
+      cancelled = true;
+      animation.stop();
+    };
+  }, [ready, metric, displayedMetric, resetKey, grow]);
 
   // Stable element identity: hovering must not rebuild ~330 skewed segments.
   const series = useMemo(
