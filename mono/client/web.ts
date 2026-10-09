@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
 import { isChangesRepositoryToolbarEmpty } from "../shared/changes-toolbar";
-import { hiddenVoiceButtonSelectors } from "../shared/composer";
+import { contextMeterIsEmpty, hiddenVoiceButtonSelectors } from "../shared/composer";
 import { fileMark, shortenFilePath } from "../shared/file-attachment";
 import { MONO_THEMES } from "../shared/palette";
 import type { MonoSettings } from "../shared/settings";
@@ -86,7 +86,9 @@ const CELL_ATTRIBUTE = "data-mono-nav-cell";
 const BUTTON_ATTRIBUTE = "data-mono-nav-button";
 const SIDEBAR_HEADER_ATTRIBUTE = "data-mono-sidebar-header";
 const SIDEBAR_FOOTER_ATTRIBUTE = "data-mono-sidebar-footer";
-// First and last children of left-sidebar.tsx's SidebarFooter (styles.sidebarFooter).
+// First and last children of the footer icon row. On Paseo <= 0.10 that row
+// (styles.sidebarFooter) draws the top border. On 0.11 the border moved to
+// [data-testid="sidebar-footer"], and Usage sits above a sidebar-footer-separator.
 const SIDEBAR_FOOTER_ANCHOR_IDS = ["sidebar-add-project", "sidebar-settings"] as const;
 const EXPLORER_DIVIDER_ATTRIBUTE = "data-mono-explorer-divider";
 const EXPLORER_EMPTY_REPOSITORY_ATTRIBUTE = "data-mono-empty-changes-repository";
@@ -159,6 +161,8 @@ const RESIZE_HANDLE_TEST_IDS = [
   "workspace-split-resize-handle",
 ] as const;
 const FILE_PILL_SELECTOR = '[data-testid="composer-file-attachment-pill"], [data-testid="composer-workspace-file-attachment-pill"]';
+const EMPTY_CONTEXT_ATTRIBUTE = "data-mono-empty-context";
+const CONTEXT_METER_SELECTOR = '[data-testid="message-input-root"] [data-testid="context-window-meter"]';
 const FILE_PILL_ATTRIBUTE = "data-mono-file-pill";
 const FILE_ICON_ATTRIBUTE = "data-mono-file-icon";
 const FILE_TITLE_ATTRIBUTE = "data-mono-file-title";
@@ -187,10 +191,10 @@ export function installMonoWeb(): () => void {
 
   const voiceStyle = document.createElement("style");
   voiceStyle.setAttribute("data-mono-owned", "composer-voice");
-  voiceStyle.textContent = voiceCss(getMonoSettings());
+  voiceStyle.textContent = composerCss(getMonoSettings());
   document.head.append(voiceStyle);
   const unsubscribeSettings = subscribeMonoSettings((settings) => {
-    voiceStyle.textContent = voiceCss(settings);
+    voiceStyle.textContent = composerCss(settings);
     schedule();
   });
 
@@ -474,6 +478,29 @@ export function installMonoWeb(): () => void {
     }
   }
 
+  // Hide the meter and every single-child wrapper around it (the hover trigger and
+  // the 28px slot). Stop at the control row, which has the voice and send buttons.
+  function markEmptyContextMeters(desired: DesiredAttributes, enabled: boolean): void {
+    if (!enabled) return;
+    for (const meter of Array.from(document.querySelectorAll(CONTEXT_METER_SELECTOR))) {
+      if (!contextMeterIsEmpty({
+        circleCount: meter.querySelectorAll("circle").length,
+        label: meter.getAttribute("aria-label"),
+      })) {
+        continue;
+      }
+      setDesired(desired, meter, EMPTY_CONTEXT_ATTRIBUTE);
+      let node: DomElement = meter;
+      for (;;) {
+        const parent = node.parentElement;
+        if (!parent || parent.getAttribute("data-testid") === "message-input-root") break;
+        if (parent.childElementCount !== 1) break;
+        setDesired(desired, parent, EMPTY_CONTEXT_ATTRIBUTE);
+        node = parent;
+      }
+    }
+  }
+
   function reconcile(): void {
     scheduled = null;
     if (disposed) return;
@@ -481,6 +508,7 @@ export function installMonoWeb(): () => void {
     const desired: DesiredAttributes = new Map();
     const settings = getMonoSettings();
     syncFilePills(desired, settings.enhancedFileAttachments);
+    markEmptyContextMeters(desired, settings.hideEmptyContextMeter);
     const mode = selectedMonoTheme();
     if (mode) setDesired(desired, document.documentElement, THEME_ATTRIBUTE, mode);
     const finish = () => {
@@ -571,18 +599,23 @@ export function installMonoWeb(): () => void {
   };
 }
 
-function voiceCss(settings: MonoSettings): string {
-  const selectors = hiddenVoiceButtonSelectors(settings);
-  if (selectors.length === 0) return "";
-  return `${selectors
-    .map((selector) => `[data-testid="message-input-root"] ${selector}`)
-    .join(",\n")} {
+function composerCss(settings: MonoSettings): string {
+  const blocks: string[] = [];
+  const voiceSelectors = hiddenVoiceButtonSelectors(settings);
+  if (voiceSelectors.length > 0) {
+    blocks.push(`${voiceSelectors
+      .map((selector) => `[data-testid="message-input-root"] ${selector}`)
+      .join(",\n")} {
   display: none !important;
-}
-`;
+}`);
+  }
+  return blocks.join("\n");
 }
 
 const LAYOUT_CSS = `
+[${EMPTY_CONTEXT_ATTRIBUTE}] {
+  display: none !important;
+}
 [${FILE_PILL_ATTRIBUTE}] > :first-child {
   height: 34px !important;
   max-width: 260px !important;
@@ -629,8 +662,12 @@ html[${CHROME_ATTRIBUTE}] [${SIDEBAR_HEADER_ATTRIBUTE}] {
   border-bottom-color: transparent !important;
 }
 html[${CHROME_ATTRIBUTE}] [${SIDEBAR_FOOTER_ATTRIBUTE}],
+html[${CHROME_ATTRIBUTE}] [data-testid="sidebar-footer"],
 html[${CHROME_ATTRIBUTE}] ${WORKTREE_CALLOUT_SELECTOR} {
   border-top-color: transparent !important;
+}
+html[${CHROME_ATTRIBUTE}] [data-testid="sidebar-footer-separator"] {
+  border-bottom-color: transparent !important;
 }
 html[${CHROME_ATTRIBUTE}] [data-testid="message-input-root"] > *,
 html[${CHROME_ATTRIBUTE}] [${PILL_ATTRIBUTE}] {

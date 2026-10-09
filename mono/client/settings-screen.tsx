@@ -40,6 +40,10 @@ function DisplayControls({ settings }: { settings: ReadySettings }) {
     (value: boolean) => change("enhancedFileAttachments", value),
     [change],
   );
+  const changeHideEmptyContextMeter = useCallback(
+    (value: boolean) => change("hideEmptyContextMeter", value),
+    [change],
+  );
   return (
     <>
       <SettingsSection title="Layout">
@@ -75,6 +79,13 @@ function DisplayControls({ settings }: { settings: ReadySettings }) {
             value={settings.values.enhancedFileAttachments}
             disabled={settings.saving}
             onValueChange={changeEnhancedFileAttachments}
+          />
+          <SettingsSwitch
+            label="Hide empty context meter"
+            hint="Hide the composer context ring when it has no context data. Web and desktop only."
+            value={settings.values.hideEmptyContextMeter}
+            disabled={settings.saving}
+            onValueChange={changeHideEmptyContextMeter}
           />
         </SettingsCard>
       </SettingsSection>

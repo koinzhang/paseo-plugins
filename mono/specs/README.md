@@ -20,5 +20,7 @@
 | 016 | [`016-composer-attachment-sizing`](./016-composer-attachment-sizing/) | Composer 附件字号跟随输入文字，类型标记同步缩放 | 已实现，人工验收待完成 |
 
 | 017 | [`017-model-switch-host-ownership`](./017-model-switch-host-ownership/) | Provider 模型开关按当前主机隔离，修复多实例覆盖与回调错配 | 已实现并验证 |
+| 018 | [`018-sidebar-usage-dividers`](./018-sidebar-usage-dividers/) | 隐藏左侧栏 footer 上 Usage 摘要上下分隔线 | 已实现，人工验收待完成 |
+| 019 | [`019-hide-empty-context-meter`](./019-hide-empty-context-meter/) | 无 context 数据时隐藏 composer 右下角 context 圆环 | 已实现，人工验收待完成 |
 
 规则同仓库根 `AGENTS.md`：先改 spec / plan 再改代码；每完成一个 task 在 `tasks.md` 勾选并写验证方式；新功能点新开编号目录。

@@ -19,6 +19,7 @@ test("every tweak is enabled by default", () => {
     hideDictation: true,
     hideVoiceMode: true,
     enhancedFileAttachments: true,
+    hideEmptyContextMeter: true,
   });
 });
 
@@ -30,6 +31,7 @@ test("each setting is stored independently", () => {
     hideDictation: false,
     hideVoiceMode: true,
     enhancedFileAttachments: false,
+    hideEmptyContextMeter: true,
   });
 });
 

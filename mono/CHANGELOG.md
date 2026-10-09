@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Hide the lines above and below the left sidebar footer Usage summary when Hide dividers and borders is on. The footer top line stays hidden on Paseo 0.11, which draws it on the footer container instead of the icon row.
+
+### Added
+
+- Hide the composer context ring while it shows no context data. **Composer → Hide empty context meter** is on by default; turning it off restores the ring. A ring with token data stays visible.
 - Composer file attachment names and hover paths follow the composer input font size instead of a fixed 14px, and the file-type mark scales down from 18px to that size with its glyph at half. Original inline values are restored when the toggle is off, a pill is removed, or the plugin unloads.
 
 ## [0.2.1] - 2026-09-28

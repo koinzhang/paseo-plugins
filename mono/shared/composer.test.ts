@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   DICTATION_BUTTON_SELECTOR,
   VOICE_MODE_BUTTON_SELECTOR,
+  contextMeterIsEmpty,
   hiddenVoiceButtonSelectors,
 } from "./composer.ts";
 
@@ -26,4 +27,12 @@ test("hidden selectors follow each setting independently", () => {
     DICTATION_BUTTON_SELECTOR,
   ]);
   assert.deepEqual(hiddenVoiceButtonSelectors({ hideDictation: false, hideVoiceMode: false }), []);
+});
+
+test("a track-only context ring is empty, and a progress circle is not", () => {
+  assert.equal(contextMeterIsEmpty({ circleCount: 1, label: null }), true);
+  assert.equal(contextMeterIsEmpty({ circleCount: 2, label: "Context window 12% used" }), false);
+  assert.equal(contextMeterIsEmpty({ circleCount: 0, label: "Context window: No context data" }), true);
+  assert.equal(contextMeterIsEmpty({ circleCount: 0, label: "Context window 12% used" }), false);
+  assert.equal(contextMeterIsEmpty({ circleCount: 0, label: null }), false);
 });
