@@ -19,7 +19,7 @@ On desktop and web (any theme), each model in **Settings → Providers → _prov
 ## Install
 
 ```bash
-paseo plugin add npm:@koinzhang/paseo-plugin-mono@0.2.1
+paseo plugin add npm:@koinzhang/paseo-plugin-mono@0.3.0
 ```
 
 Then pick **Mono Dark** or **Mono Light** in Settings → Appearance.
