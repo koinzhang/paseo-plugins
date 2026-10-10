@@ -89,6 +89,10 @@ const TRACK_HEIGHT_PX = 20;
 const THUMB_PX = 16;
 const THUMB_INSET_PX = (TRACK_HEIGHT_PX - THUMB_PX) / 2;
 const THUMB_TRAVEL_PX = TRACK_WIDTH_PX - THUMB_PX - THUMB_INSET_PX * 2;
+// provider-diagnostic-sheet.tsx modelRow: spacing[4] padding, spacing[3] gap.
+const MODEL_ROW_INSET_PX = 16;
+const MODEL_ROW_GAP_PX = 12;
+const MODEL_ROW_SELECTOR = `${DIALOG_SELECTOR} :has(> [${TOGGLE_ATTRIBUTE}])`;
 const TRANSITION = "180ms ease-in-out";
 
 type SwitchColor = "trackOn" | "thumbOn" | "trackOff" | "thumbOff";
@@ -365,14 +369,30 @@ const TOGGLE_CSS = `
   content: attr(${COUNT_SHOWN_ATTRIBUTE});
   font-size: var(${COUNT_FONT_PROPERTY});
 }
+${MODEL_ROW_SELECTOR} {
+  position: relative !important;
+  padding-right: ${MODEL_ROW_INSET_PX + TRACK_WIDTH_PX + MODEL_ROW_GAP_PX}px !important;
+}
+${MODEL_ROW_SELECTOR} > :is(${TEXT_SELECTOR}, ${MODEL_ID_SELECTOR}) {
+  min-width: 0 !important;
+  flex-shrink: 1 !important;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+${MODEL_ROW_SELECTOR} > [role="button"] {
+  flex-shrink: 0 !important;
+}
 [${TOGGLE_ATTRIBUTE}] {
   all: unset;
   box-sizing: border-box;
   display: block;
-  position: relative;
+  position: absolute;
+  right: ${MODEL_ROW_INSET_PX}px;
+  top: 50%;
+  transform: translateY(-50%);
   flex: 0 0 auto;
   align-self: center;
-  margin-left: auto;
   width: ${TRACK_WIDTH_PX}px;
   height: ${TRACK_HEIGHT_PX}px;
   border-radius: ${TRACK_HEIGHT_PX / 2}px;
