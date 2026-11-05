@@ -5,7 +5,7 @@ All notable changes to `@koinzhang/paseo-plugin-inbox` are documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.0] - 2026-11-05
 
 Requires Paseo **>= 0.15.0**.
 
@@ -32,5 +32,6 @@ Requires Paseo **>= 0.9.0**.
 - Empty notes are never kept: a new note is saved only once it has a title or text, and a note left empty is removed.
 - Items grouped by project: git remote URL, falling back to the repository root path.
 
-[Unreleased]: https://github.com/koinzhang/paseo-plugins/compare/inbox-v0.1.0...HEAD
+[Unreleased]: https://github.com/koinzhang/paseo-plugins/compare/inbox-v0.2.0...HEAD
+[0.2.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/inbox-v0.2.0
 [0.1.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/inbox-v0.1.0
