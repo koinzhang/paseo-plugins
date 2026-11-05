@@ -5,7 +5,7 @@ Paseo 插件仓库。当前包含插件 **Activity**（`activity/`）：本地�
 > 插件 ID / 目录名 / 数据目录：**`activity`**（原 `tool-usage`，见 `activity/specs/007-rename-activity/` Phase 2）。
 > 架构总览：[`activity/docs/architecture.md`](./activity/docs/architecture.md) · 产品 README：[`activity/README.md`](./activity/README.md)
 
-其他插件：**Mono**（`mono/`，主题 + 布局微调）；**Customize**（`customize/`，按 provider / project 展示 instructions / rules / skills / MCP / commands / subagents / plugins 及自动发现状态；spec 在 `customize/specs/`，各家机制依据见 `customize/specs/001-customize-board/research.md`；UI 复用 Activity design tokens）；**Commands**（`commands/`，npm `@koinzhang/paseo-plugin-commands`，需 Paseo >= 0.9.0，`/model` `/effort` `/profile` `/mode` `/feature` `/rename` `/cancel` 控制当前 agent（`/rename` 默认改当前 tab，`-w` 改 workspace），`/resend` 重发最近一条用户 prompt；设置写操作经 server 端 `DaemonClient`，重发直接使用公开插件 SDK；各命令可在 Settings → Plugins → commands 单独启停，见 `commands/specs/`）。**Inbox**（`inbox/`，收藏 agent（归档后保留、可反归档并先恢复 workspace）、notes、`/inbox` 临时记录；只有一份全局数据，条目带 project（按 git remote / 仓库根）与 workspace 标签，note / scratch 可在全局页面编辑标签（workspace 必须属于该 project）；Explorer 的 workspace Inbox 面板按标签过滤全局数据，归档的 project / workspace 标签加删除线；SQLite 存于各 host 的 `~/.paseo/plugin-data/inbox/`；反归档用内部 `DaemonClient`，见 `inbox/specs/`）。命令同上，在对应目录执行、把 `activity` 换成插件 ID。
+其他插件：**Mono**（`mono/`，主题 + 布局微调）；**Customize**（`customize/`，按 provider / project 展示 instructions / rules / skills / MCP / commands / subagents / plugins 及自动发现状态；spec 在 `customize/specs/`，各家机制依据见 `customize/specs/001-customize-board/research.md`；UI 复用 Activity design tokens）；**Commands**（`commands/`，npm `@koinzhang/paseo-plugin-commands`，需 Paseo >= 0.15.0，`/model` `/effort` `/profile` `/mode` `/feature` `/rename` `/cancel` 控制当前 agent（`/rename` 默认改当前 tab，`-w` 改 workspace），`/resend` 重发最近一条用户 prompt；设置写操作经 server 端 `DaemonClient`，重发直接使用公开插件 SDK；各命令可在 Settings → Plugins → commands 单独启停，见 `commands/specs/`）。**Inbox**（`inbox/`，收藏 agent（归档后保留、可反归档并先恢复 workspace）、notes、`/inbox` 临时记录；只有一份全局数据，条目带 project（按 git remote / 仓库根）与 workspace 标签，note / scratch 可在全局页面编辑标签（workspace 必须属于该 project）；Explorer 的 workspace Inbox 面板按标签过滤全局数据，归档的 project / workspace 标签加删除线；SQLite 存于各 host 的 `~/.paseo/plugin-data/inbox/`；反归档用内部 `DaemonClient`，见 `inbox/specs/`）。命令同上，在对应目录执行、把 `activity` 换成插件 ID。
 
 ## Paseo 源码（查阅用）
 
@@ -117,6 +117,7 @@ jj undo / jj op log / jj op restore         # 恢复
 
 ## 约束
 
+- **插件 SDK 版本**：五个插件的 `@getpaseo/plugin` 与 `requirements.paseo` 跟随已安装运行时（当前 0.15.x）；升级前先读 `public-docs/plugins/migration.md` 与 `hooks.md`，deprecated API（`addSurface` / `addSidebarItem` / `openSurface` / `server.on` / `server.before` / `client/react-native` / 面板 `context` 与 `agentId`）不再使用
 - **产品名（用户可见）**：Activity
 - **插件 ID**：`activity`（与 checkout 目录名一致）
 - **架构**：三层 Global / Workspace / Agent — 见 [`activity/docs/architecture.md`](./activity/docs/architecture.md)

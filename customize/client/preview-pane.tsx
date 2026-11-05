@@ -1,5 +1,5 @@
 import { openExternalUrl, useRpc } from "@getpaseo/plugin/client";
-import { ScrollView, copyText, useToast } from "@getpaseo/plugin/client/react-native";
+import { ScrollView, copyText, useToast } from "@getpaseo/plugin/client/ui";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { Text, View } from "react-native";

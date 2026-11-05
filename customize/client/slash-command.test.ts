@@ -9,7 +9,7 @@ function commandContext(provider: string, projectRootPath: string, rpc: (name: s
     agent: { provider },
     workspace: { projectRootPath },
     rpc: (contract: { name: string }, input: unknown) => rpc(contract.name, input),
-    openSurface: (id: string) => opened.push(id),
+    openScreen: (input: { screenId: string }) => opened.push(input.screenId),
   } as unknown as PluginAgentCommandContext;
   return { context, opened };
 }

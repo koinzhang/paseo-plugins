@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Requires Paseo **>= 0.15.0**.
+
+### Changed
+
+- Align with Paseo 0.15: the Inbox page is a screen with a sidebar header row (replacing the deprecated `addSurface` / `addSidebarItem`), the Command Center items open it through `openScreen`, the daemon connection uses `@getpaseo/client@0.15.1`, and UI components import from `@getpaseo/plugin/client/ui`.
+
 ## [0.1.0] - 2026-09-30
 
 Requires Paseo **>= 0.9.0**.

@@ -5,6 +5,14 @@ All notable changes to `@koinzhang/paseo-plugin-mono` are documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Requires Paseo **>= 0.15.0**.
+
+### Changed
+
+- Align with Paseo 0.15 (`@getpaseo/plugin@0.15.1`); UI components import from `@getpaseo/plugin/client/ui`.
+
 ## [0.3.1] - 2026-10-10
 
 Requires Paseo **>= 0.9.0**.

@@ -1,5 +1,5 @@
 import type { PluginTheme } from "@getpaseo/plugin";
-import { Icon } from "@getpaseo/plugin/client/react-native";
+import { Icon } from "@getpaseo/plugin/client/ui";
 import { useEffect, useRef } from "react";
 import { Animated, Easing, Text, View } from "react-native";
 import type { AgentLive, AgentState } from "../shared/contracts.ts";

@@ -112,6 +112,7 @@
 | [083-insights-rank-header-alignment](./083-insights-rank-header-alignment/) | 已实现，页面验收待完成 | Global 底部 Insights / Most used 标题区高度统一，修复右栏整体偏下 |
 | [084-press-feedback-and-motion-fixes](./084-press-feedback-and-motion-fixes/) | 已实现，页面验收待完成 | 按压反馈（IconButton / 列表行 / 文本目标）；transform·opacity 动画改原生驱动；两处退出动画去 ease-in |
 | [085-hourly-metric-exit-animation](./085-hourly-metric-exit-animation/) | 已实现，页面验收待完成 | Hourly Activity 切换指标时旧折线向下收回基线，再展开新折线 |
+| [086-paseo-0.15-adaptation](./086-paseo-0.15-adaptation/) | 已实现，实机验收待完成 | 五个插件对齐 SDK 0.15.1 / Paseo >=0.15.0；screens、sidebar items、addAgentPanel、addHook；turn.after 用 timeline.refetch 采集 |
 ## 约定
 
 每个编号目录通常含：

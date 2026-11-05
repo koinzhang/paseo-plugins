@@ -1,4 +1,4 @@
-import { Icon } from "@getpaseo/plugin/client/react-native";
+import { Icon } from "@getpaseo/plugin/client/ui";
 import { useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,

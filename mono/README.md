@@ -2,7 +2,7 @@
 
 Neutral gray themes for Paseo: **Mono Dark** and **Mono Light**. Backgrounds, surfaces, borders, and text use distinct gray levels; accent, selection, and focus use the foreground color. Paseo retains semantic status colors for success, warning, and danger.
 
-Requires Paseo >= 0.9.0.
+Requires Paseo >= 0.15.0.
 
 The layout tweaks below are independent of the theme: they work with any theme, and you can use the Mono themes without them.
 
@@ -24,7 +24,7 @@ paseo plugin add npm:@koinzhang/paseo-plugin-mono@0.3.0
 
 Then pick **Mono Dark** or **Mono Light** in Settings → Appearance.
 
-To install from GitHub, use `paseo plugin add koinzhang/paseo-plugins --path mono`.
+To install from GitHub, use `paseo plugin add github:koinzhang/paseo-plugins:mono`.
 
 ## Development
 

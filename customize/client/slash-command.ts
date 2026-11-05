@@ -2,11 +2,12 @@ import { settingsRpc } from "@getpaseo/plugin";
 import type { PluginAgentCommandContext } from "@getpaseo/plugin/client";
 import { isProviderId } from "../shared/providers.ts";
 import { selectionSettings } from "../shared/selection-settings.ts";
+import { CUSTOMIZE_SCREEN_ID } from "./screen-id.ts";
 
 const { read, write } = settingsRpc(selectionSettings.id);
 
 /** Navigate even if the current agent cannot supply a usable board selection. */
-export async function openCustomizeFromAgent({ agent, workspace, rpc, openSurface }: PluginAgentCommandContext): Promise<void> {
+export async function openCustomizeFromAgent({ agent, workspace, rpc, openScreen }: PluginAgentCommandContext): Promise<void> {
   const provider = isProviderId(agent.provider) ? agent.provider : null;
   const projectRoot = workspace.projectRootPath?.trim() ? workspace.projectRootPath : null;
   try {
@@ -31,6 +32,6 @@ export async function openCustomizeFromAgent({ agent, workspace, rpc, openSurfac
     }
     throw new Error("Customize selection changed concurrently; try again");
   } finally {
-    openSurface("customize");
+    openScreen({ screenId: CUSTOMIZE_SCREEN_ID });
   }
 }

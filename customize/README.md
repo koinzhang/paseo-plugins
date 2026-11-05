@@ -2,7 +2,7 @@
 
 One board that scans local agent configuration for a project: **instructions** (AGENTS.md, CLAUDE.md …), **rules**, **skills**, **MCP servers**, **commands**, **subagents**, and **plugins** at project and user level.
 
-Requires Paseo >= 0.9.0.
+Requires Paseo >= 0.15.0.
 
 ## What you get
 
@@ -46,7 +46,7 @@ Per-provider mechanisms and their sources are recorded in [`specs/001-customize-
 ## Install
 
 ```bash
-paseo plugin add koinzhang/paseo-plugins --path customize
+paseo plugin add github:koinzhang/paseo-plugins:customize
 ```
 
 ## Development

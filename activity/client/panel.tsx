@@ -1,5 +1,5 @@
 import { type PluginAgentPanelProps, useAgent, useRpc } from "@getpaseo/plugin/client";
-import { Icon } from "@getpaseo/plugin/client/react-native";
+import { Icon } from "@getpaseo/plugin/client/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useRegisterOpenAgent } from "./open-agent.ts";
@@ -49,7 +49,8 @@ type SkillDetail = {
 };
 
 
-export function UsagePanel({ theme, layout, agentId, navigation }: PluginAgentPanelProps) {
+export function UsagePanel({ theme, layout, params, navigation }: PluginAgentPanelProps) {
+  const { agentId } = params;
   const locale = useAppLanguage();
   const m = useMessages();
   const [tab, setTab] = useState<TabId | null>(null);

@@ -1,17 +1,21 @@
 import type { PluginClientContext } from "@getpaseo/plugin/client";
 import { contributeHeaderButtons } from "./client/header-button.ts";
 import { InboxSurface } from "./client/inbox-surface.tsx";
+import { INBOX_SCREEN_ID } from "./client/screen-id.ts";
+import { InboxSidebarItem } from "./client/sidebar-item.tsx";
 import { notifyItemsChanged, requestDraft, requestSelection } from "./client/selection.ts";
 import { WorkspaceInboxPanel } from "./client/workspace-panel.tsx";
 import { saveNote, starAgent } from "./shared/contracts.ts";
 import { parseInboxCommand } from "./shared/slash-command.ts";
 
-const SURFACE = "inbox";
-
 export default function contribute(client: PluginClientContext) {
   const removers = [
-    client.addSurface(SURFACE, InboxSurface),
-    client.addSidebarItem({ id: SURFACE, title: "Inbox", icon: "Inbox", surface: SURFACE }),
+    client.addScreen({ id: INBOX_SCREEN_ID, title: "Inbox", Component: InboxSurface }),
+    client.addSidebarHeaderItem({
+      id: INBOX_SCREEN_ID,
+      title: "Inbox",
+      Component: InboxSidebarItem,
+    }),
     client.addWorkspacePanel({
       id: "workspace-inbox",
       title: "Inbox",
@@ -26,7 +30,7 @@ export default function contribute(client: PluginClientContext) {
       icon: "Inbox",
       keywords: ["open"],
       context: "global",
-      onSelect: ({ openSurface }) => openSurface(SURFACE),
+      onSelect: ({ openScreen }) => openScreen({ screenId: INBOX_SCREEN_ID }),
     }),
     client.addCommandCenterItem({
       id: "star-agent",
@@ -34,10 +38,10 @@ export default function contribute(client: PluginClientContext) {
       icon: "Star",
       keywords: ["star", "favorite", "bookmark", "inbox"],
       context: "agent",
-      async onSelect({ agent, rpc, openSurface }) {
+      async onSelect({ agent, rpc, openScreen }) {
         const { item } = await rpc(starAgent, { agentId: agent.id });
         requestSelection(item.id);
-        openSurface(SURFACE);
+        openScreen({ screenId: INBOX_SCREEN_ID });
       },
     }),
     client.addCommandCenterItem({
@@ -46,9 +50,9 @@ export default function contribute(client: PluginClientContext) {
       icon: "NotebookPen",
       keywords: ["note", "inbox", "capture"],
       context: "workspace",
-      onSelect({ workspace, openSurface }) {
+      onSelect({ workspace, openScreen }) {
         requestDraft({ projectOfWorkspace: workspace.id });
-        openSurface(SURFACE);
+        openScreen({ screenId: INBOX_SCREEN_ID });
       },
     }),
     client.addSlashCommand({

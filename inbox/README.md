@@ -13,7 +13,7 @@ A personal inbox for Paseo: star agents, keep notes per project, and capture scr
 - **Projects**: items are grouped by the git remote URL (`origin`, else the first remote), falling back to the repository root, then the directory. Worktrees of one repository share a project.
 - **Hosts**: data lives on each daemon in `~/.paseo/plugin-data/inbox/inbox.db`. With several hosts connected, the Inbox host picker switches between them.
 
-Requires Paseo >= 0.9.0 and a daemon Node runtime with `node:sqlite`.
+Requires Paseo >= 0.15.0 and a daemon Node runtime with `node:sqlite`.
 
 ## Install
 
@@ -21,7 +21,7 @@ Requires Paseo >= 0.9.0 and a daemon Node runtime with `node:sqlite`.
 paseo plugin add npm:@koinzhang/paseo-plugin-inbox
 ```
 
-To install from GitHub, use `paseo plugin add koinzhang/paseo-plugins --path inbox`.
+To install from GitHub, use `paseo plugin add github:koinzhang/paseo-plugins:inbox`.
 
 ## Development
 

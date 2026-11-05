@@ -6,7 +6,7 @@ export interface DraftTags {
   projectOfWorkspace?: string;
 }
 
-/** What the Inbox surface should open next; set by commands before `openSurface`. */
+/** What the Inbox screen should open next; set by commands before `openScreen`. */
 export type SelectionRequest = { itemId: string } | { draft: DraftTags };
 
 let pending: SelectionRequest | null = null;

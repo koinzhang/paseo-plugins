@@ -7,7 +7,7 @@ import {
   type PluginButtonRegistration,
   type PluginClientContext,
 } from "@getpaseo/plugin/client";
-import { Icon } from "@getpaseo/plugin/client/react-native";
+import { Icon } from "@getpaseo/plugin/client/ui";
 import { useEffect, useRef } from "react";
 import { formatUsagePillLabel, usageSkillsByNameRpc, usageMcpByToolRpc } from "../shared/usage.ts";
 import { useUsagePillData, clearPillDataCache } from "./usage-query.tsx";

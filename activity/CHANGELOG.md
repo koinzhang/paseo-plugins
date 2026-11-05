@@ -5,6 +5,18 @@ All notable changes to `@koinzhang/paseo-plugin-activity` are documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Requires Paseo **>= 0.15.0**.
+
+### Changed
+
+- Align the plugin SDK with Paseo 0.15 (`@getpaseo/plugin@0.15.1`): the global page is a screen with a sidebar header row (replacing the deprecated `addSurface` / `addSidebarItem`), the agent panel registers through `addAgentPanel` and reads `params.agentId`, UI components import from `@getpaseo/plugin/client/ui`, and lifecycle hooks use `server.addHook` (`agent.create.after`, `agent.archive.after`, `agent.turn.after`).
+
+### Fixed
+
+- Tool calls are recorded as soon as a turn ends again. Paseo 0.13+ sends an empty `timeline` in the turn-ended hook, so the plugin reads the recent history back with `timeline.refetch`; the background scan still owns full history.
+
 ## [0.7.0] - 2026-09-27
 
 ### Added

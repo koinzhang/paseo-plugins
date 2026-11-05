@@ -23,7 +23,7 @@
     "test:browser": "node tests/model-visibility-browser.mjs"
   },
   "devDependencies": {
-    "@getpaseo/plugin": "0.9.1",
+    "@getpaseo/plugin": "0.15.1",
     "@types/node": "^24.13.5",
     "@types/react": "~19.2.0",
     "react": "19.1.0",

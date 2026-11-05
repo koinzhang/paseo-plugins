@@ -42,9 +42,9 @@ from slash autocomplete, so the provider's own command of the same name (if any)
 paseo plugin add npm:@koinzhang/paseo-plugin-commands
 ```
 
-To install from GitHub, use `paseo plugin add koinzhang/paseo-plugins --path commands`.
+To install from GitHub, use `paseo plugin add github:koinzhang/paseo-plugins:commands`.
 
-Requires Paseo >= 0.9.0. The plugin SDK cannot change agent settings yet, so the daemon side of
+Requires Paseo >= 0.15.0. The plugin SDK cannot change agent settings yet, so the daemon side of
 the plugin connects to its local daemon (`PASEO_LISTEN` or `$PASEO_HOME/paseo.pid`) and sends the
 same requests the app uses. If the daemon requires a password, set `PASEO_PASSWORD` for it.
 

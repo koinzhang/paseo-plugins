@@ -4,11 +4,12 @@ import { UsagePanel } from "./client/panel.tsx";
 import { contributeAttentionPills } from "./client/attention-pill.tsx";
 import { contributeHeaderButtons } from "./client/header-button.ts";
 import { contributePills } from "./client/pill.tsx";
+import { ACTIVITY_SCREEN_ID, ActivitySidebarItem } from "./client/sidebar-item.tsx";
 import { WorkspaceActivityPanel } from "./client/workspace-panel.tsx";
 import { currentAppLanguage, watchAppLanguage } from "./client/use-app-language.ts";
 import { messagesFor } from "./shared/i18n.ts";
 
-const GLOBAL_SURFACE_ID = "activity";
+const GLOBAL_SCREEN_ID = ACTIVITY_SCREEN_ID;
 
 /** Command titles follow the app language; the host has no update(), so re-register on change. */
 function addScopedCommands(client: PluginClientContext): () => void {
@@ -40,19 +41,21 @@ function addScopedCommands(client: PluginClientContext): () => void {
 }
 
 export default function contribute(client: PluginClientContext) {
-  client.addSurface(GLOBAL_SURFACE_ID, GlobalUsageSurface);
-  client.addSidebarItem({
-    id: "activity",
+  client.addScreen({
+    id: GLOBAL_SCREEN_ID,
     title: "Activity",
-    icon: "Activity",
-    surface: GLOBAL_SURFACE_ID,
+    Component: GlobalUsageSurface,
+  });
+  client.addSidebarHeaderItem({
+    id: GLOBAL_SCREEN_ID,
+    title: "Activity",
+    Component: ActivitySidebarItem,
   });
 
-  client.addWorkspacePanel({
+  client.addAgentPanel({
     id: "usage",
     title: "Activity",
     icon: "Activity",
-    context: "agent",
     Component: UsagePanel,
   });
 
@@ -60,7 +63,6 @@ export default function contribute(client: PluginClientContext) {
     id: "workspace-activity",
     title: "Activity",
     icon: "Activity",
-    context: "workspace",
     locations: ["explorer"],
     Component: WorkspaceActivityPanel,
   });
@@ -71,8 +73,8 @@ export default function contribute(client: PluginClientContext) {
     icon: "Activity",
     keywords: ["activity", "tool", "usage", "provider", "all", "global", "sidebar"],
     context: "global",
-    onSelect({ openSurface }) {
-      openSurface(GLOBAL_SURFACE_ID);
+    onSelect({ openScreen }) {
+      openScreen({ screenId: GLOBAL_SCREEN_ID });
     },
   });
 

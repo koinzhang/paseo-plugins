@@ -3,7 +3,7 @@ import {
   type PluginButtonRegistration,
   type PluginClientContext,
 } from "@getpaseo/plugin/client";
-import { Icon } from "@getpaseo/plugin/client/react-native";
+import { Icon } from "@getpaseo/plugin/client/ui";
 import { useMemo } from "react";
 import {
   attentionPillIconName,

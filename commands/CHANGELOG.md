@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Requires Paseo **>= 0.15.0**.
+
+### Changed
+
+- Align with Paseo 0.15: `@getpaseo/client@0.15.1` for the daemon control connection, and UI components import from `@getpaseo/plugin/client/ui`.
+
 ## [0.1.0] - 2026-09-28
 
 Requires Paseo **>= 0.9.0**.

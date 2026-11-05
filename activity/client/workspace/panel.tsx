@@ -4,7 +4,7 @@ import {
   useRpc,
   useSettings,
 } from "@getpaseo/plugin/client";
-import { useToast } from "@getpaseo/plugin/client/react-native";
+import { useToast } from "@getpaseo/plugin/client/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRegisterOpenAgent } from "../open-agent.ts";

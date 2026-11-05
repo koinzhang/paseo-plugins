@@ -2,6 +2,6 @@
   "id": "mono",
   "description": "Neutral gray light and dark themes, plus optional layout tweaks",
   "requirements": {
-    "paseo": ">=0.9.0"
+    "paseo": ">=0.15.0"
   }
 }

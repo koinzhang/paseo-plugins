@@ -20,10 +20,9 @@ import {
   createUnarchiveAgentHandler,
 } from "./server/handlers.ts";
 import { agentRowFromHook } from "./server/agents.ts";
-import { ingestTimeline, ingestUserMessages } from "./server/ingest.ts";
-import { resolveAgentModel } from "./server/resolve-model.ts";
 import { createRpcCache } from "./server/rpc-cache.ts";
 import { createUsageStore } from "./server/store.ts";
+import { ingestTurnAfter } from "./server/turn-ingest.ts";
 import {
   usageActivityByHourRpc,
   usageActivityByDayRpc,
@@ -97,17 +96,17 @@ export default function contribute(server: PluginServerContext) {
   server.handle(usageHostInfoRpc, () => ({ homeDir: homedir() }));
   server.handle(usageReadSkillRpc, createReadSkillHandler());
 
-  const removeCreated = server.on("agent.created", (event, context) => {
+  const removeCreated = server.addHook("agent.create.after", async (event, context) => {
     void background.request(context.paseo);
     try {
       store.upsertAgents([agentRowFromHook(event.agent)]);
       console.log(`[activity] agent.created id=${event.agent.id}`);
     } catch (error) {
-      console.error("[activity] failed to ingest agent.created", error);
+      console.error("[activity] failed to ingest agent.create.after", error);
     }
   });
 
-  const removeArchived = server.on("agent.archived", (event, context) => {
+  const removeArchived = server.addHook("agent.archive.after", async (event, context) => {
     void background.request(context.paseo);
     try {
       store.upsertAgents([
@@ -118,43 +117,24 @@ export default function contribute(server: PluginServerContext) {
       ]);
       console.log(`[activity] agent.archived id=${event.agent.id}`);
     } catch (error) {
-      console.error("[activity] failed to ingest agent.archived", error);
+      console.error("[activity] failed to ingest agent.archive.after", error);
     }
   });
 
-  const removeTurnEnded = server.on("agent.turn_ended", (event, context) => {
+  const removeTurnEnded = server.addHook("agent.turn.after", async (event, context) => {
     void background.request(context.paseo);
     void (async () => {
       try {
-        const existing = store.getAgent(event.agent.id);
-        store.upsertAgents([
-          agentRowFromHook(event.agent, {
-            createdAt: existing?.createdAt,
-            archivedAt: existing?.archivedAt,
-          }),
-        ]);
-        const model = await resolveAgentModel(context.paseo, event.agent.id);
-        store.upsertUserMessages(
-          ingestUserMessages(event.timeline, event.agent, { model }),
-        );
-        store.pruneReplayDuplicateMessages(event.agent.id);
-        // event.timeline is the whole history; calls already stored in a terminal
-        // status cannot change from a live snapshot, so only the rest are upserted.
-        const settled = store.terminalCallIds(event.agent.id);
-        const pending = event.timeline.filter(
-          (item) => item.type !== "tool_call" || !settled.has(item.callId),
-        );
-        const rows = ingestTimeline(pending, event.agent, null, {
+        const rows = await ingestTurnAfter(store, context.paseo, event.agent, {
           homeDir: homedir(),
         });
-        if (rows.length > 0) {
-          store.upsertMany(rows);
+        if (rows > 0) {
           console.log(
-            `[activity] turn_ended agent=${event.agent.id} rows=${rows.length} total=${store.count()}`,
+            `[activity] turn.after agent=${event.agent.id} rows=${rows} total=${store.count()}`,
           );
         }
       } catch (error) {
-        console.error("[activity] failed to ingest agent.turn_ended", error);
+        console.error("[activity] failed to ingest agent.turn.after", error);
       }
     })();
   });

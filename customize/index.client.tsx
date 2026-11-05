@@ -1,12 +1,12 @@
 import type { PluginClientContext } from "@getpaseo/plugin/client";
 import { Platform } from "react-native";
+import { CustomizeSidebarItem } from "./client/sidebar-item.tsx";
+import { CUSTOMIZE_SCREEN_ID } from "./client/screen-id.ts";
 import { CustomizeSurface } from "./client/surface.tsx";
 import { openCustomizeFromAgent } from "./client/slash-command.ts";
 import { currentAppLanguage, watchAppLanguage } from "./client/use-app-language.ts";
 import { trackWorkspaceRoute } from "./client/web.ts";
 import { messagesFor } from "./shared/i18n.ts";
-
-const SURFACE_ID = "customize";
 
 /** Command titles follow the app language; the host has no update(), so re-register on change. */
 function addCommands(client: PluginClientContext): () => void {
@@ -17,8 +17,8 @@ function addCommands(client: PluginClientContext): () => void {
     icon: "FolderCog",
     keywords: ["customize", "agents.md", "claude.md", "rules", "skills", "mcp", "instructions", "provider"],
     context: "global",
-    onSelect({ openSurface }) {
-      openSurface(SURFACE_ID);
+    onSelect({ openScreen }) {
+      openScreen({ screenId: CUSTOMIZE_SCREEN_ID });
     },
   });
   const removeSlashCommand = client.addSlashCommand({
@@ -36,12 +36,15 @@ function addCommands(client: PluginClientContext): () => void {
 
 export default function contribute(client: PluginClientContext) {
   const stopRouteTracking = Platform.OS === "web" ? trackWorkspaceRoute() : () => {};
-  client.addSurface(SURFACE_ID, CustomizeSurface);
-  client.addSidebarItem({
-    id: "customize",
+  client.addScreen({
+    id: CUSTOMIZE_SCREEN_ID,
     title: "Customize",
-    icon: "FolderCog",
-    surface: SURFACE_ID,
+    Component: CustomizeSurface,
+  });
+  client.addSidebarHeaderItem({
+    id: CUSTOMIZE_SCREEN_ID,
+    title: "Customize",
+    Component: CustomizeSidebarItem,
   });
 
   let removeCommands = addCommands(client);

@@ -82,7 +82,7 @@ server/          handlers · store · ingest · background-sync · hooks
 
 | Hook | 写入 |
 |---|---|
-| `agent.created` / `agent.archived` / `agent.turn_ended` | agents +（turn）tool_calls / user_messages |
+| `agent.create.after` / `agent.archive.after` / `agent.turn.after`（086 起用 `server.addHook`） | agents +（turn）tool_calls / user_messages；0.13+ 的 turn.after 不带 timeline，用 `timeline.refetch` 读回尾部 500 条（`server/turn-ingest.ts`） |
 | background-sync | 静默历史补扫（008）；`agents.list` 须翻页取全；目录同步带 `includeArchived` 补归档元数据（049），归档 entry 不扫 timeline；分页 `workspaces.list` 记录活跃 workspace 的 project root（070） |
 | store upsert（SQLite / JSONL） | 事件时间只变早：取更早 `ts`，拒绝晚于首次入库 `ingested_at` 的新值；启动时幂等清空晚于 `ingested_at` 的 `ts`（074） |
 | 扫描后 / 启动时 | prompt 回放副本去重：同 agent 内删除 provider 回放行（与实时行相差 ≤ 2s）与匿名 `canonical:` 批次，保留实时行（075） |
