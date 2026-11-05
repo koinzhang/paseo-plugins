@@ -149,6 +149,8 @@ Do not republish an existing version; bump again if the publish failed after the
 
 Commands 0.1.0 was published locally before npm Trusted Publisher existed; the `publish-commands` job skips the `commands-v0.1.0` tag. Customize 0.1.0 predates `publish-customize` and was published locally too. Inbox 0.1.0 is the same kind of first publish: `publish-inbox` skips `inbox-v0.1.0`. Do not republish any of these versions.
 
+Trusted Publisher is registered for all five packages (repository `koinzhang/paseo-plugins`, workflow `publish.yml`, **Allow npm publish** enabled, environment name empty). Commands 0.2.0 and Inbox 0.2.0 were their first releases published through it, so a normal version bump plus release tag is enough for every plugin.
+
 For a new plugin using GitHub Release publication: add a job in `publish.yml`, use tag `{id}-v*`, and register the same workflow as a Trusted Publisher on that npm package.
 
 ## Reporting issues and vulnerabilities

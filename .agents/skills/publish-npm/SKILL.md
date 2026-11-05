@@ -66,12 +66,12 @@ Substitute the plugin id, directory, package name, and tag prefix from the table
 ## Auth / troubleshooting
 
 - npm auth is **Trusted Publisher** on workflow file `publish.yml` (OIDC). No `NPM_TOKEN` in this repo.
-- If publish fails with auth errors: npm package → Trusted Publisher → repo `koinzhang/paseo-plugins`, workflow `publish.yml`, allow `npm publish`.
-- If the job is skipped: tag must start with the plugin's prefix (`activity-v`, `mono-v`, `customize-v`, `commands-v`, `inbox-v`). `commands-v0.1.0` and `inbox-v0.1.0` are skipped on purpose.
+- If publish fails with auth errors: npm package → Trusted Publisher → repo `koinzhang/paseo-plugins`, workflow `publish.yml`, `Allow npm publish`, environment empty (the workflow declares no `environment:`). The setting is registered for all five packages; a 404 on `PUT` means that package is missing it.
+- If the job is skipped: tag must start with the plugin's prefix (`activity-v`, `mono-v`, `customize-v`, `commands-v`, `inbox-v`). `commands-v0.1.0` and `inbox-v0.1.0` are skipped on purpose: both were published locally before the job existed.
 - If the job fails at version check: tag and that plugin's `package.json` version disagree.
 
 ## Other plugins
 
 - **Mono** (`@koinzhang/paseo-plugin-mono`, tag `mono-vX.Y.Z`, `publish-mono`) and **Customize** (`@koinzhang/paseo-plugin-customize`, tag `customize-vX.Y.Z`, `publish-customize`) publish through GitHub Release like Activity. Customize 0.1.0 predates the workflow job and was published locally — do not republish it.
-- **Commands** (`@koinzhang/paseo-plugin-commands`, tag `commands-vX.Y.Z`, `publish-commands`) is wired to the same flow. Commands 0.1.0 was published locally before npm Trusted Publisher existed; the job skips the `commands-v0.1.0` tag — do not republish it.
-- **Inbox** (`@koinzhang/paseo-plugin-inbox`, tag `inbox-vX.Y.Z`, `publish-inbox`) is wired to the same flow. Inbox 0.1.0 is published locally before npm Trusted Publisher can be configured; the job skips the `inbox-v0.1.0` tag — do not republish it.
+- **Commands** (`@koinzhang/paseo-plugin-commands`, tag `commands-vX.Y.Z`, `publish-commands`) publishes through the same flow. Its 0.1.0 was published locally before npm Trusted Publisher existed, so the job skips `commands-v0.1.0` — do not republish it; every later version goes through GitHub Release (0.2.0 was the first).
+- **Inbox** (`@koinzhang/paseo-plugin-inbox`, tag `inbox-vX.Y.Z`, `publish-inbox`) is the same: 0.1.0 was published locally, the job skips `inbox-v0.1.0`, and later versions publish through GitHub Release (0.2.0 was the first).
