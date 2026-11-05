@@ -13,7 +13,7 @@ Paseo 插件仓库。当前包含插件 **Activity**（`activity/`）：本地�
 
 - 本机路径：`/Users/koinzhang/Workspace/xws/paseo`；其他设备先 `ls ..` 确认，不存在就不要臆造路径（缺失时 `./scripts/sync-paseo.sh --clone` 浅克隆）
 - 刷新：`./scripts/sync-paseo.sh`（fetch + fast-forward，只读不改内容）
-- **不要**把 Paseo 改成 git submodule：jj 不支持，submodule 内容不会出现在工作副本里
+- **不要**把 Paseo 改成 git submodule：只读参考用同级 checkout 即可，submodule 内容默认不落到工作副本里
 - 常用位置：
   - `packages/plugin/src/` — 插件运行时与插件 API（surface / RPC / hooks 等）
   - `packages/protocol/` — RPC 与事件契约
@@ -82,26 +82,26 @@ paseo plugin reload activity-dev
 - 两个实例共库（同一 `usage.db`，SQLite WAL + busy timeout 保证并发写不报错），且会出现两个 Activity 入口
 - 要完全隔离数据只能跑第二个 daemon（独立配置目录）
 
-## 版本控制（jj）
+## 版本控制（git）
 
-本仓库存在 `.jj/`（colocate 模式），版本控制操作**优先用 jj**，git 只作远程契约（fetch / push / PR / CI）。
+本仓库使用纯 git：`main` 跟踪 `origin/main`，没有 jj（`.jj/` 已移除，`refs/jj/*` 已清理）。
 
 ```bash
-jj st / jj diff / jj log                    # 查看
-jj describe -m "..." && jj new              # 提交（无暂存区，改动自动 snapshot）
-jj bookmark set main -r @ && jj git push    # 推送
-jj undo / jj op log / jj op restore         # 恢复
+git status / git diff / git log            # 查看
+git add -A && git commit -m "..."          # 提交
+git push origin main                       # 推送
+git restore <file> / git reset --hard <c>  # 恢复
 ```
 
 约束：
 
-- 不要用 git 做写操作（`git add` / `commit` / `checkout` / `reset` / `stash`）；只读命令（`git log` / `status` / `diff`）可用
-- **不要点 Paseo 的 commit 按钮**（内部是 `git add -A && git commit`，会与 jj 工作副本状态错位）；需要提交时用 jj
-- worktree 隔离的 workspace 没有 `.jj`：jj 不可用，也不要执行 `jj git init --colocate`（会与主 checkout 形成双 store）
+- 所有版本控制操作走 git；**不要**再初始化 jj（不执行 `jj git init --colocate`，也不要重建 `.jj/`）
+- **不要点 Paseo 的 commit 按钮**（内部是 `git add -A && git commit`，会把无关改动一并提交，且没有规范 commit message）；需要提交时自己按 Commit 格式写
+- worktree 隔离的 workspace 是独立 git worktree，与主 checkout 共享同一仓库；不要在里面对 `main` 做破坏性操作
 
 ## Commit 格式
 
-提交信息（`jj describe` / git commit）使用 Conventional Commits：`<type>(<scope>): <description>`。
+提交信息（`git commit -m`）使用 Conventional Commits：`<type>(<scope>): <description>`。
 
 - type：`feat` / `fix` / `docs` / `style` / `refactor` / `perf` / `test` / `build` / `ci` / `chore` / `revert`
 - scope：插件 id（如 `activity`）或 `ci` / `docs` / `repo`

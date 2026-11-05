@@ -130,7 +130,7 @@
 插件 API 结论以**上游源码 + 已安装运行时**为依据，不以 `main` HEAD 为准（HEAD 常领先于已发布契约）。
 
 - 刷新本地只读参考 checkout：`./scripts/sync-paseo.sh`（同级 `../paseo`，fetch + fast-forward；`--clone` 首次浅克隆）
-- 仓库**不引入 git submodule**：jj 不支持，submodule 内容不会出现在工作副本里，等于查不到源码
+- 仓库**不引入 git submodule**：只读参考用同级 checkout，submodule 内容默认不落到工作副本里，等于查不到源码
 - 凡 `research.md` 中「已验证」的 API / 契约结论，同时记录锚点——上游 commit + 当时 `paseo --version`（脚本末尾输出可复制块）
 - 锚点与运行时冲突时，以 `paseo-plugin.json` 的 `requirements.paseo` 与实机行为为准
 - 脚本只在 checkout 正好等于 `origin/main` 时给出锚点；有本地提交 / 在其他分支时报错退出，避免把非上游 commit 当成依据

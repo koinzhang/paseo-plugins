@@ -40,12 +40,12 @@ Substitute the plugin id, directory, package name, and tag prefix from the table
    npm version patch --no-git-tag-version   # or minor / major
    ```
 
-3. Commit and push to `main` (only if the user asked for the commit / release). This repo is jj-colocated — commit with jj; git is only the remote contract:
+3. Commit and push to `main` (only if the user asked for the commit / release). This repo uses plain git (`main` tracks `origin/main`):
 
    ```bash
-   jj commit -m "chore(activity): release X.Y.Z"
-   jj bookmark set main -r @-
-   jj git push
+   git add -A
+   git commit -m "chore(activity): release X.Y.Z"
+   git push origin main
    ```
 
 4. Tag and create the Release, using the changelog section as notes (replace `X.Y.Z`; run from repo root):

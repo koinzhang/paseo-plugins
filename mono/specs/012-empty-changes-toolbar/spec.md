@@ -2,7 +2,7 @@
 
 ## 问题
 
-Explorer 的 Changes 面板有仓库工具栏和 Uncommitted 工具栏。Paseo 在当前分支名为空（例如 jj colocated checkout 的 detached HEAD）、没有 PR 且没有工具栏动作时，仍渲染 36px 高的仓库工具栏。隐藏分隔线后，这一行呈现为明显空白。
+Explorer 的 Changes 面板有仓库工具栏和 Uncommitted 工具栏。Paseo 在当前分支名为空（例如 detached HEAD 的 checkout）、没有 PR 且没有工具栏动作时，仍渲染 36px 高的仓库工具栏。隐藏分隔线后，这一行呈现为明显空白。
 
 ## 目标
 

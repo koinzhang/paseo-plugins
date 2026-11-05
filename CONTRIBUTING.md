@@ -119,12 +119,12 @@ The examples use `activity`; substitute the plugin id, package name, and tag for
    cd activity
    npm version patch --no-git-tag-version   # or minor / major
    # edit CHANGELOG.md: rename [Unreleased] to [X.Y.Z] - YYYY-MM-DD
-   jj commit -m "chore(activity): release X.Y.Z"
-   jj bookmark set main -r @-
-   jj git push
+   git add -A
+   git commit -m "chore(activity): release X.Y.Z"
+   git push origin main
    ```
 
-   This repo is jj-colocated: commit and push with jj, and use git only as the remote / PR contract.
+   This repo uses plain git: `main` tracks `origin/main`; commit and push with git.
 
 2. Create a tag and publish a GitHub Release (tag form: `activity-vX.Y.Z`), using that changelog section as the release notes:
 

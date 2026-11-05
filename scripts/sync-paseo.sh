@@ -7,8 +7,8 @@
 #   PASEO_DIR=/path/to/paseo scripts/sync-paseo.sh
 #   PASEO_REMOTE=git@github.com:getpaseo/paseo.git PASEO_BRANCH=main scripts/sync-paseo.sh
 #
-# 只做 fetch / fast-forward：不提交、不改 paseo 工作副本内容、不动本仓库 jj 状态。
-# 本仓库不把 Paseo 作为 git submodule（jj 不支持：内容不会出现在工作副本里）。
+# 只做 fetch / fast-forward：不提交、不改 paseo 工作副本内容、不动本仓库工作副本。
+# 本仓库不把 Paseo 作为 git submodule（只读参考用同级 checkout；submodule 内容默认不落到工作副本里）。
 set -euo pipefail
 
 REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -53,7 +53,7 @@ if [ ! -d "${PASEO_DIR}/.git" ]; then
   git clone --depth 1 --filter=blob:none ${PASEO_REMOTE} "${PASEO_DIR}"
 
 或运行：scripts/sync-paseo.sh --clone
-（不用 submodule：jj 不支持，submodule 内容不会出现在工作副本里。）
+（不用 submodule：只读参考用同级 checkout，submodule 内容默认不落到工作副本里。）
 EOF
     exit 1
   fi

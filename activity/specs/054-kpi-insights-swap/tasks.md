@@ -21,4 +21,4 @@
 ## 备注
 
 - 纯参数搬家：两个指标的计算函数、口径与文案都未改，无新 RPC / 新查询。
-- 未推送：本变更停在本地 change（`main` 已含 049–053，推送需再执行 `jj bookmark set main -r @ && jj git push`）。
+- 未推送：本变更停在本地 change（`main` 已含 049–053，推送需再执行 `git push origin main`）。
