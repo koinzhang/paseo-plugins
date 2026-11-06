@@ -6,7 +6,7 @@
   "packages": {
     "": {
       "name": "@koinzhang/paseo-plugin-commands",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "license": "MIT",
       "dependencies": {
         "@getpaseo/client": "0.15.1",

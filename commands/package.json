@@ -1,6 +1,6 @@
 {
   "name": "@koinzhang/paseo-plugin-commands",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Essential client-side slash commands for controlling the current Paseo agent.",
   "license": "MIT",
   "type": "module",
@@ -19,7 +19,8 @@
     "shared/",
     "!**/*.test.ts",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "npm-shrinkwrap.json"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
