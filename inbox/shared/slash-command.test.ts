@@ -7,7 +7,7 @@ test("no args stars the current agent", () => {
   assert.deepEqual(parseInboxCommand("   "), { text: "" });
 });
 
-test("plain text is scratch", () => {
+test("plain text becomes a note", () => {
   assert.deepEqual(parseInboxCommand(" buy milk "), { text: "buy milk" });
 });
 

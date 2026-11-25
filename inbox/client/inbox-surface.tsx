@@ -1,12 +1,12 @@
 import type { PluginTheme } from "@getpaseo/plugin";
-import { type PluginSurfaceProps, usePaseo, useRpc } from "@getpaseo/plugin/client";
-import { Icon, ScrollView, TextInput, useToast } from "@getpaseo/plugin/client/ui";
+import { type PluginSurfaceProps, useComposers, usePaseo, useRpc } from "@getpaseo/plugin/client";
+import { copyText, Icon, Markdown, ScrollView, TextInput, useToast } from "@getpaseo/plugin/client/ui";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   type ComponentProps,
-  type ComponentRef,
   Fragment,
   type ReactNode,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -36,7 +36,13 @@ import { fetchLastExchange } from "./last-exchange.ts";
 import { AgentIcon, PermissionBadge } from "./agent-status.tsx";
 import { inboxListSort, visibleInboxFilters } from "../shared/filter-settings.ts";
 import { itemTitle } from "../shared/item-title.ts";
+import { formatItemTime, workspaceItemSubtitle } from "./item-subtitle.ts";
 import { isEmptyNote, syncNoteText } from "../shared/note.ts";
+import { insertNoteIntoComposer } from "./note-actions.ts";
+import { KindFilterMenu, KindFilterMenuPanel } from "./kind-filter-menu.tsx";
+import { toggleInboxKind, toggleInboxSelection } from "./kind-filter.ts";
+import { noteFieldFocusBorder } from "./note-detail-styles.ts";
+import { showsNoteRowActions } from "./note-row-actions.ts";
 import {
   type DraftTags,
   onItemsChanged,
@@ -45,7 +51,9 @@ import {
   takeSelection,
 } from "./selection.ts";
 import { useInboxFilters } from "./use-inbox-filters.ts";
-import { type HorizontalScrollNode, trackHorizontalDrag, wheelScrollsHorizontally } from "./web.ts";
+import { trackHorizontalDrag } from "./web.ts";
+import { shouldSelectFirstItem } from "./default-selection.ts";
+import { defaultScopeSelection } from "./default-scope-selection.ts";
 
 /**
  * `id` is the open item; `draft` is non-null for an unsaved note.
@@ -78,13 +86,7 @@ const STATES_KEY = ["inbox", "agent-states"] as const;
 const CANDIDATES_KEY = ["inbox", "agent-candidates"] as const;
 const TAG_OPTIONS_KEY = ["inbox", "tag-options"] as const;
 const SAVE_DELAY_MS = 600;
-
-const FILTERS: Array<{ id: ItemKind | "all"; label: string }> = [
-  { id: "all", label: "All" },
-  { id: "agent", label: "Agents" },
-  { id: "note", label: "Notes" },
-  { id: "scratch", label: "Scratch" },
-];
+type NoteComposer = Parameters<typeof insertNoteIntoComposer>[0];
 
 /** Tapping the sort button steps through these in order. */
 const SORTS: Array<{ id: ItemSort; label: string; icon: string }> = [
@@ -110,14 +112,15 @@ type Styles = ReturnType<typeof createStyles>;
 const noOutline = Platform.OS === "web" ? ({ outlineStyle: "none" } as object) : {};
 const resizeCursor = Platform.OS === "web" ? ({ cursor: "col-resize" } as object) : {};
 
-/** Swaps the accent focus ring for a muted border, like Customize's search box. */
+/** Swaps the accent focus ring for a muted border on bordered inputs. */
 function Field({ styles, style, ...props }: ComponentProps<typeof TextInput> & { styles: Styles }) {
   const [focused, setFocused] = useState(false);
+  const borderless = style === styles.noteTitleInput || style === styles.editor;
   return (
     <TextInput
       placeholderTextColor={styles.placeholderColor}
       {...props}
-      style={[style, focused ? styles.inputFocused : null]}
+      style={[style, noteFieldFocusBorder({ borderless, focused }) ? styles.inputFocused : null]}
       onFocus={(e) => {
         setFocused(true);
         props.onFocus?.(e);
@@ -130,11 +133,25 @@ function Field({ styles, style, ...props }: ComponentProps<typeof TextInput> & {
   );
 }
 
-function createStyles(theme: PluginTheme, compact: boolean) {
+function createStyles(theme: PluginTheme, compact: boolean, workspace: boolean) {
   const c = theme.colors;
   return {
-    screen: { flex: 1, backgroundColor: c.surface0, flexDirection: "row" as const },
+    screen: { flex: 1, backgroundColor: workspace ? "transparent" : c.surface0, flexDirection: "row" as const },
     listPane: { overflow: "hidden" as const },
+    listChrome: { position: "relative" as const },
+    filterMenuBackdrop: {
+      position: "absolute" as const,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 30,
+    },
+    filterMenuPosition: {
+      position: "absolute" as const,
+      zIndex: 31,
+      overflow: "visible" as const,
+    },
     divider: {
       width: 9,
       marginHorizontal: -4,
@@ -144,8 +161,14 @@ function createStyles(theme: PluginTheme, compact: boolean) {
     },
     dividerLine: { width: 1, flex: 1, backgroundColor: c.border },
     detailPane: { flex: 1, padding: compact ? 16 : 24, gap: 12 },
-    toolbar: { padding: compact ? 12 : 16, gap: 10, borderBottomWidth: 1, borderColor: c.border },
+    toolbar: { padding: compact ? 12 : 16, gap: 10, overflow: "visible" as const },
     row: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8 },
+    itemRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8, position: "relative" as const },
+    itemActions: { flexDirection: "row" as const, alignItems: "center" as const, flexShrink: 0 },
+    itemActionsOverlay: { position: "absolute" as const, right: 0, top: 0, bottom: 0 },
+    detailMeta: { flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "flex-end" as const, gap: 8 },
+    detailTags: { flexDirection: "row" as const, alignItems: "center" as const, gap: 6, flex: 1, minWidth: 0 },
+    itemActionDivider: { width: 1, height: 16, marginHorizontal: 3, backgroundColor: c.border },
     wrap: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 6 },
     input: {
       color: c.foreground,
@@ -160,10 +183,25 @@ function createStyles(theme: PluginTheme, compact: boolean) {
     },
     inputFocused: { borderColor: c.foregroundMuted },
     placeholderColor: c.foregroundMuted,
+    noteEditor: { flex: 1, gap: 10 },
+    noteFields: { flex: 1, backgroundColor: "transparent" },
+    noteTitleInput: {
+      color: c.foreground,
+      backgroundColor: "transparent",
+      borderWidth: 0,
+      paddingHorizontal: 0,
+      paddingTop: 8,
+      paddingBottom: 12,
+      fontSize: 14,
+      ...noOutline,
+    },
+    noteFieldDivider: { borderBottomWidth: 1, borderBottomColor: c.border },
     chip: (active: boolean) => ({
       flexDirection: "row" as const,
       alignItems: "center" as const,
       gap: 4,
+      minWidth: 0,
+      flexShrink: 1,
       paddingHorizontal: 10,
       paddingVertical: 5,
       borderRadius: 999,
@@ -174,16 +212,17 @@ function createStyles(theme: PluginTheme, compact: boolean) {
     chipText: (active: boolean) => ({
       color: active ? c.accentForeground : c.foregroundMuted,
       fontSize: 12,
+      flexShrink: 1,
+      minWidth: 0,
     }),
     item: (selected: boolean) => ({
       paddingHorizontal: compact ? 12 : 16,
       paddingVertical: 10,
       gap: 4,
-      borderBottomWidth: 1,
-      borderColor: c.border,
       backgroundColor: selected ? c.surface2 : "transparent",
     }),
-    itemTitle: { color: c.foreground, fontSize: 14, flex: 1 },
+    itemDivider: { height: 1, marginHorizontal: compact ? 12 : 16, backgroundColor: c.border },
+    itemTitle: { color: c.foreground, fontSize: 14, flex: 1, minWidth: 0 },
     muted: { color: c.foregroundMuted, fontSize: 12 },
     struck: { textDecorationLine: "line-through" as const },
     badge: (tone: "warning" | "danger" | "success") => ({
@@ -193,25 +232,14 @@ function createStyles(theme: PluginTheme, compact: boolean) {
     }),
     heading: { color: c.foreground, fontSize: compact ? 18 : 20, fontWeight: "600" as const },
     body: { color: c.foreground, fontSize: 14 },
-    message: {
-      color: c.foreground,
-      fontSize: 13,
-      lineHeight: 18,
-      backgroundColor: c.surface1,
-      borderColor: c.border,
-      borderWidth: 1,
-      borderRadius: 8,
-      padding: 10,
-    },
     editor: {
       flex: 1,
       minHeight: 200,
       color: c.foreground,
-      backgroundColor: c.surface1,
-      borderColor: c.border,
-      borderWidth: 1,
-      borderRadius: 8,
-      padding: 12,
+      backgroundColor: "transparent",
+      borderWidth: 0,
+      paddingHorizontal: 0,
+      paddingVertical: 12,
       fontSize: 14,
       textAlignVertical: "top" as const,
       ...noOutline,
@@ -228,12 +256,89 @@ function createStyles(theme: PluginTheme, compact: boolean) {
       backgroundColor: kind === "primary" ? c.accent : "transparent",
     }),
     iconButton: { paddingHorizontal: 8, paddingVertical: 8 },
+    rowIconButton: (pressed: boolean) => ({
+      width: 28,
+      height: 28,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      borderRadius: 6,
+      backgroundColor: pressed ? c.surface2 : "transparent",
+      flexShrink: 0,
+    }),
     buttonText: (kind: "primary" | "plain" | "danger") => ({
       color:
         kind === "primary" ? c.accentForeground : kind === "danger" ? c.statusDanger : c.foreground,
       fontSize: 13,
     }),
     empty: { padding: 24, alignItems: "center" as const, gap: 8 },
+  };
+}
+
+function RowIconButton({
+  styles,
+  theme,
+  icon,
+  accessibilityLabel,
+  onPress,
+  disabled,
+  color,
+}: {
+  styles: Styles;
+  theme: PluginTheme;
+  icon: string;
+  accessibilityLabel: string;
+  onPress: () => void;
+  disabled?: boolean;
+  color?: string;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={Platform.OS === "web" ? accessibilityLabel : undefined}
+      hitSlop={8}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [styles.rowIconButton(pressed), disabled ? { opacity: 0.45 } : null]}
+    >
+      <Icon name={icon} size={14} color={color ?? theme.colors.foregroundMuted} />
+    </Pressable>
+  );
+}
+
+function useNoteActions(body: string, composer: NoteComposer | undefined) {
+  const toast = useToast();
+  const [copying, setCopying] = useState(false);
+  const [sending, setSending] = useState(false);
+  const copy = async () => {
+    setCopying(true);
+    try {
+      await copyText(body);
+      toast.show("Copied", { variant: "success" });
+    } catch (error) {
+      toast.error(`Could not copy: ${errorText(error)}`);
+    } finally {
+      setCopying(false);
+    }
+  };
+  const send = async () => {
+    if (!composer) return;
+    setSending(true);
+    try {
+      await insertNoteIntoComposer(composer, body);
+      toast.show("Inserted into the current agent's composer", { variant: "success" });
+    } catch (error) {
+      toast.error(`Could not insert note: ${errorText(error)}`);
+    } finally {
+      setSending(false);
+    }
+  };
+  return {
+    copy: () => void copy(),
+    send: () => void send(),
+    copying,
+    sending,
+    canSend: Boolean(composer),
   };
 }
 
@@ -280,7 +385,202 @@ function Button({
   );
 }
 
-const KIND_ICON: Record<ItemKind, string> = { agent: "Bot", note: "NotebookText", scratch: "StickyNote" };
+function DetailActionGroup({
+  entries,
+  styles,
+  theme,
+}: {
+  entries: Array<{
+    key: string;
+    icon: string;
+    label: string;
+    onPress: () => void;
+    disabled?: boolean;
+    color?: string;
+  }>;
+  styles: Styles;
+  theme: PluginTheme;
+}) {
+  return (
+    <View style={styles.itemActions}>
+      {entries.map((entry, index) => (
+        <Fragment key={entry.key}>
+          {index ? <View style={styles.itemActionDivider} /> : null}
+          <RowIconButton
+            styles={styles}
+            theme={theme}
+            icon={entry.icon}
+            accessibilityLabel={entry.label}
+            disabled={entry.disabled}
+            onPress={entry.onPress}
+            color={entry.color}
+          />
+        </Fragment>
+      ))}
+    </View>
+  );
+}
+
+const KIND_ICON: Record<ItemKind, string> = { agent: "Bot", note: "FileText" };
+
+function useAgentRestore(item: Item) {
+  const unarchive = useRpc(unarchiveAgent);
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const mutation = useMutation({
+    mutationFn: () => unarchive({ agentId: item.agentId! }),
+    onSuccess: ({ restoredWorkspace }) => {
+      toast.show(restoredWorkspace ? "Workspace and agent restored" : "Agent unarchived", { variant: "success" });
+      void queryClient.invalidateQueries({ queryKey: STATES_KEY });
+    },
+    onError: (error) => toast.error(errorText(error)),
+  });
+  return {
+    pending: mutation.isPending,
+    restore: () => mutation.mutate(),
+  };
+}
+
+function ItemActions({
+  item,
+  state,
+  composer,
+  selected,
+  visible,
+  navigation,
+  styles,
+  theme,
+  onDeleted,
+  onBusyChange,
+  containerStyle,
+  onWidthChange,
+}: {
+  item: Item;
+  state: AgentState | undefined;
+  composer: NoteComposer | undefined;
+  selected: boolean;
+  visible: boolean;
+  navigation: PluginSurfaceProps["navigation"];
+  styles: Styles;
+  theme: PluginTheme;
+  onDeleted: () => void;
+  onBusyChange: (busy: boolean) => void;
+  containerStyle?: object;
+  onWidthChange?: (width: number) => void;
+}) {
+  const update = useRpc(updateItem);
+  const remove = useRpc(deleteItem);
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const [pinning, setPinning] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const noteActions = useNoteActions(item.body, composer);
+  const restore = useAgentRestore(item);
+  const canOpen = item.kind === "agent" && state === "active" && Boolean(navigation && item.agentId);
+  const busy = pinning || deleting || restore.pending || noteActions.copying || noteActions.sending;
+  useEffect(() => onBusyChange(busy), [busy, onBusyChange]);
+  const run = async (kind: "pin" | "delete") => {
+    const setBusy = kind === "pin" ? setPinning : setDeleting;
+    setBusy(true);
+    try {
+      if (kind === "pin") await update({ id: item.id, pinned: !item.pinned });
+      else await remove({ id: item.id });
+      if (kind === "delete" && selected) onDeleted();
+      await queryClient.invalidateQueries({ queryKey: ["inbox"] });
+    } catch (error) {
+      toast.error(errorText(error));
+      await queryClient.invalidateQueries({ queryKey: ["inbox"] });
+    } finally {
+      setBusy(false);
+    }
+  };
+  const actions = item.kind === "agent"
+    ? [
+        state === "archived" ? {
+          key: "unarchive",
+          icon: "ArchiveRestore",
+          label: restore.pending ? "Unarchiving" : "Unarchive",
+          disabled: restore.pending,
+          onPress: restore.restore,
+        } : {
+          key: "open",
+          icon: "SquareArrowOutUpRight",
+          label: canOpen ? "Open agent" : "Agent unavailable to open",
+          disabled: !canOpen,
+          onPress: () => {
+            if (canOpen) navigation!.openAgent({ agentId: item.agentId! });
+          },
+        },
+        {
+          key: "pin",
+          icon: item.pinned ? "PinOff" : "Pin",
+          label: item.pinned ? "Unpin" : "Pin",
+          disabled: pinning,
+          onPress: () => void run("pin"),
+        },
+        {
+          key: "delete",
+          icon: "StarOff",
+          label: "Remove from Inbox",
+          disabled: deleting,
+          color: theme.colors.statusDanger,
+          onPress: () => void run("delete"),
+        },
+      ]
+    : [
+        {
+          key: "pin",
+          icon: item.pinned ? "PinOff" : "Pin",
+          label: item.pinned ? "Unpin" : "Pin",
+          disabled: pinning,
+          onPress: () => void run("pin"),
+        },
+        {
+          key: "copy",
+          icon: "Copy",
+          label: "Copy note",
+          disabled: noteActions.copying,
+          onPress: noteActions.copy,
+        },
+        {
+          key: "send",
+          icon: "Send",
+          label: composer ? "Send note to current agent" : "No current agent available",
+          disabled: !composer || noteActions.sending,
+          onPress: noteActions.send,
+        },
+        {
+          key: "delete",
+          icon: "Trash2",
+          label: "Delete",
+          disabled: deleting,
+          color: theme.colors.statusDanger,
+          onPress: () => void run("delete"),
+        },
+      ];
+  return (
+    <View
+      style={[styles.itemActions, containerStyle, { opacity: visible || busy ? 1 : 0 }]}
+      pointerEvents={visible || busy ? "auto" : "none"}
+      onLayout={onWidthChange ? (event) => onWidthChange(event.nativeEvent.layout.width) : undefined}
+    >
+      {actions.map((action, index) => (
+        <Fragment key={action.key}>
+          {index ? <View style={styles.itemActionDivider} /> : null}
+          <RowIconButton
+            styles={styles}
+            theme={theme}
+            icon={action.icon}
+            accessibilityLabel={action.label}
+            disabled={action.disabled}
+            color={"color" in action ? action.color : undefined}
+            onPress={action.onPress}
+          />
+        </Fragment>
+      ))}
+    </View>
+  );
+}
 
 /** Project and workspace tags of an item; archived ones are marked. */
 function itemTags(item: Item, archived: Archived): Array<{ label: string; archived: boolean }> {
@@ -299,90 +599,136 @@ function ItemRow({
   selected,
   state,
   live,
+  agentUpdatedAt,
   archived,
   hideWorkspaceId,
+  composer,
+  navigation,
   styles,
   theme,
   onPress,
+  onDeleted,
 }: {
   item: Item;
   selected: boolean;
   state: AgentState | undefined;
   live: AgentLive | undefined;
+  agentUpdatedAt: string | null | undefined;
   archived: Archived;
   /** The panel's own workspace, left out of the subtitle. */
   hideWorkspaceId: string | null;
+  composer: NoteComposer | undefined;
+  navigation: PluginSurfaceProps["navigation"];
   styles: Styles;
   theme: PluginTheme;
   onPress: () => void;
+  onDeleted: () => void;
 }) {
+  const [hovered, setHovered] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const reportBusy = useCallback((pending: boolean) => setBusy(pending), []);
+  const [actionsWidth, setActionsWidth] = useState(0);
+  const overlayActions = Platform.OS === "web";
+  const showActions = showsNoteRowActions({
+    web: Platform.OS === "web",
+    hovered,
+    busy,
+  });
   const agentState = state;
   const status = item.kind === "agent" ? describeAgentStatus(agentState, live) : null;
   const tags = itemTags(
     hideWorkspaceId && item.workspaceId === hideWorkspaceId ? { ...item, workspaceId: null } : item,
     archived,
   );
-  const subtitle = [
+  const subtitle = hideWorkspaceId ? workspaceItemSubtitle(item, agentUpdatedAt) : [
     ...tags,
-    ...[item.kind === "agent" ? item.agentSnapshot?.provider : null, new Date(item.updatedAt).toLocaleDateString()]
+    ...[item.kind === "agent" ? item.agentSnapshot?.provider : null, formatItemTime(item.updatedAt)]
       .filter((label): label is string => Boolean(label))
       .map((label) => ({ label, archived: false })),
   ];
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={status ? `${itemTitle(item)}, ${status.label}` : itemTitle(item)}
-      onPress={onPress}
-      style={styles.item(selected)}
+    <View
+      {...({
+        onPointerEnter: () => setHovered(true),
+        onPointerLeave: () => setHovered(false),
+      } as object)}
     >
-      <View style={styles.row}>
-        {item.kind === "agent" ? (
-          <AgentIcon state={agentState} live={live} size={14} theme={theme} />
-        ) : (
-          <Icon name={KIND_ICON[item.kind]} size={14} color={theme.colors.foregroundMuted} />
-        )}
-        <Text style={styles.itemTitle} numberOfLines={1}>
-          {itemTitle(item)}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={status ? `${itemTitle(item)}, ${status.label}` : itemTitle(item)}
+        onPress={onPress}
+        style={styles.item(selected)}
+      >
+        <View style={styles.itemRow}>
+          {item.kind === "agent" ? (
+            <AgentIcon state={agentState} live={live} size={14} theme={theme} />
+          ) : (
+            <Icon name={KIND_ICON[item.kind]} size={14} color={theme.colors.foregroundMuted} />
+          )}
+          <Text
+            style={[styles.itemTitle, overlayActions ? { paddingRight: showActions ? actionsWidth + 8 : 0 } : null]}
+            numberOfLines={1}
+          >
+            {itemTitle(item)}
+          </Text>
+          {item.kind === "agent" ? <PermissionBadge state={agentState} live={live} theme={theme} /> : null}
+          <ItemActions
+            item={item}
+            state={agentState}
+            composer={composer}
+            selected={selected}
+            visible={showActions}
+            navigation={navigation}
+            styles={styles}
+            theme={theme}
+            onDeleted={onDeleted}
+            onBusyChange={reportBusy}
+            containerStyle={overlayActions ? styles.itemActionsOverlay : undefined}
+            onWidthChange={overlayActions ? setActionsWidth : undefined}
+          />
+        </View>
+        <Text style={styles.muted} numberOfLines={1}>
+          {subtitle.map((part, index) => (
+            <Fragment key={index}>
+              {index ? " · " : ""}
+              <Text style={part.archived ? styles.struck : null}>{part.label}</Text>
+            </Fragment>
+          ))}
         </Text>
-        {item.pinned ? <Icon name="Pin" size={12} color={theme.colors.accent} /> : null}
-        {item.kind === "agent" ? <PermissionBadge state={agentState} live={live} theme={theme} /> : null}
-      </View>
-      <Text style={styles.muted} numberOfLines={1}>
-        {subtitle.map((part, index) => (
-          <Fragment key={index}>
-            {index ? " · " : ""}
-            <Text style={part.archived ? styles.struck : null}>{part.label}</Text>
-          </Fragment>
-        ))}
-      </Text>
-    </Pressable>
+      </Pressable>
+    </View>
   );
 }
 
 /**
- * Autosaving editor for notes and scratch. A draft (`item` null) is created on the
+ * Autosaving editor for notes. A draft (`item` null) is created on the
  * first non-empty save; a note that is empty when the editor closes is deleted.
  */
 function NoteEditor({
   item,
   draft,
+  title,
+  body,
+  onTitleChange,
+  onBodyChange,
   styles,
   onCreated,
 }: {
   item: Item | null;
   draft: DraftTags;
+  title: string;
+  body: string;
+  onTitleChange: (title: string) => void;
+  onBodyChange: (body: string) => void;
   styles: Styles;
   onCreated: (id: string) => void;
 }) {
   const save = useRpc(saveNote);
   const remove = useRpc(deleteItem);
   const queryClient = useQueryClient();
-  const [title, setTitle] = useState(item?.title ?? "");
-  const [body, setBody] = useState(item?.body ?? "");
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
 
-  const kind = item?.kind === "scratch" ? "scratch" : "note";
   const idRef = useRef(item?.id ?? null);
   const saved = useRef({ title: item?.title ?? "", body: item?.body ?? "" });
   const latest = useRef({ title, body });
@@ -397,8 +743,8 @@ function NoteEditor({
     if (!next) return;
     saved.current = next;
     latest.current = next;
-    setTitle(next.title);
-    setBody(next.body);
+    onTitleChange(next.title);
+    onBodyChange(next.body);
   }, [item?.id, item?.title, item?.body]);
 
   /** Serialized so a draft is created once even when saves overlap. */
@@ -414,7 +760,6 @@ function NoteEditor({
         if (t === saved.current.title && b === saved.current.body && idRef.current) return;
         const { item: next } = await save({
           ...(idRef.current ? { id: idRef.current } : draft),
-          kind,
           title: t.trim() ? t : null,
           body: b,
         });
@@ -459,25 +804,28 @@ function NoteEditor({
         : "Saved";
 
   return (
-    <View style={{ flex: 1, gap: 10 }}>
-      <Field
-        styles={styles}
-        style={styles.input}
-        value={title}
-        onChangeText={setTitle}
-        placeholder="Title (optional)"
-        accessibilityLabel="Title"
-      />
-      <Field
-        styles={styles}
-        style={styles.editor}
-        value={body}
-        onChangeText={setBody}
-        placeholder="Write something…"
-        accessibilityLabel="Note body"
-        multiline
-        autoFocus={!item}
-      />
+    <View style={styles.noteEditor}>
+      <View style={styles.noteFields}>
+        <Field
+          styles={styles}
+          style={styles.noteTitleInput}
+          value={title}
+          onChangeText={onTitleChange}
+          placeholder="Title (optional)"
+          accessibilityLabel="Title"
+        />
+        <View style={styles.noteFieldDivider} />
+        <Field
+          styles={styles}
+          style={styles.editor}
+          value={body}
+          onChangeText={onBodyChange}
+          placeholder="Write something…"
+          accessibilityLabel="Note body"
+          multiline
+          autoFocus={!item}
+        />
+      </View>
       <Text style={error ? styles.badge("danger") : styles.muted}>{statusText}</Text>
     </View>
   );
@@ -489,16 +837,20 @@ function ExchangeBlock({
   label,
   text,
   styles,
+  markdown = false,
 }: {
   label: string;
   text: string | null;
   styles: Styles;
+  markdown?: boolean;
 }) {
   return (
     <View style={{ gap: 2 }}>
       <Text style={styles.muted}>{label}</Text>
-      {text ? (
-        <Text style={styles.message} selectable>
+      {text && markdown ? (
+        <Markdown>{excerpt(text)}</Markdown>
+      ) : text ? (
+        <Text style={styles.body} selectable>
           {excerpt(text)}
         </Text>
       ) : (
@@ -538,62 +890,62 @@ function AgentExchange({
   return (
     <View style={{ gap: 12 }}>
       <ExchangeBlock label="Prompt" text={exchange.prompt} styles={styles} />
-      <ExchangeBlock label="Agent" text={exchange.agent} styles={styles} />
+      <ExchangeBlock label="Agent" text={exchange.agent} styles={styles} markdown />
     </View>
   );
 }
 
 /** Open, or Unarchive once archived; sits in the Pin / Remove row. */
-function AgentActions({
+function AgentDetailActions({
   item,
   state,
   styles,
   theme,
   navigation,
+  onPin,
+  onDelete,
 }: {
   item: Item;
   state: AgentState | undefined;
   styles: Styles;
   theme: PluginTheme;
   navigation: PluginSurfaceProps["navigation"];
+  onPin: () => void;
+  onDelete: () => void;
 }) {
-  const unarchive = useRpc(unarchiveAgent);
-  const queryClient = useQueryClient();
-  const toast = useToast();
-  const mutation = useMutation({
-    mutationFn: () => unarchive({ agentId: item.agentId! }),
-    onSuccess: ({ restoredWorkspace }) => {
-      toast.show(restoredWorkspace ? "Workspace and agent restored" : "Agent unarchived", {
-        variant: "success",
-      });
-      void queryClient.invalidateQueries({ queryKey: STATES_KEY });
+  const restore = useAgentRestore(item);
+  const canOpen = state === "active" && Boolean(navigation && item.agentId);
+  const entries = [
+    state === "archived" ? {
+      key: "unarchive",
+      icon: "ArchiveRestore",
+      label: restore.pending ? "Unarchiving" : "Unarchive",
+      disabled: restore.pending,
+      onPress: restore.restore,
+    } : {
+      key: "open",
+      icon: "SquareArrowOutUpRight",
+      label: canOpen ? "Open agent" : "Agent unavailable to open",
+      disabled: !canOpen,
+      onPress: () => {
+        if (canOpen) navigation!.openAgent({ agentId: item.agentId! });
+      },
     },
-    onError: (error) => toast.error(errorText(error)),
-  });
-  if (state === "archived") {
-    return (
-      <Button
-        styles={styles}
-        theme={theme}
-        kind="primary"
-        icon="ArchiveRestore"
-        accessibilityLabel={mutation.isPending ? "Unarchiving" : "Unarchive"}
-        disabled={mutation.isPending}
-        onPress={() => mutation.mutate()}
-      />
-    );
-  }
-  if (!navigation || state === "missing" || !item.agentId) return null;
-  return (
-    <Button
-      styles={styles}
-      theme={theme}
-      kind="primary"
-      icon="SquareArrowOutUpRight"
-      accessibilityLabel="Open"
-      onPress={() => navigation.openAgent({ agentId: item.agentId! })}
-    />
-  );
+    {
+      key: "pin",
+      icon: item.pinned ? "PinOff" : "Pin",
+      label: item.pinned ? "Unpin" : "Pin",
+      onPress: onPin,
+    },
+    {
+      key: "delete",
+      icon: "StarOff",
+      label: "Remove from Inbox",
+      color: theme.colors.statusDanger,
+      onPress: onDelete,
+    },
+  ];
+  return <DetailActionGroup entries={entries} styles={styles} theme={theme} />;
 }
 
 function AgentDetail({
@@ -676,7 +1028,7 @@ function TagOption({
 }
 
 /**
- * Project and workspace tags. Notes and scratch can change them; a workspace
+ * Project and workspace tags. Notes can change them; a workspace
  * must sit in the tagged project, so other projects are off while one is set.
  * A starred agent's tags follow the agent and are read-only.
  */
@@ -685,11 +1037,13 @@ function TagEditor({
   archived,
   styles,
   theme,
+  actions,
 }: {
   item: Item;
   archived: Archived;
   styles: Styles;
   theme: PluginTheme;
+  actions: ReactNode;
 }) {
   const options = useRpc(tagOptions);
   const tag = useRpc(tagItem);
@@ -729,7 +1083,7 @@ function TagEditor({
     const content = (
       <>
         <Icon
-          name={isProject ? "Folder" : "GitBranch"}
+          name={isProject ? "Folder" : "PanelsTopLeft"}
           size={12}
           color={active ? theme.colors.accentForeground : theme.colors.foregroundMuted}
         />
@@ -765,9 +1119,12 @@ function TagEditor({
 
   return (
     <View style={{ gap: 6 }}>
-      <View style={styles.wrap}>
-        {projectChip}
-        {workspaceChip}
+      <View style={styles.detailMeta}>
+        <View style={styles.detailTags}>
+          {projectChip}
+          {workspaceChip}
+        </View>
+        {actions}
       </View>
       {open && optionsQuery.isPending ? <Text style={styles.muted}>Loading…</Text> : null}
       {open && optionsQuery.isError ? (
@@ -836,6 +1193,7 @@ function Detail({
   archived,
   state,
   live,
+  composer,
   styles,
   theme,
   navigation,
@@ -849,6 +1207,7 @@ function Detail({
   onCreated: (id: string) => void;
   state: AgentState | undefined;
   live: AgentLive | undefined;
+  composer: NoteComposer | undefined;
   styles: Styles;
   theme: PluginTheme;
   navigation: PluginSurfaceProps["navigation"];
@@ -859,6 +1218,9 @@ function Detail({
   const remove = useRpc(deleteItem);
   const queryClient = useQueryClient();
   const toast = useToast();
+  const [title, setTitle] = useState(item?.title ?? "");
+  const [body, setBody] = useState(item?.body ?? "");
+  const actions = useNoteActions(body, composer);
   const refresh = () => queryClient.invalidateQueries({ queryKey: LIST_KEY });
   const run = (task: () => Promise<unknown>, after?: () => void) =>
     task()
@@ -881,47 +1243,67 @@ function Detail({
         ) : (
           <Icon name={KIND_ICON[item?.kind ?? "note"]} size={18} color={theme.colors.foregroundMuted} />
         )}
-        <Text style={[styles.heading, { flex: 1 }]} numberOfLines={2}>
+        <Text style={[styles.heading, { flex: 1, minWidth: 0 }]} numberOfLines={1} ellipsizeMode="tail">
           {item ? itemTitle(item) : "New note"}
         </Text>
         {item?.kind === "agent" ? <PermissionBadge state={state} live={live} theme={theme} /> : null}
       </View>
-      {item ? (
-        <View style={styles.wrap}>
+      {item ? <TagEditor item={item} archived={archived} styles={styles} theme={theme} actions={
+        <View style={styles.itemActions}>
           {item.kind === "agent" ? (
-            <AgentActions item={item} state={state} styles={styles} theme={theme} navigation={navigation} />
-          ) : null}
-          <Button
-            styles={styles}
-            theme={theme}
-            icon={item.pinned ? "PinOff" : "Pin"}
-            accessibilityLabel={item.pinned ? "Unpin" : "Pin"}
-            onPress={() => run(() => update({ id: item.id, pinned: !item.pinned }))}
-          />
-          {item.kind === "scratch" ? (
-            <Button
+            <AgentDetailActions
+              item={item}
+              state={state}
               styles={styles}
               theme={theme}
-              icon="NotebookText"
-              label="Convert to note"
-              onPress={() => run(() => update({ id: item.id, kind: "note" }))}
+              navigation={navigation}
+              onPin={() => run(() => update({ id: item.id, pinned: !item.pinned }))}
+              onDelete={() => run(() => remove({ id: item.id }), onDeleted)}
             />
-          ) : null}
-          <Button
-            styles={styles}
-            theme={theme}
-            kind="danger"
-            icon={item.kind === "agent" ? "StarOff" : "Trash2"}
-            accessibilityLabel={item.kind === "agent" ? "Remove from Inbox" : "Delete"}
-            onPress={() => run(() => remove({ id: item.id }), onDeleted)}
-          />
+          ) : (
+            <DetailActionGroup
+              styles={styles}
+              theme={theme}
+              entries={[
+                {
+                  key: "pin",
+                  icon: item.pinned ? "PinOff" : "Pin",
+                  label: item.pinned ? "Unpin" : "Pin",
+                  onPress: () => run(() => update({ id: item.id, pinned: !item.pinned })),
+                },
+                { key: "copy", icon: "Copy", label: "Copy note", disabled: actions.copying, onPress: actions.copy },
+                {
+                  key: "send",
+                  icon: "Send",
+                  label: actions.canSend ? "Send note to current agent" : "No current agent available",
+                  disabled: !actions.canSend || actions.sending,
+                  onPress: actions.send,
+                },
+                {
+                  key: "delete",
+                  icon: "Trash2",
+                  label: "Delete",
+                  color: theme.colors.statusDanger,
+                  onPress: () => run(() => remove({ id: item.id }), onDeleted),
+                },
+              ]}
+            />
+          )}
         </View>
-      ) : null}
-      {item ? <TagEditor item={item} archived={archived} styles={styles} theme={theme} /> : null}
+      } /> : null}
       {item?.kind === "agent" ? (
         <AgentDetail item={item} state={state} live={live} styles={styles} />
       ) : (
-        <NoteEditor item={item} draft={draft} styles={styles} onCreated={onCreated} />
+        <NoteEditor
+          item={item}
+          draft={draft}
+          title={title}
+          body={body}
+          onTitleChange={setTitle}
+          onBodyChange={setBody}
+          styles={styles}
+          onCreated={onCreated}
+        />
       )}
     </ScrollView>
   );
@@ -984,55 +1366,6 @@ function AgentPicker({
   );
 }
 
-function Chip({
-  label,
-  icon,
-  accessibilityLabel,
-  active,
-  struck,
-  styles,
-  theme,
-  onPress,
-}: {
-  label: string;
-  icon?: string;
-  accessibilityLabel: string;
-  active: boolean;
-  /** Archived project / workspace. */
-  struck?: boolean;
-  styles: Styles;
-  theme: PluginTheme;
-  onPress: () => void;
-}) {
-  const color = active ? theme.colors.accentForeground : theme.colors.foregroundMuted;
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      onPress={onPress}
-      style={styles.chip(active)}
-    >
-      {icon ? <Icon name={icon} size={12} color={color} /> : null}
-      <Text style={[styles.chipText(active), struck ? styles.struck : null]}>{label}</Text>
-    </Pressable>
-  );
-}
-
-/** A single-line chip row; on web the mouse wheel scrolls it sideways. */
-function ChipStrip({ styles, children }: { styles: Styles; children: ReactNode }) {
-  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
-  useEffect(() => {
-    if (Platform.OS !== "web") return;
-    const node = scrollRef.current?.getScrollableNode() as HorizontalScrollNode | null | undefined;
-    return node ? wheelScrollsHorizontally(node) : undefined;
-  }, []);
-  return (
-    <ScrollView ref={scrollRef} horizontal showsHorizontalScrollIndicator={false}>
-      <View style={styles.row}>{children}</View>
-    </ScrollView>
-  );
-}
-
 /**
  * The Inbox list and editor. Without `workspace` it is the global page (every
  * visible item, workspace filter, ⌘K selection requests); with it, the list is
@@ -1045,20 +1378,25 @@ export function InboxView({
   workspace,
 }: Pick<PluginSurfaceProps, "theme" | "layout" | "navigation"> & { workspace?: InboxWorkspace }) {
   const compact = workspace ? true : layout.compact;
-  const styles = useMemo(() => createStyles(theme, compact), [theme, compact]);
+  const styles = useMemo(() => createStyles(theme, compact, Boolean(workspace)), [theme, compact, workspace]);
   const list = useRpc(listItems);
   const states = useRpc(agentStates);
   const queryClient = useQueryClient();
+  const [composer] = useComposers({ focused: true });
 
   const filters = useInboxFilters();
   const updateFilters = useRef(filters.update);
   updateFilters.current = filters.update;
   const shown = filters.values ? visibleInboxFilters(filters.values, { workspaceId: workspace?.id }) : null;
-  const kind = shown?.kind ?? null;
-  const projectKey = shown?.projectKey ?? null;
-  const scope = shown?.workspaceId ?? null;
+  const kinds = shown?.kinds ?? [];
+  const projectKeys = shown?.projectKeys ?? null;
+  const scope = shown?.workspaceIds ?? null;
   const [query, setQuery] = useState("");
   const [picking, setPicking] = useState(false);
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const filterTriggerRef = useRef<View>(null);
+  const listChromeRef = useRef<View>(null);
+  const [filterMenuAnchor, setFilterMenuAnchor] = useState<{ top: number; right: number } | null>(null);
   const sort = filters.values ? inboxListSort(filters.values, { workspaceId: workspace?.id }) : "updated";
   const [listWidth, setListWidth] = useState(rememberedListWidth);
   const widthAtGrant = useRef(listWidth);
@@ -1104,7 +1442,7 @@ export function InboxView({
     return onSelectionRequest(() => {
       const next = toSelection(takeSelection());
       if (!next) return;
-      updateFilters.current({ kind: "all", projectKey: null, workspaceId: null });
+      updateFilters.current({ kinds: ["agent", "note"], projectKeys: null, workspaceIds: null });
       setQuery("");
       setSelection(next);
       void queryClient.invalidateQueries({ queryKey: LIST_KEY });
@@ -1121,9 +1459,9 @@ export function InboxView({
 
   const filter = shown
     ? {
-        ...(shown.kind === "all" ? {} : { kind: shown.kind }),
-        ...(shown.projectKey ? { projectKey: shown.projectKey } : {}),
-        ...(workspace ? { inboxOf: workspace.id } : shown.workspaceId ? { workspaceId: shown.workspaceId } : {}),
+        kinds: shown.kinds,
+        projectKeys: shown.projectKeys,
+        ...(workspace ? { inboxOf: workspace.id } : { workspaceIds: shown.workspaceIds }),
         ...(query.trim() ? { query: query.trim() } : {}),
         ...(sort === "updated" ? {} : { sort }),
       }
@@ -1138,24 +1476,43 @@ export function InboxView({
   const items = itemsQuery.data?.items ?? [];
   const projects = itemsQuery.data?.projects ?? [];
   const workspaces = itemsQuery.data?.workspaces ?? [];
+  useEffect(() => {
+    if (shouldSelectFirstItem({
+      globalSurface: !workspace,
+      selection,
+      firstItemId: items[0]?.id,
+      isPlaceholderData: itemsQuery.isPlaceholderData,
+    })) {
+      setSelection({ id: items[0]!.id, draft: null, session: nextSession() });
+    }
+  }, [items, itemsQuery.isPlaceholderData, selection, workspace]);
   const archivedData = itemsQuery.data?.archived;
   const archived = useMemo<Archived>(
     () => ({ projects: new Set(archivedData?.projects), workspaces: new Set(archivedData?.workspaces) }),
     [archivedData],
   );
 
+  useEffect(() => {
+    const current = filters.values;
+    if (workspace || !current || !itemsQuery.data || itemsQuery.isPlaceholderData) return;
+    const projectKeys = defaultScopeSelection({ selected: current.projectKeys, available: itemsQuery.data.projects.map((entry) => entry.key), isPlaceholderData: itemsQuery.isPlaceholderData });
+    const workspaceIds = defaultScopeSelection({ selected: current.workspaceIds, available: itemsQuery.data.workspaces.map((entry) => entry.id), isPlaceholderData: itemsQuery.isPlaceholderData });
+    if (projectKeys !== current.projectKeys || workspaceIds !== current.workspaceIds) {
+      updateFilters.current({ projectKeys, workspaceIds });
+    }
+  }, [filters.values, itemsQuery.data, itemsQuery.isPlaceholderData, workspace]);
+
   // No item of this kind carries the selected tag: its chip is gone, so clear the saved choice.
   useEffect(() => {
     const current = filters.values;
     if (workspace || !itemsQuery.data || itemsQuery.isPlaceholderData || !current) return;
-    const staleProject =
-      current.projectKey && !itemsQuery.data.projects.some((entry) => entry.key === current.projectKey);
-    const staleWorkspace =
-      current.workspaceId && !itemsQuery.data.workspaces.some((entry) => entry.id === current.workspaceId);
-    if (staleProject || staleWorkspace) {
+    if (current.projectKeys === null || current.workspaceIds === null) return;
+    const projectKeys = current.projectKeys.filter((key) => itemsQuery.data!.projects.some((entry) => entry.key === key));
+    const workspaceIds = current.workspaceIds.filter((id) => itemsQuery.data!.workspaces.some((entry) => entry.id === id));
+    if (projectKeys.length !== current.projectKeys.length || workspaceIds.length !== current.workspaceIds.length) {
       updateFilters.current({
-        ...(staleProject ? { projectKey: null } : {}),
-        ...(staleWorkspace ? { workspaceId: null } : {}),
+        ...(projectKeys.length !== current.projectKeys.length ? { projectKeys } : {}),
+        ...(workspaceIds.length !== current.workspaceIds.length ? { workspaceIds } : {}),
       });
     }
   }, [filters.values, itemsQuery.data, itemsQuery.isPlaceholderData, workspace]);
@@ -1171,6 +1528,8 @@ export function InboxView({
     item.agentId ? statesQuery.data?.states[item.agentId] : undefined;
   const agentLive = (item: Item) =>
     item.agentId ? statesQuery.data?.live?.[item.agentId] : undefined;
+  const agentUpdatedAt = (item: Item) =>
+    item.agentId ? statesQuery.data?.lastActivityAt?.[item.agentId] : undefined;
 
   const selected = items.find((item) => item.id === selectedId) ?? null;
   // A draft, or a note just created from one, stays open while the list catches up.
@@ -1179,7 +1538,9 @@ export function InboxView({
   const showDetail = !compact || Boolean(editing);
 
   const createNote = () => {
-    filters.update(workspace ? { panelKind: "all" } : { kind: "all", projectKey: null, workspaceId: null });
+    filters.update(workspace
+      ? { panelKinds: ["agent", "note"] }
+      : { kinds: ["agent", "note"], projectKeys: null, workspaceIds: null });
     setSelection({ id: null, draft: workspace ? { workspaceId: workspace.id } : {}, session: nextSession() });
   };
 
@@ -1187,17 +1548,34 @@ export function InboxView({
     <Button
       styles={styles}
       theme={theme}
-      kind="primary"
-      icon="NotebookPen"
+      icon="FilePlus2"
       accessibilityLabel="New note"
       onPress={createNote}
     />
   );
 
+  useEffect(() => {
+    if (!filterMenuOpen) {
+      setFilterMenuAnchor(null);
+      return;
+    }
+    const trigger = filterTriggerRef.current;
+    const root = listChromeRef.current;
+    if (!trigger || !root) return;
+    trigger.measureInWindow((left, top, width, height) => {
+      root.measureInWindow((rootLeft, rootTop, rootWidth) => {
+        setFilterMenuAnchor({ top: top + height - rootTop + 4, right: rootLeft + rootWidth - (left + width) });
+      });
+    });
+  }, [filterMenuOpen]);
+
   return (
     <View style={styles.screen}>
       {showList ? (
-        <View style={[styles.listPane, compact ? { flex: 1 } : { width: listWidth }]}>
+        <View
+          ref={listChromeRef}
+          style={[styles.listPane, styles.listChrome, compact ? { flex: 1 } : { width: listWidth }]}
+        >
           <View style={styles.toolbar}>
             <View style={styles.row}>
               <Field
@@ -1208,6 +1586,14 @@ export function InboxView({
                 placeholder="Search"
                 accessibilityLabel="Search Inbox"
               />
+              <View ref={filterTriggerRef} collapsable={false}>
+                <KindFilterMenu
+                  value={kinds}
+                  theme={theme}
+                  open={filterMenuOpen}
+                  onOpenChange={setFilterMenuOpen}
+                />
+              </View>
               {noteButton}
               {workspace ? (
                 <Button
@@ -1237,67 +1623,13 @@ export function InboxView({
                 theme={theme}
                 onStarred={() => {
                   setPicking(false);
-                  filters.update({ panelKind: "all" });
+                  filters.update({ panelKinds: ["agent", "note"] });
                   setQuery("");
                 }}
               />
             ) : null}
-            <View style={styles.wrap}>
-              {FILTERS.map((option) => (
-                <Chip
-                  key={option.id}
-                  label={option.label}
-                  accessibilityLabel={`Show ${option.label}`}
-                  active={kind === option.id}
-                  styles={styles}
-                  theme={theme}
-                  onPress={() => filters.update(workspace ? { panelKind: option.id } : { kind: option.id })}
-                />
-              ))}
-            </View>
-            {!workspace && projects.length > 0 ? (
-              <ChipStrip styles={styles}>
-                {projects.map((project) => {
-                  const active = projectKey === project.key;
-                  return (
-                    <Chip
-                      key={project.key}
-                      icon="Folder"
-                      label={`${project.label} · ${project.count}`}
-                      accessibilityLabel={`Filter by project ${project.label}${project.archived ? " (archived)" : ""}`}
-                      active={active}
-                      struck={project.archived}
-                      styles={styles}
-                      theme={theme}
-                      onPress={() => filters.update({ projectKey: active ? null : project.key })}
-                    />
-                  );
-                })}
-              </ChipStrip>
-            ) : null}
-            {!workspace && workspaces.length > 0 ? (
-              <ChipStrip styles={styles}>
-                {workspaces.map((entry) => (
-                  <Chip
-                    key={entry.id}
-                    icon="GitBranch"
-                    label={`${entry.label} · ${entry.count}`}
-                    accessibilityLabel={`Filter by workspace ${entry.label}${entry.archived ? " (archived)" : ""}`}
-                    active={scope === entry.id}
-                    struck={entry.archived}
-                    styles={styles}
-                    theme={theme}
-                    onPress={() =>
-                      filters.update({
-                        workspaceId: filters.values?.workspaceId === entry.id ? null : entry.id,
-                      })
-                    }
-                  />
-                ))}
-              </ChipStrip>
-            ) : null}
           </View>
-          <ScrollView style={{ flex: 1 }}>
+          <ScrollView style={{ flex: 1 }} scrollEnabled={!filterMenuOpen}>
             {itemsQuery.isError ? (
               <View style={styles.empty}>
                 <Text style={styles.badge("danger")}>{errorText(itemsQuery.error)}</Text>
@@ -1313,21 +1645,53 @@ export function InboxView({
               </View>
             ) : (
               items.map((item) => (
-                <ItemRow
-                  key={item.id}
-                  item={item}
-                  selected={item.id === selectedId}
-                  state={agentState(item)}
-                  live={agentLive(item)}
-                  archived={archived}
-                  hideWorkspaceId={workspace?.id ?? null}
-                  styles={styles}
-                  theme={theme}
-                  onPress={() => select(item.id)}
-                />
+                <Fragment key={item.id}>
+                  <ItemRow
+                    item={item}
+                    selected={item.id === selectedId}
+                    state={agentState(item)}
+                    live={agentLive(item)}
+                    agentUpdatedAt={agentUpdatedAt(item)}
+                    archived={archived}
+                    hideWorkspaceId={workspace?.id ?? null}
+                    composer={composer}
+                    navigation={navigation}
+                    styles={styles}
+                    theme={theme}
+                    onPress={() => select(item.id)}
+                    onDeleted={() => select(null)}
+                  />
+                  <View style={styles.itemDivider} />
+                </Fragment>
               ))
             )}
           </ScrollView>
+          {filterMenuOpen ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close filter"
+              onPress={() => setFilterMenuOpen(false)}
+              style={styles.filterMenuBackdrop}
+            />
+          ) : null}
+          {filterMenuOpen && filterMenuAnchor ? (
+            <View style={[styles.filterMenuPosition, filterMenuAnchor]}>
+              <KindFilterMenuPanel
+                value={kinds}
+                projects={workspace ? undefined : projects}
+                projectKeys={projectKeys}
+                onProjectChange={workspace ? undefined : (key) => filters.update({ projectKeys: toggleInboxSelection(projectKeys ?? [], key) })}
+                workspaces={workspace ? undefined : workspaces}
+                workspaceIds={scope}
+                onWorkspaceChange={workspace ? undefined : (id) => filters.update({ workspaceIds: toggleInboxSelection(scope ?? [], id) })}
+                theme={theme}
+                onChange={(next) => {
+                  const selected = toggleInboxKind(kinds, next);
+                  filters.update(workspace ? { panelKinds: selected } : { kinds: selected, projectKeys: null, workspaceIds: null });
+                }}
+              />
+            </View>
+          ) : null}
         </View>
       ) : null}
       {showList && showDetail ? (
@@ -1345,6 +1709,7 @@ export function InboxView({
               archived={archived}
               state={selected ? agentState(selected) : undefined}
               live={selected ? agentLive(selected) : undefined}
+              composer={composer}
               styles={styles}
               theme={theme}
               navigation={navigation}

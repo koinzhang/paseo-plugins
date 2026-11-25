@@ -48,7 +48,7 @@ export default function contribute(client: PluginClientContext) {
     client.addCommandCenterItem({
       id: "quick-note",
       title: "New Inbox note",
-      icon: "NotebookPen",
+      icon: "FilePlus2",
       keywords: ["note", "inbox", "capture"],
       context: "workspace",
       onSelect({ workspace, openScreen }) {
@@ -58,7 +58,7 @@ export default function contribute(client: PluginClientContext) {
     }),
     client.addSlashCommand({
       name: "inbox",
-      description: "Add this agent to the Inbox, or save text as a scratch note tagged with this project.",
+      description: "Add this agent to the Inbox, or save text as a note tagged with this project.",
       argumentHint: "[text]",
       context: "agent",
       async onSubmit({ args, agent, workspace, rpc }) {
@@ -66,7 +66,7 @@ export default function contribute(client: PluginClientContext) {
         if (!command.text) {
           await rpc(starAgent, { agentId: agent.id });
         } else {
-          await rpc(saveNote, { kind: "scratch", body: command.text, projectOfWorkspace: workspace.id });
+          await rpc(saveNote, { body: command.text, projectOfWorkspace: workspace.id });
         }
         notifyItemsChanged();
       },

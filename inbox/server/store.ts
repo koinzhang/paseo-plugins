@@ -14,7 +14,7 @@ type Database = InstanceType<SqliteModule["DatabaseSync"]>;
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS items (
   id             TEXT PRIMARY KEY,
-  kind           TEXT NOT NULL CHECK (kind IN ('agent', 'note', 'scratch')),
+  kind           TEXT NOT NULL CHECK (kind IN ('agent', 'note')),
   title          TEXT,
   body           TEXT NOT NULL DEFAULT '',
   project_key    TEXT,
@@ -57,18 +57,19 @@ export interface WorkspaceRef {
 }
 
 export interface ListFilter {
-  kind?: ItemKind;
+  kinds?: ItemKind[];
   projectKey?: string;
+  projectKeys?: string[] | null;
   query?: string;
   /** Items tagged with exactly this workspace. */
   workspaceId?: string;
+  workspaceIds?: string[] | null;
   /** A workspace's Inbox: its workspace tag, or no workspace tag and its project tag. */
   inboxOf?: { workspaceId: string; projectKey: string | null };
   sort?: ItemSort;
 }
 
 export interface NoteInput {
-  kind: "note" | "scratch";
   title?: string | null;
   body: string;
   project?: ProjectRef | null;
@@ -154,6 +155,7 @@ export class InboxStore {
   }
 
   private migrate(): void {
+    this.db.exec("UPDATE items SET kind = 'note' WHERE kind = 'scratch'");
     const columns = this.db.prepare("PRAGMA table_info(items)").all() as Array<{ name: string }>;
     if (!columns.some((column) => column.name === "workspace_id")) {
       this.db.exec("ALTER TABLE items ADD COLUMN workspace_id TEXT");
@@ -168,11 +170,11 @@ export class InboxStore {
     );
   }
 
-  /** Drops notes / scratch with no title or text, e.g. left behind by an interrupted editor. */
+  /** Drops notes with no title or text, e.g. left behind by an interrupted editor. */
   deleteEmptyNotes(): number {
     const result = this.db
       .prepare(
-        `DELETE FROM items WHERE kind IN ('note', 'scratch')
+        `DELETE FROM items WHERE kind = 'note'
          AND trim(coalesce(title, '')) = '' AND trim(body) = ''`,
       )
       .run();
@@ -200,18 +202,29 @@ export class InboxStore {
   list(filter: ListFilter = {}): Item[] {
     const where: string[] = [];
     const params: string[] = [];
-    if (filter.kind) {
-      where.push("kind = ?");
-      params.push(filter.kind);
+    if (filter.kinds) {
+      if (filter.kinds.length === 0) return [];
+      where.push(`kind IN (${filter.kinds.map(() => "?").join(", ")})`);
+      params.push(...filter.kinds);
     }
-    if (filter.projectKey) {
+    const projectKeys = [...new Set([...(filter.projectKeys ?? []), ...(filter.projectKey ? [filter.projectKey] : [])])];
+    if (filter.projectKeys && filter.projectKeys.length > 0) {
+      where.push(`(project_key IN (${projectKeys.map(() => "?").join(", ")}) OR project_key IS NULL)`);
+      params.push(...projectKeys);
+    } else if (filter.projectKey) {
       where.push("project_key = ?");
       params.push(filter.projectKey);
     }
-    if (filter.workspaceId) {
+    if (filter.projectKeys && filter.projectKeys.length === 0 && !filter.projectKey) where.push("project_key IS NULL");
+    const workspaceIds = [...new Set([...(filter.workspaceIds ?? []), ...(filter.workspaceId ? [filter.workspaceId] : [])])];
+    if (filter.workspaceIds && filter.workspaceIds.length > 0) {
+      where.push(`(workspace_id IN (${workspaceIds.map(() => "?").join(", ")}) OR workspace_id IS NULL)`);
+      params.push(...workspaceIds);
+    } else if (filter.workspaceId) {
       where.push("workspace_id = ?");
       params.push(filter.workspaceId);
     }
+    if (filter.workspaceIds && filter.workspaceIds.length === 0 && !filter.workspaceId) where.push("workspace_id IS NULL");
     if (filter.inboxOf) {
       const { workspaceId, projectKey } = filter.inboxOf;
       if (projectKey) {
@@ -236,26 +249,26 @@ export class InboxStore {
     return sortItems(items, filter.sort ?? "updated");
   }
 
-  projects(kind?: ItemKind): Array<{ key: string; label: string; count: number }> {
+  projects(kinds?: ItemKind[]): Array<{ key: string; label: string; count: number }> {
     const rows = this.db
       .prepare(
         `SELECT project_key AS key, MAX(project_label) AS label, COUNT(*) AS count
-         FROM items WHERE project_key IS NOT NULL ${kind ? "AND kind = ?" : ""}
+         FROM items WHERE project_key IS NOT NULL ${kinds ? `AND kind IN (${kinds.map(() => "?").join(", ")})` : ""}
          GROUP BY project_key ORDER BY MAX(updated_at) DESC`,
       )
-      .all(...(kind ? [kind] : [])) as Array<{ key: string; label: string | null; count: number }>;
+      .all(...(kinds ?? [])) as Array<{ key: string; label: string | null; count: number }>;
     return rows.map((row) => ({ key: row.key, label: row.label ?? row.key, count: Number(row.count) }));
   }
 
   /** Item counts per workspace tag, most recently updated first. */
-  workspaces(kind?: ItemKind): Array<{ id: string; label: string; count: number }> {
+  workspaces(kinds?: ItemKind[]): Array<{ id: string; label: string; count: number }> {
     const rows = this.db
       .prepare(
         `SELECT workspace_id AS id, MAX(workspace_label) AS label, COUNT(*) AS count
-         FROM items WHERE workspace_id IS NOT NULL ${kind ? "AND kind = ?" : ""}
+         FROM items WHERE workspace_id IS NOT NULL ${kinds ? `AND kind IN (${kinds.map(() => "?").join(", ")})` : ""}
          GROUP BY workspace_id ORDER BY MAX(updated_at) DESC`,
       )
-      .all(...(kind ? [kind] : [])) as Array<{ id: string; label: string | null; count: number }>;
+      .all(...(kinds ?? [])) as Array<{ id: string; label: string | null; count: number }>;
     return rows.map((row) => ({ id: row.id, label: row.label ?? row.id, count: Number(row.count) }));
   }
 
@@ -304,7 +317,7 @@ export class InboxStore {
       )
       .run(
         id,
-        input.kind,
+        "note",
         input.title ?? null,
         input.body,
         input.project?.key ?? null,
@@ -318,12 +331,14 @@ export class InboxStore {
     return this.require(id);
   }
 
-  updateNote(id: string, patch: { kind: "note" | "scratch"; title?: string | null; body: string }): Item {
+  updateNote(id: string, patch: { title?: string | null; body: string }): Item {
     const existing = this.require(id);
     if (existing.kind === "agent") throw new Error("Starred agents have no editable note body");
+    const title = patch.title === undefined ? existing.title : patch.title;
+    if (existing.title === title && existing.body === patch.body) return existing;
     this.db
       .prepare("UPDATE items SET kind = ?, title = ?, body = ?, updated_at = ? WHERE id = ?")
-      .run(patch.kind, patch.title === undefined ? existing.title : patch.title, patch.body, this.now(), id);
+      .run("note", title, patch.body, this.now(), id);
     this.onChange();
     return this.require(id);
   }
@@ -334,7 +349,7 @@ export class InboxStore {
     if (tags.workspace && !tags.project) throw new Error("A workspace tag needs its project");
     this.db
       .prepare(
-        `UPDATE items SET project_key = ?, project_label = ?, workspace_id = ?, workspace_label = ?, updated_at = ?
+        `UPDATE items SET project_key = ?, project_label = ?, workspace_id = ?, workspace_label = ?
          WHERE id = ?`,
       )
       .run(
@@ -342,24 +357,18 @@ export class InboxStore {
         tags.project?.label ?? null,
         tags.workspace?.id ?? null,
         tags.workspace?.label ?? null,
-        this.now(),
         id,
       );
     this.onChange();
     return this.require(id);
   }
 
-  update(id: string, patch: { pinned?: boolean; kind?: "note" }): Item {
+  update(id: string, patch: { pinned?: boolean }): Item {
     const existing = this.require(id);
-    if (patch.kind && existing.kind !== "scratch") {
-      throw new Error("Only scratch items can be promoted to notes");
-    }
     this.db
-      .prepare("UPDATE items SET pinned = ?, kind = ?, updated_at = ? WHERE id = ?")
+      .prepare("UPDATE items SET pinned = ? WHERE id = ?")
       .run(
         patch.pinned === undefined ? (existing.pinned ? 1 : 0) : patch.pinned ? 1 : 0,
-        patch.kind ?? existing.kind,
-        this.now(),
         id,
       );
     this.onChange();

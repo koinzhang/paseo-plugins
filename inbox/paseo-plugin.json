@@ -1,6 +1,6 @@
 {
   "id": "inbox",
-  "description": "Personal inbox: starred agents, notes, project records, and quick scratch captures",
+  "description": "Personal inbox: starred agents, notes, and project records",
   "requirements": {
     "paseo": ">=0.17.4"
   }

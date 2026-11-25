@@ -59,21 +59,20 @@ export function registerHandlers(server: PluginServerContext, { store, resolvePr
     }
     return {
       items,
-      projects: store.projects(filter.kind).map((entry) => ({ ...entry, archived: projectArchived(entry.key) })),
-      workspaces: store.workspaces(filter.kind).map((entry) => ({ ...entry, archived: workspaceArchived(entry.id) })),
+      projects: store.projects(filter.kinds).map((entry) => ({ ...entry, archived: projectArchived(entry.key) })),
+      workspaces: store.workspaces(filter.kinds).map((entry) => ({ ...entry, archived: workspaceArchived(entry.id) })),
       archived: { projects: [...archived.projects], workspaces: [...archived.workspaces] },
     };
   });
 
-  server.handle(saveNote, async ({ id, kind, title, body, workspaceId, projectOfWorkspace }, { paseo }) => {
-    if (id) return { item: store.updateNote(id, { kind, title, body }) };
+  server.handle(saveNote, async ({ id, title, body, workspaceId, projectOfWorkspace }, { paseo }) => {
+    if (id) return { item: store.updateNote(id, { title, body }) };
     const target = workspaceId ?? projectOfWorkspace;
-    if (!target) return { item: store.createNote({ kind, title, body }) };
+    if (!target) return { item: store.createNote({ title, body }) };
     const found = (await tryDirectory(paseo))?.workspaces.get(target);
     if (!found && workspaceId) throw new Error("This workspace is archived or no longer on this host");
     return {
       item: store.createNote({
-        kind,
         title,
         body,
         project: found?.project ?? null,
@@ -138,6 +137,7 @@ export function registerHandlers(server: PluginServerContext, { store, resolvePr
     return {
       states: Object.fromEntries(entries.map(([id, { state }]) => [id, state])),
       live: Object.fromEntries(entries.flatMap(([id, { live }]) => (live ? [[id, live]] : []))),
+      lastActivityAt: Object.fromEntries(entries.flatMap(([id, { updatedAt }]) => (updatedAt ? [[id, updatedAt]] : []))),
       ...(titlesChanged ? { titlesChanged } : {}),
     };
   });

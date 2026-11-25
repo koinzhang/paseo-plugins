@@ -2,26 +2,33 @@ import { defineSettings } from "@getpaseo/plugin";
 import { z } from "zod";
 import { ItemSort } from "./contracts.ts";
 
-const FilterKind = z.enum(["all", "agent", "note", "scratch"]);
+const FilterKinds = z.array(z.enum(["agent", "note"]));
 
 /** Older documents have no `sort`; the schema default fills it in. */
 export function migrateInboxFilters(values: unknown, fromVersion: number): unknown {
-  if (fromVersion < 2) return values;
-  return values;
+  if (fromVersion >= 5 || !values || typeof values !== "object" || Array.isArray(values)) return values;
+  const filters = values as Record<string, unknown>;
+  const migrateKind = (kind: unknown) => Array.isArray(kind) ? kind : kind === "agent" || kind === "note" ? [kind] : ["agent", "note"];
+  const selected = (value: unknown) => typeof value === "string" ? [value] : null;
+  return {
+    ...("sort" in filters ? { sort: filters.sort } : {}),
+    kinds: migrateKind(filters.kind ?? filters.kinds),
+    panelKinds: migrateKind(filters.panelKind ?? filters.panelKinds),
+    projectKeys: selected(filters.projectKey),
+    workspaceIds: selected(filters.workspaceId),
+  };
 }
 
 /** Host-scoped Inbox filters. The global page and the Explorer panel each keep their own group. */
 export const inboxFilterSettings = defineSettings({
   id: "list-filters",
   scope: "host",
-  version: 2,
+  version: 6,
   schema: z.object({
-    kind: FilterKind.default("all"),
-    /** Selected project chip on the global page. */
-    projectKey: z.string().nullable().default(null),
-    /** Selected workspace chip on the global page. */
-    workspaceId: z.string().nullable().default(null),
-    panelKind: FilterKind.default("all"),
+    kinds: FilterKinds.default(["agent", "note"]),
+    projectKeys: z.array(z.string()).nullable().default(null),
+    workspaceIds: z.array(z.string()).nullable().default(null),
+    panelKinds: FilterKinds.default(["agent", "note"]),
     /** Global page sort. The Explorer panel always lists by last update. */
     sort: ItemSort.default("updated"),
   }),
@@ -31,19 +38,19 @@ export const inboxFilterSettings = defineSettings({
 export type InboxFilters = z.infer<typeof inboxFilterSettings.schema>;
 
 export const INBOX_FILTER_DEFAULTS: InboxFilters = {
-  kind: "all",
-  projectKey: null,
-  workspaceId: null,
-  panelKind: "all",
+  kinds: ["agent", "note"],
+  projectKeys: null,
+  workspaceIds: null,
+  panelKinds: ["agent", "note"],
   sort: "updated",
 };
 
 export function sameInboxFilters(a: InboxFilters, b: InboxFilters): boolean {
   return (
-    a.kind === b.kind &&
-    a.projectKey === b.projectKey &&
-    a.workspaceId === b.workspaceId &&
-    a.panelKind === b.panelKind &&
+    a.kinds.length === b.kinds.length && a.kinds.every((kind, index) => kind === b.kinds[index]) &&
+    JSON.stringify(a.projectKeys) === JSON.stringify(b.projectKeys) &&
+    JSON.stringify(a.workspaceIds) === JSON.stringify(b.workspaceIds) &&
+    a.panelKinds.length === b.panelKinds.length && a.panelKinds.every((kind, index) => kind === b.panelKinds[index]) &&
     a.sort === b.sort
   );
 }
@@ -54,9 +61,9 @@ export function inboxListSort(filters: InboxFilters, surface: { workspaceId?: st
 }
 
 export interface VisibleInboxFilters {
-  kind: InboxFilters["kind"];
-  projectKey: string | null;
-  workspaceId: string | null;
+  kinds: InboxFilters["kinds"];
+  projectKeys: string[] | null;
+  workspaceIds: string[] | null;
 }
 
 /**
@@ -68,7 +75,7 @@ export function visibleInboxFilters(
   surface: { workspaceId?: string },
 ): VisibleInboxFilters {
   if (surface.workspaceId) {
-    return { kind: filters.panelKind, projectKey: null, workspaceId: surface.workspaceId };
+    return { kinds: filters.panelKinds, projectKeys: null, workspaceIds: [surface.workspaceId] };
   }
-  return { kind: filters.kind, projectKey: filters.projectKey, workspaceId: filters.workspaceId };
+  return { kinds: filters.kinds, projectKeys: filters.projectKeys, workspaceIds: filters.workspaceIds };
 }

@@ -9,11 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Requires Paseo **>= 0.17.4**.
 
+### Added
+
+- Add note-row Pin / Copy / Send / Delete and agent-row Open / Pin / Remove actions, revealed on hover on web / desktop and fixed on mobile. Copy uses the host clipboard; Send inserts the current editor body into the focused agent's composer without replacing the existing prompt or starting a turn.
+- Replace archived agent rows' Open action with the detail page's Unarchive flow, sharing restore status, success feedback, and state refresh.
+- Add an Agents / Notes multi-select filter, defaulting to both; detail actions share the list's borderless icon-and-divider treatment.
+- Show full edit times for workspace notes and host update times for workspace agents, with a starred-time fallback; detail headings truncate to one line and agent replies use the SDK Markdown renderer.
+
 ### Changed
 
+- Remove scratch as a separate type: `/inbox <text>` saves a note directly, the Scratch filter and Convert action are gone, and stored scratch entries migrate to notes without losing their content or tags.
+- Remove detail action borders and agent message boxes; notes remain borderless with a title/body separator.
+- Advance note update time only for actual title or body edits, not pin, tag, or identical-content saves; remove the New note button's green primary styling.
+- Keep desktop row action disabled states independent of hover so moving onto the icons does not recreate their pointer targets.
+- Move global Project / Workspace scope chips into the search-bar Filter menu alongside Agents / Notes. All scopes support multi-selection, default to all available tags, and leave untagged items visible; selections, counts, archived labels, and persistence remain.
+- Open the first item when entering the global Inbox without a selection. Desktop row actions reserve title width only while visible; restore horizontal list / detail resizing and use the Explorer surface background for workspace panels.
+- Use single-document FileText icons for notes and FilePlus2 for note creation instead of notebook-style icons.
+- Use a PanelsTopLeft icon for Workspace tags instead of the Git branch symbol; Project keeps its Folder icon.
+- Remove the full-width divider between the search toolbar and the note / agent list; keep the inset separators between items.
 - Pin the plugin SDK, daemon client, and protocol development dependency to 0.17.4; workspace recovery now uses that client's terminal-response waiting behavior.
 - Refresh connected clients after Inbox writes through the SDK's subscription API. Events contain only an invalidation signal; clients re-read current data after subscribing or reconnecting. Slow clients coalesce notifications without blocking writes, and cleanup releases subscriptions and retries.
-- Remove the deprecated workspace panel context registration and use host-scoped workspace references for cached panel lookup. Keep archived/missing handling, project keys, saved tabs, and the SQLite schema unchanged.
+- Remove the deprecated workspace panel context registration and use host-scoped workspace references for cached panel lookup. Keep archived/missing handling, project keys, saved tabs, and the SQLite table unchanged.
 
 ## [0.2.0] - 2026-11-05
 

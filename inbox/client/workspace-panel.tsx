@@ -10,7 +10,7 @@ function WorkspaceInboxContent({
   const workspace = useWorkspace(workspaceRef, ({ id, directory }) => ({ id, directory }));
   if (!workspace) {
     return (
-      <View style={{ flex: 1, padding: 16, backgroundColor: theme.colors.surface0 }}>
+      <View style={{ flex: 1, padding: 16, backgroundColor: "transparent" }}>
         <Text style={{ color: theme.colors.foregroundMuted, fontSize: 12 }}>Workspace unavailable.</Text>
       </View>
     );
@@ -27,7 +27,7 @@ export function WorkspaceInboxPanel(props: PluginWorkspacePanelProps) {
   const workspaceRef = workspaces[0];
   if (!workspaceRef) {
     return (
-      <View style={{ flex: 1, padding: 16, backgroundColor: props.theme.colors.surface0 }}>
+      <View style={{ flex: 1, padding: 16, backgroundColor: "transparent" }}>
         <Text style={{ color: props.theme.colors.foregroundMuted, fontSize: 12 }}>Workspace unavailable.</Text>
       </View>
     );

@@ -9,6 +9,7 @@ export interface AgentLookup {
   snapshot: AgentSnapshot;
   archived: boolean;
   live: AgentLive;
+  updatedAt: string;
 }
 
 function liveAttention(agent: {
@@ -42,6 +43,7 @@ export async function lookupAgent(paseo: PaseoApi, agentId: string): Promise<Age
       createdAt: agent.createdAt,
     },
     archived: Boolean(agent.archivedAt),
+    updatedAt: agent.updatedAt,
     live: {
       status: agent.status,
       attention: liveAttention(agent),
@@ -53,10 +55,10 @@ export async function lookupAgent(paseo: PaseoApi, agentId: string): Promise<Age
 export async function agentState(
   paseo: PaseoApi,
   agentId: string,
-): Promise<{ state: AgentState; live: AgentLive | null; title: string | null }> {
+): Promise<{ state: AgentState; live: AgentLive | null; title: string | null; updatedAt: string | null }> {
   const found = await lookupAgent(paseo, agentId);
-  if (!found) return { state: "missing", live: null, title: null };
-  return { state: found.archived ? "archived" : "active", live: found.live, title: found.snapshot.title };
+  if (!found) return { state: "missing", live: null, title: null, updatedAt: null };
+  return { state: found.archived ? "archived" : "active", live: found.live, title: found.snapshot.title, updatedAt: found.updatedAt };
 }
 
 /** Unarchived agents of one workspace. */

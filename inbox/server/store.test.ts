@@ -23,10 +23,12 @@ const project = { key: "remote:github.com/a/repo", label: "repo" };
 test("successful writes notify, while repeated stars, unchanged sync and failed writes do not", () => {
   let notifications = 0;
   withStore((store) => {
-    const note = store.createNote({ kind: "scratch", body: "private text" });
+    const note = store.createNote({ body: "private text" });
     assert.equal(notifications, 1);
-    store.updateNote(note.id, { kind: "scratch", body: "edited" });
-    store.update(note.id, { kind: "note", pinned: true });
+    store.updateNote(note.id, { title: null, body: "private text" });
+    assert.equal(notifications, 1);
+    store.updateNote(note.id, { body: "edited" });
+    store.update(note.id, { pinned: true });
     store.setTags(note.id, { project, workspace: { id: "w1", label: "main" } });
     assert.equal(notifications, 4);
     const agent = store.starAgent("a1", snapshot, project).item;
@@ -38,12 +40,12 @@ test("successful writes notify, while repeated stars, unchanged sync and failed 
     store.refreshLabels(new Map([[project.key, "renamed repo"]]), new Map([["w1", "renamed workspace"]]));
     store.refreshAgentTitles(new Map([["a1", "renamed agent"]]));
     assert.equal(notifications, 7);
-    assert.throws(() => store.updateNote(agent.id, { kind: "note", body: "not allowed" }));
-    assert.throws(() => store.createNote({ kind: "note", body: "" }));
+    assert.throws(() => store.updateNote(agent.id, { body: "not allowed" }));
+    assert.throws(() => store.createNote({ body: "" }));
     store.delete("missing");
     store.list();
     assert.equal(notifications, 7);
-    store.updateNote(note.id, { kind: "note", title: null, body: "" });
+    store.updateNote(note.id, { title: null, body: "" });
     assert.equal(store.deleteEmptyNotes(), 1);
     assert.equal(store.deleteEmptyNotes(), 0);
     store.delete(agent.id);
@@ -80,9 +82,9 @@ test("refreshing agent titles follows a rename without touching updatedAt", () =
 
 test("pinned items sort first, then most recently updated", () => {
   withStore((store) => {
-    const a = store.createNote({ kind: "note", body: "a" });
-    const b = store.createNote({ kind: "note", body: "b" });
-    store.createNote({ kind: "scratch", body: "c" });
+    const a = store.createNote({ body: "a" });
+    const b = store.createNote({ body: "b" });
+    store.createNote({ body: "c" });
     store.update(a.id, { pinned: true });
     assert.deepEqual(
       store.list().map((item) => item.body),
@@ -92,34 +94,74 @@ test("pinned items sort first, then most recently updated", () => {
   });
 });
 
+test("only title or body changes advance a note's updatedAt", () => {
+  let notifications = 0;
+  withStore((store) => {
+    const note = store.createNote({ title: "Title", body: "Body" });
+    const createdAt = note.updatedAt;
+    store.update(note.id, { pinned: true });
+    store.update(note.id, { pinned: false });
+    store.setTags(note.id, { project, workspace: { id: "w1", label: "main" } });
+    assert.equal(store.get(note.id)?.updatedAt, createdAt);
+    assert.equal(notifications, 4);
+
+    const titled = store.updateNote(note.id, { title: "Changed", body: "Body" });
+    assert.notEqual(titled.updatedAt, createdAt);
+    const bodied = store.updateNote(note.id, { title: "Changed", body: "Changed body" });
+    assert.notEqual(bodied.updatedAt, titled.updatedAt);
+    const unchanged = store.updateNote(note.id, { title: "Changed", body: "Changed body" });
+    assert.equal(unchanged.updatedAt, bodied.updatedAt);
+    assert.equal(notifications, 6);
+  }, () => { notifications += 1; });
+});
+
 test("filters by kind, project and text; LIKE wildcards are literal", () => {
   withStore((store) => {
-    store.createNote({ kind: "note", title: "Plan", body: "100% done", project });
-    store.createNote({ kind: "scratch", body: "other" });
+    store.createNote({ title: "Plan", body: "100% done", project });
+    store.createNote({ body: "other" });
     store.starAgent("a1", snapshot, project);
-    assert.equal(store.list({ kind: "scratch" }).length, 1);
+    assert.equal(store.list({ kinds: ["note"] }).length, 2);
     assert.equal(store.list({ projectKey: project.key }).length, 2);
     assert.equal(store.list({ query: "100%" }).length, 1);
     assert.equal(store.list({ query: "0%d" }).length, 0);
     assert.equal(store.list({ query: "login" }).length, 1);
     assert.deepEqual(store.projects(), [{ key: project.key, label: "repo", count: 2 }]);
-    assert.deepEqual(store.projects("agent"), [{ key: project.key, label: "repo", count: 1 }]);
+    assert.deepEqual(store.projects(["agent"]), [{ key: project.key, label: "repo", count: 1 }]);
+    assert.deepEqual(store.list({ kinds: ["agent"] }).map((item) => item.kind), ["agent"]);
+    assert.deepEqual(store.list({ kinds: [] }), []);
   });
 });
 
-test("scratch promotes to note; agents and notes cannot be promoted", () => {
+test("agents cannot be edited as notes", () => {
   withStore((store) => {
-    const scratch = store.createNote({ kind: "scratch", body: "idea" });
-    assert.equal(store.update(scratch.id, { kind: "note" }).kind, "note");
-    assert.throws(() => store.update(scratch.id, { kind: "note" }));
     const agent = store.starAgent("a1", snapshot, null).item;
-    assert.throws(() => store.updateNote(agent.id, { kind: "note", body: "x" }));
+    assert.throws(() => store.updateNote(agent.id, { body: "x" }));
+  });
+});
+
+test("multiple project and workspace selections OR within a group and AND across groups", () => {
+  withStore((store) => {
+    const other = { key: "other", label: "Other" };
+    store.createNote({ body: "p1w1", project, workspace: { id: "w1", label: "Main" } });
+    store.createNote({ body: "p1w2", project, workspace: { id: "w2", label: "Feature" } });
+    store.createNote({ body: "p2w1", project: other, workspace: { id: "w1", label: "Main" } });
+    store.createNote({ body: "p2w3", project: other, workspace: { id: "w3", label: "Other" } });
+    store.createNote({ body: "untagged" });
+    store.createNote({ body: "project only", project });
+    const bodies = (filter: Parameters<InboxStore["list"]>[0]) => store.list(filter).map((item) => item.body).sort();
+    assert.deepEqual(bodies({ projectKeys: [project.key, other.key] }), ["p1w1", "p1w2", "p2w1", "p2w3", "project only", "untagged"]);
+    assert.deepEqual(bodies({ workspaceIds: ["w1", "w2"] }), ["p1w1", "p1w2", "p2w1", "project only", "untagged"]);
+    assert.deepEqual(bodies({ projectKeys: [project.key], workspaceIds: ["w1", "w2"] }), ["p1w1", "p1w2", "project only", "untagged"]);
+    assert.deepEqual(bodies({ projectKeys: null, workspaceIds: null }), ["p1w1", "p1w2", "p2w1", "p2w3", "project only", "untagged"]);
+    assert.deepEqual(bodies({ projectKeys: [], workspaceIds: [] }), ["untagged"]);
+    assert.deepEqual(bodies({ projectKeys: [project.key], workspaceIds: [] }), ["project only", "untagged"]);
+    assert.deepEqual(bodies({ projectKeys: [project.key], projectKey: other.key, workspaceId: "w1" }), ["p1w1", "p2w1"]);
   });
 });
 
 test("an empty note is never created", () => {
   withStore((store) => {
-    assert.throws(() => store.createNote({ kind: "note", title: " ", body: "\n" }), /Empty notes/);
+    assert.throws(() => store.createNote({ title: " ", body: "\n" }), /Empty notes/);
     assert.equal(store.list().length, 0);
   });
 });
@@ -128,9 +170,9 @@ test("updating a note to empty then reopening removes it", () => {
   const dir = mkdtempSync(join(tmpdir(), "inbox-store-"));
   try {
     const first = new InboxStore({ dir });
-    const note = first.createNote({ kind: "note", body: "draft" });
-    first.createNote({ kind: "note", body: "kept" });
-    first.updateNote(note.id, { kind: "note", title: null, body: "  " });
+    const note = first.createNote({ body: "draft" });
+    first.createNote({ body: "kept" });
+    first.updateNote(note.id, { title: null, body: "  " });
     first.starAgent("a1", { title: null, provider: "codex", model: null, workspaceId: null, cwd: "/" }, null);
     first.close();
     const second = new InboxStore({ dir });
@@ -148,7 +190,7 @@ test("data survives reopening the database", () => {
   const dir = mkdtempSync(join(tmpdir(), "inbox-store-"));
   try {
     const first = new InboxStore({ dir });
-    first.createNote({ kind: "note", body: "kept" });
+    first.createNote({ body: "kept" });
     first.close();
     const second = new InboxStore({ dir });
     assert.equal(second.list()[0]?.body, "kept");
@@ -158,14 +200,51 @@ test("data survives reopening the database", () => {
   }
 });
 
+test("legacy scratch items migrate to notes without changing their content or timestamps", () => {
+  const dir = mkdtempSync(join(tmpdir(), "inbox-store-"));
+  try {
+    const sqlite = process.getBuiltinModule("node:sqlite") as typeof import("node:sqlite");
+    const legacy = new sqlite.DatabaseSync(join(dir, "inbox.db"));
+    legacy.exec(`CREATE TABLE items (
+      id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK (kind IN ('agent', 'note', 'scratch')),
+      title TEXT, body TEXT NOT NULL DEFAULT '', project_key TEXT, project_label TEXT,
+      agent_id TEXT, agent_snapshot TEXT, workspace_id TEXT, workspace_label TEXT,
+      pinned INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`);
+    legacy.prepare(`INSERT INTO items (
+      id, kind, title, body, project_key, project_label, workspace_id, workspace_label,
+      pinned, created_at, updated_at
+    ) VALUES ('legacy', 'scratch', 'Old title', 'Old body', 'project', 'Repo', 'workspace', 'Main', 1, 'created', 'updated')`).run();
+    legacy.close();
+    const store = new InboxStore({ dir });
+    assert.deepEqual(store.get("legacy"), {
+      id: "legacy",
+      kind: "note",
+      title: "Old title",
+      body: "Old body",
+      projectKey: "project",
+      projectLabel: "Repo",
+      agentId: null,
+      agentSnapshot: null,
+      workspaceId: "workspace",
+      workspaceLabel: "Main",
+      pinned: true,
+      createdAt: "created",
+      updatedAt: "updated",
+    });
+    store.close();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("a workspace Inbox shows its workspace tag and items tagged only with its project", () => {
   withStore((store) => {
     const other = { key: "remote:github.com/a/other", label: "other" };
-    store.createNote({ kind: "note", body: "untagged" });
-    store.createNote({ kind: "note", body: "project only", project });
-    store.createNote({ kind: "note", body: "w1 note", project, workspace: { id: "w1", label: "main" } });
-    store.createNote({ kind: "note", body: "w2 note", project, workspace: { id: "w2", label: "feat" } });
-    store.createNote({ kind: "note", body: "other project", project: other });
+    store.createNote({ body: "untagged" });
+    store.createNote({ body: "project only", project });
+    store.createNote({ body: "w1 note", project, workspace: { id: "w1", label: "main" } });
+    store.createNote({ body: "w2 note", project, workspace: { id: "w2", label: "feat" } });
+    store.createNote({ body: "other project", project: other });
     const bodies = (items: ReturnType<InboxStore["list"]>) => items.map((item) => item.body).sort();
     assert.equal(store.list().length, 5);
     assert.deepEqual(bodies(store.list({ workspaceId: "w1" })), ["w1 note"]);
@@ -178,13 +257,13 @@ test("a workspace Inbox shows its workspace tag and items tagged only with its p
       { id: "w2", label: "feat", count: 1 },
       { id: "w1", label: "main", count: 1 },
     ]);
-    assert.deepEqual(store.workspaces("agent"), []);
+    assert.deepEqual(store.workspaces(["agent"]), []);
   });
 });
 
 test("tags can be set and cleared on notes, not agents; a workspace needs a project", () => {
   withStore((store) => {
-    const note = store.createNote({ kind: "note", body: "n" });
+    const note = store.createNote({ body: "n" });
     const tagged = store.setTags(note.id, { project, workspace: { id: "w1", label: "main" } });
     assert.equal(tagged.projectKey, project.key);
     assert.equal(tagged.workspaceLabel, "main");
@@ -199,7 +278,7 @@ test("tags can be set and cleared on notes, not agents; a workspace needs a proj
 
 test("labels refresh from the host; archived tags keep their last name", () => {
   withStore((store) => {
-    const note = store.createNote({ kind: "note", body: "n", project, workspace: { id: "w1", label: "old" } });
+    const note = store.createNote({ body: "n", project, workspace: { id: "w1", label: "old" } });
     store.refreshLabels(new Map([[project.key, "a/repo"]]), new Map([["w1", "renamed"]]));
     assert.equal(store.get(note.id)?.projectLabel, "a/repo");
     assert.equal(store.get(note.id)?.workspaceLabel, "renamed");
@@ -269,14 +348,14 @@ test("a database from before workspace scoping gains the column; old items stay 
 
 test("sorts by starred, created, updated and name; pinned stays first", () => {
   withStore((store) => {
-    const beta = store.createNote({ kind: "note", title: "beta", body: "" });
+    const beta = store.createNote({ title: "beta", body: "" });
     const agent = store.starAgent(
       "a1",
       { ...snapshot, title: "Gamma", createdAt: "2020-01-01T00:00:00.000Z" },
       project,
     ).item;
-    const alpha = store.createNote({ kind: "note", title: "Alpha", body: "" });
-    store.updateNote(beta.id, { kind: "note", title: "beta", body: "edited" });
+    const alpha = store.createNote({ title: "Alpha", body: "" });
+    store.updateNote(beta.id, { title: "beta", body: "edited" });
     const order = (sort: "starred" | "created" | "updated" | "name") =>
       store.list({ sort }).map((item) => item.id);
     assert.deepEqual(order("updated"), [beta.id, alpha.id, agent.id]);

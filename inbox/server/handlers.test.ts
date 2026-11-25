@@ -31,7 +31,7 @@ function harness(failRefresh = false) {
   let title = "original agent";
   const agent = () => ({
     id: "agent", title, provider: "codex", model: null, workspaceId: "workspace", cwd: "/repo",
-    createdAt: "2026-11-25T00:00:00Z", status: "idle", archivedAt: null,
+    createdAt: "2026-11-25T00:00:00Z", updatedAt: "2026-11-25T12:00:00Z", status: "idle", archivedAt: null,
   });
   const paseo = {
     workspaces: { list: async () => ({
@@ -84,10 +84,10 @@ test("SQLite-backed RPC writes invalidate both clients without sending note cont
   const secondDone = current.changes.subscribe({ signal: new AbortController().signal, push: async (event) => { secondEvents.push(event); } });
   try {
     await settle();
-    const { item } = await current.call(saveNote, { kind: "scratch", body: "private note" });
-    await current.call(saveNote, { id: item.id, kind: "scratch", body: "edited private note" });
+    const { item } = await current.call(saveNote, { body: "private note" });
+    await current.call(saveNote, { id: item.id, body: "edited private note" });
     await current.call(tagItem, { id: item.id, projectKey: null, workspaceId: "workspace" });
-    await current.call(updateItem, { id: item.id, kind: "note", pinned: true });
+    await current.call(updateItem, { id: item.id, pinned: true });
     await current.call(starAgent, { agentId: "agent" });
     await settle();
     assert.equal(firstEvents.length, 6);
@@ -96,17 +96,18 @@ test("SQLite-backed RPC writes invalidate both clients without sending note cont
     assert.equal(current.store.get(item.id)?.body, "edited private note");
     const count = firstEvents.length;
     await current.call(starAgent, { agentId: "agent" });
-    await assert.rejects(current.call(saveNote, { kind: "note", body: "" }));
+    await assert.rejects(current.call(saveNote, { body: "" }));
     await settle();
     assert.equal(firstEvents.length, count);
     current.rename();
-    await current.call(agentStates, { agentIds: ["agent"] });
+    const state = await current.call(agentStates, { agentIds: ["agent"] });
+    assert.equal(state.lastActivityAt?.agent, "2026-11-25T12:00:00Z");
     await current.call(deleteItem, { id: item.id });
     await settle();
     assert.equal(firstEvents.length, count + 2);
     first.abort();
     await firstDone;
-    await current.call(saveNote, { kind: "note", body: "written while disconnected" });
+    await current.call(saveNote, { body: "written while disconnected" });
     await settle();
     assert.equal(firstEvents.length, count + 2);
     const reconnected: InboxChange[] = [];

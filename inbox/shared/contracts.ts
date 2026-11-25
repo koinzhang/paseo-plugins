@@ -1,7 +1,7 @@
 import { defineRpc } from "@getpaseo/plugin";
 import { z } from "zod";
 
-export const ItemKind = z.enum(["agent", "note", "scratch"]);
+export const ItemKind = z.enum(["agent", "note"]);
 export type ItemKind = z.infer<typeof ItemKind>;
 
 export const AgentSnapshot = z.object({
@@ -63,11 +63,13 @@ export type AgentState = z.infer<typeof AgentState>;
 export const listItems = defineRpc({
   name: "items.list",
   input: z.object({
-    kind: ItemKind.optional(),
+    kinds: z.array(ItemKind).optional(),
     projectKey: z.string().optional(),
+    projectKeys: z.array(z.string()).nullable().optional(),
     query: z.string().optional(),
     /** Items tagged with exactly this workspace. */
     workspaceId: z.string().optional(),
+    workspaceIds: z.array(z.string()).nullable().optional(),
     /**
      * A workspace's Inbox: items tagged with this workspace, plus items tagged
      * only with its project.
@@ -90,7 +92,6 @@ export const saveNote = defineRpc({
   name: "items.save",
   input: z.object({
     id: z.string().optional(),
-    kind: z.enum(["note", "scratch"]),
     title: z.string().nullable().optional(),
     body: z.string(),
     /** On create: tag this workspace and its project. */
@@ -133,8 +134,6 @@ export const updateItem = defineRpc({
   input: z.object({
     id: z.string(),
     pinned: z.boolean().optional(),
-    /** Only `note` is accepted: promotes a scratch entry. */
-    kind: z.literal("note").optional(),
   }),
   output: z.object({ item: Item }),
 });
@@ -180,6 +179,8 @@ export const agentStates = defineRpc({
     states: z.record(z.string(), AgentState),
     /** Only agents the host still knows. */
     live: z.record(z.string(), AgentLive).optional(),
+    /** Host update timestamps; absent when the agent is missing. */
+    lastActivityAt: z.record(z.string(), z.string()).optional(),
     /** A starred agent was renamed on the host and the stored title updated; the list is stale. */
     titlesChanged: z.boolean().optional(),
   }),
