@@ -1,4 +1,4 @@
-import type { PluginHookContext, PluginHookEvents } from "@getpaseo/plugin/server";
+import type { PluginHookContext } from "@getpaseo/plugin/server";
 
 /**
  * Host types re-derived from the plugin SDK.
@@ -9,6 +9,7 @@ import type { PluginHookContext, PluginHookEvents } from "@getpaseo/plugin/serve
  * dependencies, so `@getpaseo/protocol` and `@getpaseo/client` imports fail the
  * runtime-boundary build unless they resolve from the plugin's node_modules.
  */
-export type AgentTimelineItem = PluginHookEvents["agent.turn.after"]["timeline"][number];
-
 export type PaseoApi = PluginHookContext["paseo"];
+
+type AgentHandle = ReturnType<PaseoApi["agents"]["ref"]>;
+export type AgentTimelineItem = Awaited<ReturnType<AgentHandle["timeline"]["refetch"]>>["entries"][number]["item"];

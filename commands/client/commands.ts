@@ -13,6 +13,7 @@ import { agentControl } from "../shared/rpc.ts";
 import { composeResendPrompt, latestUserPrompt } from "../shared/resend.ts";
 import { loadAgentState, loadProfiles } from "./agent-state.ts";
 import type { PickerHost, RunControl } from "./picker.tsx";
+import { runtimeControlNotice } from "./runtime-notice.ts";
 import { getDisabledCommands, subscribeDisabledCommands } from "./settings-store.ts";
 
 type Context = PluginAgentCommandContext & { args: string };
@@ -164,6 +165,21 @@ function controlRunner(ctx: Context): RunControl {
   };
 }
 
+function runtimeRunner(ctx: Context): RunControl {
+  return async (control, note) => {
+    if (control.op !== "model" && control.op !== "thinking" && control.op !== "mode") {
+      throw new Error("This command must use the agent control RPC.");
+    }
+    const state = await loadAgentState(ctx.paseo, ctx.agent.id);
+    const [composer] = ctx.composers({ agentId: ctx.agent.id });
+    if (!composer) throw new Error("The agent's composer is unavailable.");
+    if (control.op === "model") await composer.setModel(control.modelId);
+    else if (control.op === "thinking") await composer.setThinking(control.thinkingOptionId);
+    else await composer.setMode(control.modeId);
+    return [note, runtimeControlNotice(state, control)].filter(Boolean).join("\n") || null;
+  };
+}
+
 function addCommand(client: PluginClientContext, pickers: PickerHost, command: CommandSpec) {
   return client.addSlashCommand({
     name: command.name,
@@ -176,7 +192,9 @@ function addCommand(client: PluginClientContext, pickers: PickerHost, command: C
         return;
       }
       const plan = await command.plan(ctx);
-      const run = controlRunner(ctx);
+      const run = ["model", "effort", "mode"].includes(command.name)
+        ? runtimeRunner(ctx)
+        : controlRunner(ctx);
       if (plan.kind === "picker") {
         pickers.show({ workspaceId: ctx.agent.workspaceId, agentId: ctx.agent.id }, plan, run);
         return;

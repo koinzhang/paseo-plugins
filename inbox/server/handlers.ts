@@ -13,6 +13,7 @@ import {
   updateItem,
 } from "../shared/contracts.ts";
 import { agentState, lookupAgent, unarchiveAgent as runUnarchive, workspaceAgents } from "./agents.ts";
+import type { InboxChanges } from "./changes.ts";
 import type { createDaemonConnection } from "./daemon.ts";
 import { type Directory, loadDirectory } from "./directory.ts";
 import type { createProjectResolver } from "./project-key.ts";
@@ -23,9 +24,10 @@ interface Deps {
   store: InboxStore;
   resolveProject: ReturnType<typeof createProjectResolver>;
   daemon: ReturnType<typeof createDaemonConnection>;
+  changes: InboxChanges;
 }
 
-export function registerHandlers(server: PluginServerContext, { store, resolveProject, daemon }: Deps): void {
+export function registerHandlers(server: PluginServerContext, { store, resolveProject, daemon, changes }: Deps): void {
   const directory = (paseo: PaseoApi) => loadDirectory(paseo, resolveProject);
   /** Null when the host directory is unreadable; then nothing is treated as archived. */
   const tryDirectory = (paseo: PaseoApi): Promise<Directory | null> =>
@@ -140,5 +142,11 @@ export function registerHandlers(server: PluginServerContext, { store, resolvePr
     };
   });
 
-  server.handle(unarchiveAgent, async ({ agentId }) => runUnarchive(await daemon.get(), agentId));
+  server.handle(unarchiveAgent, async ({ agentId }) => {
+    try {
+      return await runUnarchive(await daemon.get(), agentId);
+    } finally {
+      changes.invalidate();
+    }
+  });
 }

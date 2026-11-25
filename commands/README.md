@@ -44,9 +44,10 @@ paseo plugin add npm:@koinzhang/paseo-plugin-commands
 
 To install from GitHub, use `paseo plugin add github:koinzhang/paseo-plugins:commands`.
 
-Requires Paseo >= 0.15.0. The plugin SDK cannot change agent settings yet, so the daemon side of
-the plugin connects to its local daemon (`PASEO_LISTEN` or `$PASEO_HOME/paseo.pid`) and sends the
-same requests the app uses. If the daemon requires a password, set `PASEO_PASSWORD` for it.
+Requires Paseo >= 0.16.0. `/model`, `/effort`, and `/mode` use the public Composer API. Profile,
+feature, rename, and cancel controls use the daemon side of the plugin, which connects to its local
+daemon (`PASEO_LISTEN` or `$PASEO_HOME/paseo.pid`). If the daemon requires a password, set
+`PASEO_PASSWORD` for it.
 
 ## Development
 
@@ -60,5 +61,6 @@ paseo plugin reload commands
 ```
 
 Command definitions and option matching live in `shared/` (`commands.ts`, `parse.ts`,
-`resolve-option.ts`), daemon-side setting writes in `server/daemon.ts`, and the menus plus
-settings UI in `client/`. Specs are in [`specs/`](./specs/).
+`resolve-option.ts`), model / effort / mode writes use the public Composer API, the remaining
+daemon-side controls live in `server/`, and the menus plus settings UI live in `client/`. Specs are
+in [`specs/`](./specs/).

@@ -1,10 +1,6 @@
 import { defineRpc } from "@getpaseo/plugin";
 import { z } from "zod";
 
-/**
- * Agent mutations the plugin SDK does not expose yet. The daemon side forwards
- * each one to the matching native daemon request.
- */
 export const AgentControlSchema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("model"), agentId: z.string(), modelId: z.string() }),
   z.object({ op: z.literal("thinking"), agentId: z.string(), thinkingOptionId: z.string() }),
@@ -22,7 +18,7 @@ export const AgentControlSchema = z.discriminatedUnion("op", [
       modelId: z.string().optional(),
       modeId: z.string().optional(),
       thinkingOptionId: z.string().optional(),
-      featureValues: z.record(z.string(), z.unknown()).optional(),
+      options: z.record(z.string(), z.unknown()).optional(),
     }),
   }),
   z.object({ op: z.literal("rename"), agentId: z.string(), title: z.string().min(1) }),

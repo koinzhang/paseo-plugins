@@ -37,15 +37,15 @@ Everything lives on the daemon machine in `~/.paseo/plugin-data/activity/` (SQLi
 
 ## Install
 
-Requires Paseo **>= 0.15.0**. Earlier releases keep working on older runtimes: **0.7.0** is the last release that supports Paseo 0.9–0.14, and **0.4.0** the last that supports 0.8.0.
+The current checkout requires Paseo **>= 0.17.4** and pins `@getpaseo/plugin` to **0.17.4**. This is an unreleased compatibility update; earlier published versions retain their own requirements: **0.8.0** requires Paseo >=0.15.0, **0.7.0** supports Paseo 0.9–0.14, and **0.4.0** supports 0.8.0.
 
-From Git (Paseo 0.15 and later):
+From Git (Paseo 0.17.4 and later):
 
 ```bash
 paseo plugin add github:koinzhang/paseo-plugins:activity
 ```
 
-From npm (Paseo 0.15 and later; this is the source paseo.cafe hands to Paseo). Pin `0.7.0` on Paseo 0.9–0.14, or `0.4.0` on Paseo 0.8:
+From npm (this is the source paseo.cafe hands to Paseo; published releases may lag this checkout). Pin a release whose runtime requirement matches your host, such as `0.8.0` for Paseo 0.15+, `0.7.0` on Paseo 0.9–0.14, or `0.4.0` on Paseo 0.8:
 
 ```bash
 paseo plugin install npm:@koinzhang/paseo-plugin-activity

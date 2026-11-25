@@ -1,5 +1,6 @@
 import type { PluginAgentCommandContext } from "@getpaseo/plugin/client";
 import type { AgentState, Feature, ModelOption, Profile, SelectOption } from "../shared/commands.ts";
+import { optionFeatures } from "../shared/agent-options.ts";
 
 type Paseo = PluginAgentCommandContext["paseo"];
 
@@ -44,7 +45,7 @@ export async function loadAgentState(
     modes = (catalog.modes ?? []).map(toSelectOption);
   }
 
-  const features: Feature[] = (agent.features ?? []).map((feature) =>
+  const features: Feature[] = optionFeatures(agent).map((feature) =>
     feature.type === "toggle"
       ? { type: "toggle", id: feature.id, label: feature.label, value: feature.value }
       : {
@@ -70,6 +71,8 @@ export async function loadAgentState(
     models,
     modes,
     features,
+    controls: agent.controls,
+    options: agent.options,
   };
 }
 

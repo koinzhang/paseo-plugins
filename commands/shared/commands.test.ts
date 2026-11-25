@@ -178,6 +178,49 @@ test("/feature <name> <value> sets toggles and selects", () => {
   assert.throws(() => planFeature("", { ...state, features: [] }), /exposes no features/);
 });
 
+test("/feature --default produces a null options reset for toggles and selects", () => {
+  for (const featureId of ["fast_mode", "verbosity"]) {
+    assert.deepEqual(run(planFeature(`${featureId} --default`, state)).control, {
+      op: "feature",
+      agentId: "a1",
+      featureId,
+      value: null,
+    });
+  }
+});
+
+test("/feature uses current controls and effective values rather than legacy features", () => {
+  const currentState: AgentState = {
+    ...state,
+    controls: [
+      {
+        type: "select",
+        key: "service_tier",
+        label: "Speed",
+        defaultValue: "default",
+        choices: [
+          { value: "default", label: "Normal" },
+          { value: "fast", label: "Fast" },
+        ],
+      },
+    ],
+    options: { service_tier: "fast" },
+  };
+  const plan = picker(planFeature("", currentState));
+  assert.deepEqual(titles(plan.items), ["Speed: Fast"]);
+  const speed = plan.items[0];
+  assert.ok(speed && "items" in speed);
+  assert.deepEqual(current(speed.items), ["fast"]);
+  assert.deepEqual(run(planFeature("service_tier normal", currentState)).control, {
+    op: "feature",
+    agentId: "a1",
+    featureId: "service_tier",
+    value: "default",
+  });
+  assert.throws(() => planFeature("fast_mode on", currentState), /Unknown feature "fast_mode"/);
+  assert.throws(() => planFeature("", { ...currentState, controls: [] }), /exposes no features/);
+});
+
 const profiles: Profile[] = [
   {
     id: "reviewer",
@@ -216,7 +259,7 @@ test("/profile <name> applies runtime fields as one config bundle", () => {
       modelId: "gpt-5.6-sol",
       modeId: "read-only",
       thinkingOptionId: "high",
-      featureValues: { fast_mode: true },
+      options: { fast_mode: true },
     },
   });
   assert.equal(plan.note, undefined);
@@ -232,6 +275,109 @@ test("/profile ignores unsupported fields with a short note", () => {
   assert.equal(
     plan.note,
     'Applied profile "Partial". Ignored: mode "plan", feature "unknown_flag", cwd.',
+  );
+});
+
+test("/profile applies current options through the existing config bundle", () => {
+  const profile: Profile = {
+    id: "current",
+    name: "Current",
+    provider: "codex",
+    options: { fast_mode: true, verbosity: "high" },
+  };
+  const plan = run(planProfile("current", state, [profile]));
+  assert.deepEqual(plan.control, {
+    op: "config",
+    agentId: "a1",
+    config: { options: { fast_mode: true, verbosity: "high" } },
+  });
+  assert.equal(plan.note, undefined);
+});
+
+test("/profile prefers options over the legacy field without reporting it as ignored", () => {
+  const profile: Profile = {
+    id: "mixed",
+    name: "Mixed",
+    provider: "codex",
+    options: { fast_mode: false },
+    featureValues: { fast_mode: true, verbosity: "high" },
+  };
+  const plan = run(planProfile("mixed", state, [profile]));
+  assert.deepEqual(plan.control, {
+    op: "config",
+    agentId: "a1",
+    config: { options: { fast_mode: false } },
+  });
+  assert.equal(plan.note, undefined);
+});
+
+test("/profile does not revive legacy values when current options are empty", () => {
+  const profile: Profile = {
+    id: "empty",
+    name: "Empty",
+    provider: "codex",
+    options: {},
+    featureValues: { fast_mode: true },
+  };
+  assert.throws(() => planProfile("empty", state, [profile]), {
+    message: 'Profile "Empty" has nothing to apply to this agent.',
+  });
+});
+
+test("/profile still reports unknown option keys individually", () => {
+  const profile: Profile = {
+    id: "options-partial",
+    name: "Options Partial",
+    provider: "codex",
+    options: { fast_mode: true, unknown_flag: 1 },
+    cwd: "/tmp",
+  };
+  const plan = run(planProfile("options-partial", state, [profile]));
+  assert.deepEqual(plan.control, {
+    op: "config",
+    agentId: "a1",
+    config: { options: { fast_mode: true } },
+  });
+  assert.equal(
+    plan.note,
+    'Applied profile "Options Partial". Ignored: feature "unknown_flag", cwd.',
+  );
+});
+
+test("/profile emits an options bundle validated by current controls, preserving resets", () => {
+  const profile: Profile = {
+    id: "current-controls",
+    name: "Current Controls",
+    provider: "codex",
+    modeId: "read-only",
+    thinkingOptionId: "high",
+    options: { service_tier: null, fast_mode: true, unknown: true },
+  };
+  const currentState: AgentState = {
+    ...state,
+    controls: [
+      {
+        type: "select",
+        key: "service_tier",
+        label: "Speed",
+        choices: [{ value: "default", label: "Normal" }],
+      },
+    ],
+    options: { service_tier: "default" },
+  };
+  const plan = run(planProfile("current-controls", currentState, [profile]));
+  assert.deepEqual(plan.control, {
+    op: "config",
+    agentId: "a1",
+    config: {
+      modeId: "read-only",
+      thinkingOptionId: "high",
+      options: { service_tier: null },
+    },
+  });
+  assert.equal(
+    plan.note,
+    'Applied profile "Current Controls". Ignored: feature "fast_mode", feature "unknown".',
   );
 });
 

@@ -137,8 +137,9 @@ function sortItems(items: Item[], sort: ItemSort): Item[] {
 export class InboxStore {
   private readonly db: Database;
   private readonly now: () => string;
+  private readonly onChange: () => void;
 
-  constructor(options: { dir?: string; now?: () => string } = {}) {
+  constructor(options: { dir?: string; now?: () => string; onChange?: () => void } = {}) {
     const dir = options.dir ?? defaultDataDir();
     mkdirSync(dir, { recursive: true });
     const sqlite = loadSqlite();
@@ -148,6 +149,7 @@ export class InboxStore {
     this.migrate();
     this.db.exec(WORKSPACE_INDEX);
     this.now = options.now ?? (() => new Date().toISOString());
+    this.onChange = options.onChange ?? (() => {});
     this.deleteEmptyNotes();
   }
 
@@ -174,7 +176,9 @@ export class InboxStore {
          AND trim(coalesce(title, '')) = '' AND trim(body) = ''`,
       )
       .run();
-    return Number(result.changes);
+    const changes = Number(result.changes);
+    if (changes > 0) this.onChange();
+    return changes;
   }
 
   close(): void {
@@ -257,14 +261,20 @@ export class InboxStore {
 
   /** Writes current names of active projects / workspaces into the snapshots. */
   refreshLabels(projects: ReadonlyMap<string, string>, workspaces: ReadonlyMap<string, string>): void {
+    let changed = false;
     const project = this.db.prepare(
       "UPDATE items SET project_label = ? WHERE project_key = ? AND project_label IS NOT ?",
     );
-    for (const [key, label] of projects) project.run(label, key, label);
+    for (const [key, label] of projects) {
+      if (Number(project.run(label, key, label).changes) > 0) changed = true;
+    }
     const workspace = this.db.prepare(
       "UPDATE items SET workspace_label = ? WHERE workspace_id = ? AND workspace_label IS NOT ?",
     );
-    for (const [id, label] of workspaces) workspace.run(label, id, label);
+    for (const [id, label] of workspaces) {
+      if (Number(workspace.run(label, id, label).changes) > 0) changed = true;
+    }
+    if (changed) this.onChange();
   }
 
   /** Writes current agent titles into starred agents; true when any title changed. */
@@ -278,6 +288,7 @@ export class InboxStore {
     for (const [agentId, title] of titles) {
       if (Number(update.run(title, title, agentId, title).changes) > 0) changed = true;
     }
+    if (changed) this.onChange();
     return changed;
   }
 
@@ -303,6 +314,7 @@ export class InboxStore {
         now,
         now,
       );
+    this.onChange();
     return this.require(id);
   }
 
@@ -312,6 +324,7 @@ export class InboxStore {
     this.db
       .prepare("UPDATE items SET kind = ?, title = ?, body = ?, updated_at = ? WHERE id = ?")
       .run(patch.kind, patch.title === undefined ? existing.title : patch.title, patch.body, this.now(), id);
+    this.onChange();
     return this.require(id);
   }
 
@@ -332,6 +345,7 @@ export class InboxStore {
         this.now(),
         id,
       );
+    this.onChange();
     return this.require(id);
   }
 
@@ -348,6 +362,7 @@ export class InboxStore {
         this.now(),
         id,
       );
+    this.onChange();
     return this.require(id);
   }
 
@@ -379,11 +394,13 @@ export class InboxStore {
         now,
         now,
       );
+    this.onChange();
     return { item: this.require(id), created: true };
   }
 
   delete(id: string): void {
-    this.db.prepare("DELETE FROM items WHERE id = ?").run(id);
+    const result = this.db.prepare("DELETE FROM items WHERE id = ?").run(id);
+    if (Number(result.changes) > 0) this.onChange();
   }
 
   private require(id: string): Item {

@@ -1,4 +1,5 @@
 import type { PluginClientContext } from "@getpaseo/plugin/client";
+import { watchInboxChanges } from "./client/changes.ts";
 import { contributeHeaderButtons } from "./client/header-button.ts";
 import { InboxSurface } from "./client/inbox-surface.tsx";
 import { INBOX_SCREEN_ID } from "./client/screen-id.ts";
@@ -7,6 +8,7 @@ import { notifyItemsChanged, requestDraft, requestSelection } from "./client/sel
 import { WorkspaceInboxPanel } from "./client/workspace-panel.tsx";
 import { saveNote, starAgent } from "./shared/contracts.ts";
 import { parseInboxCommand } from "./shared/slash-command.ts";
+import { itemsChanged } from "./shared/changes.ts";
 
 export default function contribute(client: PluginClientContext) {
   const removers = [
@@ -20,7 +22,6 @@ export default function contribute(client: PluginClientContext) {
       id: "workspace-inbox",
       title: "Inbox",
       icon: "Inbox",
-      context: "workspace",
       locations: ["explorer"],
       Component: WorkspaceInboxPanel,
     }),
@@ -71,6 +72,12 @@ export default function contribute(client: PluginClientContext) {
       },
     }),
     contributeHeaderButtons(client),
+    watchInboxChanges(
+      (onEvent, onClosed) => client.subscribe(itemsChanged, {}, onEvent, {
+        onClosed: ({ error }) => onClosed(error),
+      }),
+      notifyItemsChanged,
+    ),
   ];
   return () => {
     for (const remove of removers) remove();

@@ -4,16 +4,13 @@ import { CustomizeSidebarItem } from "./client/sidebar-item.tsx";
 import { CUSTOMIZE_SCREEN_ID } from "./client/screen-id.ts";
 import { CustomizeSurface } from "./client/surface.tsx";
 import { openCustomizeFromAgent } from "./client/slash-command.ts";
-import { currentAppLanguage, watchAppLanguage } from "./client/use-app-language.ts";
+import { customizeTranslations } from "./client/translations.ts";
 import { trackWorkspaceRoute } from "./client/web.ts";
-import { messagesFor } from "./shared/i18n.ts";
 
-/** Command titles follow the app language; the host has no update(), so re-register on change. */
 function addCommands(client: PluginClientContext): () => void {
-  const messages = messagesFor(currentAppLanguage());
   const removeCommandCenterItem = client.addCommandCenterItem({
     id: "open-customize",
-    title: messages.title,
+    title: customizeTranslations.message("title"),
     icon: "FolderCog",
     keywords: ["customize", "agents.md", "claude.md", "rules", "skills", "mcp", "instructions", "provider"],
     context: "global",
@@ -23,7 +20,7 @@ function addCommands(client: PluginClientContext): () => void {
   });
   const removeSlashCommand = client.addSlashCommand({
     name: "customize",
-    description: messages.openBoard,
+    description: customizeTranslations.message("openBoard"),
     argumentHint: "",
     context: "agent",
     onSubmit: openCustomizeFromAgent,
@@ -47,14 +44,9 @@ export default function contribute(client: PluginClientContext) {
     Component: CustomizeSidebarItem,
   });
 
-  let removeCommands = addCommands(client);
-  const stopLanguage = watchAppLanguage(() => {
-    removeCommands();
-    removeCommands = addCommands(client);
-  });
+  const removeCommands = addCommands(client);
   return () => {
     stopRouteTracking();
-    stopLanguage();
     removeCommands();
   };
 }

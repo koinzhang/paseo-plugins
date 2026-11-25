@@ -6,35 +6,33 @@ import { ingestTimeline, ingestUserMessages } from "./ingest.ts";
 import { resolveAgentModel } from "./resolve-model.ts";
 import type { UsageStore } from "./store.ts";
 
-/** Recent history is enough for immediacy; the background scan owns the full timeline. */
-export const TURN_TAIL_LIMIT = 500;
-
 type PaseoApi = PluginHookContext["paseo"];
 
 /**
- * Paseo 0.13+ sends an empty `timeline` in `agent.turn.after`, so read the recent
- * history back through the SDK instead of trusting the hook payload.
+ * Read the latest complete turn and keep only entries belonging to the hook's turn.
  */
-export async function refetchTimelineTail(
+export async function refetchTurnTimeline(
   paseo: PaseoApi,
   agentId: string,
-  limit: number = TURN_TAIL_LIMIT,
+  turnId: string | null,
 ): Promise<AgentTimelineItem[]> {
+  if (turnId === null) return [];
   const page = await paseo.agents.ref(agentId).timeline.refetch({
-    projection: "canonical",
     direction: "tail",
-    limit,
+    limit: 1,
+    wholeTurns: true,
   });
   if (page.error) throw new Error(page.error);
-  return page.entries.map(({ item }) => item);
+  return page.entries.filter((entry) => entry.turnId === turnId).map(({ item }) => item);
 }
 
 export interface IngestTurnAfterOptions {
   homeDir?: string;
+  signal?: AbortSignal;
 }
 
 /**
- * Ingest one finished turn from a freshly read timeline tail.
+ * Ingest one finished turn from a freshly read complete turn.
  *
  * Returns the number of tool-call rows upserted. Calls already stored in a
  * terminal status cannot change from a snapshot, so they are skipped.
@@ -43,8 +41,10 @@ export async function ingestTurnAfter(
   store: UsageStore,
   paseo: PaseoApi,
   agent: PluginHookAgent,
+  turnId: string | null,
   options: IngestTurnAfterOptions = {},
 ): Promise<number> {
+  if (options.signal?.aborted) return 0;
   const existing = store.getAgent(agent.id);
   store.upsertAgents([
     agentRowFromHook(agent, {
@@ -52,17 +52,21 @@ export async function ingestTurnAfter(
       archivedAt: existing?.archivedAt,
     }),
   ]);
+  if (turnId === null) return 0;
 
   const model = await resolveAgentModel(paseo, agent.id);
-  const timeline = await refetchTimelineTail(paseo, agent.id);
-  store.upsertUserMessages(ingestUserMessages(timeline, agent, { model }));
+  if (options.signal?.aborted) return 0;
+  const timeline = await refetchTurnTimeline(paseo, agent.id, turnId);
+  if (options.signal?.aborted) return 0;
+  if (timeline.length === 0) return 0;
+  store.upsertUserMessages(ingestUserMessages(timeline, agent, { model, turnId }));
   store.pruneReplayDuplicateMessages(agent.id);
 
   const settled = store.terminalCallIds(agent.id);
   const pending = timeline.filter(
     (item) => item.type !== "tool_call" || !settled.has(item.callId),
   );
-  const rows = ingestTimeline(pending, agent, null, {
+  const rows = ingestTimeline(pending, agent, turnId, {
     homeDir: options.homeDir ?? homedir(),
   });
   if (rows.length === 0) return 0;

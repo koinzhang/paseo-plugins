@@ -12,8 +12,9 @@ A personal inbox for Paseo: star agents, keep notes per project, and capture scr
 - **Sorting**: the button next to *+ Note* on the Inbox page cycles through updated time (default), starred time, created time, and name. Drag the divider to resize the list. Pinned items stay on top.
 - **Projects**: items are grouped by the git remote URL (`origin`, else the first remote), falling back to the repository root, then the directory. Worktrees of one repository share a project.
 - **Hosts**: data lives on each daemon in `~/.paseo/plugin-data/inbox/inbox.db`. With several hosts connected, the Inbox host picker switches between them.
+- **Live refresh**: writes on one client invalidate the Inbox queries on other connected clients of the same host. Only an invalidation signal is sent, never note contents; each client reads the SQLite-backed RPCs again. A new or reconnected subscription refreshes from current data rather than replaying missed events. An open note updates from remote text only when it has no unsaved local edits; this is not collaborative editing or conflict resolution. Agent status still refreshes every 10 seconds.
 
-Requires Paseo >= 0.15.0 and a daemon Node runtime with `node:sqlite`.
+Requires Paseo >= 0.17.4 and a daemon Node runtime with `node:sqlite`. The plugin SDK, daemon client, and protocol development dependency are pinned to 0.17.4.
 
 ## Install
 

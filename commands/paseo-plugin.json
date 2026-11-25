@@ -2,6 +2,6 @@
   "id": "commands",
   "description": "Slash commands for the current agent: /model, /effort, /profile, /mode, /feature, /rename, /cancel, /resend",
   "requirements": {
-    "paseo": ">=0.15.0"
+    "paseo": ">=0.16.0"
   }
 }

@@ -36,10 +36,9 @@ import { fetchLastExchange } from "./last-exchange.ts";
 import { AgentIcon, PermissionBadge } from "./agent-status.tsx";
 import { inboxListSort, visibleInboxFilters } from "../shared/filter-settings.ts";
 import { itemTitle } from "../shared/item-title.ts";
-import { isEmptyNote } from "../shared/note.ts";
+import { isEmptyNote, syncNoteText } from "../shared/note.ts";
 import {
   type DraftTags,
-  notifyItemsChanged,
   onItemsChanged,
   onSelectionRequest,
   type SelectionRequest,
@@ -391,6 +390,16 @@ function NoteEditor({
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   const onCreatedRef = useRef(onCreated);
   onCreatedRef.current = onCreated;
+
+  useEffect(() => {
+    if (!item || item.id !== idRef.current) return;
+    const next = syncNoteText(latest.current, saved.current, { title: item.title ?? "", body: item.body });
+    if (!next) return;
+    saved.current = next;
+    latest.current = next;
+    setTitle(next.title);
+    setBody(next.body);
+  }, [item?.id, item?.title, item?.body]);
 
   /** Serialized so a draft is created once even when saves overlap. */
   const persist = (final: boolean) => {
@@ -1105,8 +1114,7 @@ export function InboxView({
   useEffect(
     () =>
       onItemsChanged(() => {
-        void queryClient.invalidateQueries({ queryKey: LIST_KEY });
-        void queryClient.invalidateQueries({ queryKey: CANDIDATES_KEY });
+        void queryClient.invalidateQueries({ queryKey: ["inbox"] });
       }),
     [queryClient],
   );
@@ -1159,9 +1167,6 @@ export function InboxView({
     enabled: agentIds.length > 0,
     refetchInterval: 10_000,
   });
-  useEffect(() => {
-    if (statesQuery.data?.titlesChanged) notifyItemsChanged();
-  }, [statesQuery.data]);
   const agentState = (item: Item) =>
     item.agentId ? statesQuery.data?.states[item.agentId] : undefined;
   const agentLive = (item: Item) =>

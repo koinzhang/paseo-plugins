@@ -30,5 +30,6 @@
 | 026 | [`026-toolbar-content-gap`](./026-toolbar-content-gap/) | 固定操作栏与滚动内容之间保留间距，滚动时内容不再贴住操作栏 | 已实现，页面目视验收待完成 |
 | 027 | [`027-refresh-icon-size`](./027-refresh-icon-size/) | 工具栏刷新图标改为 14px，与搜索 / 箭头 / 机制图标一致 | 已实现 |
 | 028 | [`028-icon-consistency`](./028-icon-consistency/) | 视图切换按钮去掉自定义 tooltip；条目类别图标改为 14px 并与标题居中 | 已实现，页面目视验收待完成 |
+| 029 | [`029-paseo-0.17-adaptation`](./029-paseo-0.17-adaptation/) | 实际对齐 SDK 0.17.4，复用公开宿主语言、命令 message 标签与 workspace handle | 已实现，实际 SDK typecheck 与完整测试 77/77 通过，本轮 reload 与页面目视验收待完成 |
 
 规则同仓库根 `AGENTS.md`：先改 spec / plan 再改代码；每完成一个 task 在 `tasks.md` 勾选并写验证方式；新功能点新开编号目录。

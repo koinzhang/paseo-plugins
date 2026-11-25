@@ -606,6 +606,8 @@ function agentFromSnapshot(agent: {
   provider: string;
   cwd: string;
   title?: string | null;
+  background?: PluginHookAgent["background"];
+  metadata?: PluginHookAgent["metadata"];
 }): PluginHookAgent {
   return {
     id: agent.id,
@@ -614,6 +616,8 @@ function agentFromSnapshot(agent: {
     provider: agent.provider,
     cwd: agent.cwd,
     title: agent.title ?? null,
+    background: agent.background ?? false,
+    metadata: agent.metadata ?? {},
   };
 }
 
@@ -678,6 +682,8 @@ export async function resyncAgents(
     cwd: string;
     updatedAt?: string;
     lastUserMessageAt?: string | null;
+    background?: PluginHookAgent["background"];
+    metadata?: PluginHookAgent["metadata"];
   } }>,
   options: { incremental?: boolean } = {},
 ): Promise<HistoryScanResult> {

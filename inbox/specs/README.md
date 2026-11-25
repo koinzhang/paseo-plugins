@@ -19,5 +19,7 @@
 | 014 | [`014-all-scope-chips`](./014-all-scope-chips/) | 全局页面 All 下也显示并应用 project / workspace 筛选；New note 清除筛选。取代 013 决策 1 | 实现中 |
 | 015 | [`015-chip-wheel-scroll`](./015-chip-wheel-scroll/) | web 上鼠标滚轮可横向滚动 project / workspace chip 行，到头后不拦截 | 实现中 |
 | 016 | [`016-agent-title-sync`](./016-agent-title-sync/) | 收藏 agent 改名后，列表 / 搜索 / 名称排序跟随最新名称 | 实现中 |
+| 017 | [`017-paseo-0.17-audit`](./017-paseo-0.17-audit/) | Paseo 0.17.4 / 插件 SDK 源码审查；保留实现，记录订阅、实体缓存与恢复接口的取舍 | 审查完成，完整测试通过；真实归档恢复未执行 |
+| 018 | [`018-paseo-0.17-alignment`](./018-paseo-0.17-alignment/) | 实际安装 SDK / client / protocol 0.17.4；服务端写入失效订阅、重连刷新和兼容 API 清理，取代 017 的暂缓升级决定 | 实现完成，typecheck / 67 项测试通过；真实跨客户端重连与恢复待上级验收 |
 
 规则同仓库根 `AGENTS.md`：先改 spec / plan 再改代码；每完成一个 task 在 `tasks.md` 勾选并写验证方式；新功能点新开编号目录。

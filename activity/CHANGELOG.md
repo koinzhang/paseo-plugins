@@ -5,6 +5,20 @@ All notable changes to `@koinzhang/paseo-plugin-activity` are documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Requires Paseo **>= 0.17.4**.
+
+### Changed
+
+- Pin the plugin SDK and its client / protocol peers to 0.17.4 in the development lockfile; older SDK types are no longer supported by this checkout.
+- Read the latest complete turn with `timeline.refetch({ direction: "tail", limit: 1, wholeTurns: true })` and keep only entries matching the hook's `turnId`. Historical backfill retains its 500-item pages and checkpoints.
+
+### Fixed
+
+- Derive timeline item types from the actual refetch result instead of the removed `agent.turn.after.timeline` field.
+- Await real turn ingestion in the hook and honor its cancellation signal, preventing late responses from writing after SQLite closes.
+
 ## [0.8.0] - 2026-11-05
 
 Requires Paseo **>= 0.15.0**.

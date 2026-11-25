@@ -2,12 +2,14 @@
 
 One board that scans local agent configuration for a project: **instructions** (AGENTS.md, CLAUDE.md …), **rules**, **skills**, **MCP servers**, **commands**, **subagents**, and **plugins** at project and user level.
 
-Requires Paseo >= 0.15.0.
+Requires Paseo >= 0.17.4. Development uses `@getpaseo/plugin` 0.17.4 with matching client/protocol peers.
 
 ## What you get
 
 - A **Customize** item in the sidebar's top navigation (next to New workspace, History, Search, Schedules) and in the Command Center opens the board.
 - Submit `/customize` in an agent composer to open the board. It selects the agent's Provider and workspace Project when available, updating each independently and keeping the current selection for any unavailable value.
+- Board and command text follow Paseo's current app language on web and native, using the public SDK language subscription instead of polling private browser settings. Switching language keeps the board selection and scan cache.
+- The remembered workspace's project is resolved through the SDK workspace handle; Customize no longer duplicates workspace pagination or stops searching after 21 pages. The web route bridge remains because screens do not expose the active workspace.
 - Top-right **Provider** and **Project** pickers. The Provider menu lists enabled Paseo providers that Customize can scan, including Cursor, Cline, CodeBuddy Code, Gemini CLI, Goose, Grok Build, Kilo Code, Kiro CLI, Kimi Code, Qwen Code, and TraeCode CLI. It groups Built-in providers above ACP ones, each group sorted by name and separated by a divider, and marks each option as Built-in or ACP. Choices persist on the Paseo host; before a project is chosen, it defaults to the workspace you were last on. The Project menu lists every Paseo project.
 - Tabs for the categories the selected provider supports — Instructions / Rules / Skills / MCP / Commands / Subagents / Plugins. Each tab starts with a "how it loads" note for that provider and then **Project** and **User** sections grouped by source directory.
 - On Skills, a switch beside search shows all skills, automatic skills (Auto and Conditional), or manual-only skills. Disabled and not-loaded skills stay under All. The choice stays on the page and is not saved with Provider or Project.

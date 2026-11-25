@@ -5,10 +5,10 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { InboxStore } from "./store.ts";
 
-function withStore(run: (store: InboxStore) => void): void {
+function withStore(run: (store: InboxStore) => void, onChange?: () => void): void {
   const dir = mkdtempSync(join(tmpdir(), "inbox-store-"));
   let tick = 0;
-  const store = new InboxStore({ dir, now: () => new Date(Date.UTC(2026, 0, 1, 0, 0, tick++)).toISOString() });
+  const store = new InboxStore({ dir, now: () => new Date(Date.UTC(2026, 0, 1, 0, 0, tick++)).toISOString(), onChange });
   try {
     run(store);
   } finally {
@@ -19,6 +19,37 @@ function withStore(run: (store: InboxStore) => void): void {
 
 const snapshot = { title: "Fix login", provider: "claude", model: null, workspaceId: "w1", cwd: "/repo" };
 const project = { key: "remote:github.com/a/repo", label: "repo" };
+
+test("successful writes notify, while repeated stars, unchanged sync and failed writes do not", () => {
+  let notifications = 0;
+  withStore((store) => {
+    const note = store.createNote({ kind: "scratch", body: "private text" });
+    assert.equal(notifications, 1);
+    store.updateNote(note.id, { kind: "scratch", body: "edited" });
+    store.update(note.id, { kind: "note", pinned: true });
+    store.setTags(note.id, { project, workspace: { id: "w1", label: "main" } });
+    assert.equal(notifications, 4);
+    const agent = store.starAgent("a1", snapshot, project).item;
+    assert.equal(notifications, 5);
+    store.starAgent("a1", snapshot, project);
+    store.refreshLabels(new Map([[project.key, "repo"]]), new Map([["w1", "main"]]));
+    store.refreshAgentTitles(new Map([["a1", snapshot.title]]));
+    assert.equal(notifications, 5);
+    store.refreshLabels(new Map([[project.key, "renamed repo"]]), new Map([["w1", "renamed workspace"]]));
+    store.refreshAgentTitles(new Map([["a1", "renamed agent"]]));
+    assert.equal(notifications, 7);
+    assert.throws(() => store.updateNote(agent.id, { kind: "note", body: "not allowed" }));
+    assert.throws(() => store.createNote({ kind: "note", body: "" }));
+    store.delete("missing");
+    store.list();
+    assert.equal(notifications, 7);
+    store.updateNote(note.id, { kind: "note", title: null, body: "" });
+    assert.equal(store.deleteEmptyNotes(), 1);
+    assert.equal(store.deleteEmptyNotes(), 0);
+    store.delete(agent.id);
+    assert.equal(notifications, 10);
+  }, () => { notifications += 1; });
+});
 
 test("starring the same agent twice keeps one item", () => {
   withStore((store) => {

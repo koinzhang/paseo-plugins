@@ -12,6 +12,8 @@ const agent: PluginHookAgent = {
   provider: "claude",
   cwd: "/repo",
   title: "test agent",
+  background: false,
+  metadata: {},
 };
 
 const FIXED_NOW = "2026-09-18T12:00:00.000Z";

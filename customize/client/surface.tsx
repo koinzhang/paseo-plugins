@@ -1,4 +1,4 @@
-import { type PluginSurfaceProps, usePaseo, useRpc, useSettings } from "@getpaseo/plugin/client";
+import { type PluginScreenProps, usePaseo, useRpc, useSettings } from "@getpaseo/plugin/client";
 import { Icon, ScrollView, TextInput } from "@getpaseo/plugin/client/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
@@ -22,12 +22,12 @@ import { newestScan, REVISIT_QUERY_POLICY, SCAN_QUERY_POLICY, shouldScanSnapshot
 import { CategoryTabs, ErrorState, IconButton, InlineEmpty, LoadingState, SectionHeader, SegmentedControl } from "./ui.tsx";
 import { useAppLanguage } from "./use-app-language.ts";
 import { readLastWorkspaceId } from "./web.ts";
+import { loadWorkspaceProjectRoot } from "./workspace-root.ts";
 
 const NO_PROJECT = "";
-const WORKSPACE_PAGE_LIMIT = 200;
 
 /** Sidebar surface; an unselected project defaults to the last workspace. */
-export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNode {
+export function CustomizeSurface({ theme, layout }: PluginScreenProps): ReactNode {
   const colors = theme.colors;
   const compact = layout.compact;
   const page = pageLayout(compact);
@@ -57,15 +57,7 @@ export function CustomizeSurface({ theme, layout }: PluginSurfaceProps): ReactNo
     enabled: workspaceId !== null,
     staleTime: 60_000,
     ...REVISIT_QUERY_POLICY,
-    queryFn: async () => {
-      let page = await paseo.workspaces.list({ page: { limit: WORKSPACE_PAGE_LIMIT } });
-      for (let pages = 0; ; pages++) {
-        const hit = page.entries.find((workspace) => workspace.id === workspaceId);
-        if (hit) return hit.projectRootPath;
-        if (!page.pageInfo.hasMore || !page.pageInfo.nextCursor || pages >= 20) return null;
-        page = await paseo.workspaces.list({ page: { limit: WORKSPACE_PAGE_LIMIT, cursor: page.pageInfo.nextCursor } });
-      }
-    },
+    queryFn: () => loadWorkspaceProjectRoot(paseo, workspaceId),
   });
   const workspaceRoot = lastWorkspace.data ?? null;
 

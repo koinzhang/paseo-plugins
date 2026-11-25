@@ -1,6 +1,8 @@
 import { formatToggle, parseToggle, splitFirst, TOGGLE_WORDS } from "./parse.ts";
 import { formatList, requireOption } from "./resolve-option.ts";
 import type { AgentControl } from "./rpc.ts";
+import type { AgentOptionControl, ProviderOptions } from "@getpaseo/protocol/agent-types";
+import { optionFeatures } from "./agent-options.ts";
 
 export interface SelectOption {
   id: string;
@@ -29,6 +31,7 @@ export interface Profile {
   modeId?: string;
   thinkingOptionId?: string;
   featureValues?: Record<string, unknown>;
+  options?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
@@ -43,6 +46,8 @@ export interface AgentState {
   models: ModelOption[];
   modes: SelectOption[];
   features: Feature[];
+  controls?: AgentOptionControl[];
+  options?: ProviderOptions;
 }
 
 export type PickerEntry =
@@ -166,7 +171,8 @@ export function formatFeatureValue(feature: Feature): string {
 }
 
 export function planFeature(args: string, state: AgentState): Plan {
-  const { agentId, features } = state;
+  const { agentId } = state;
+  const features = optionFeatures(state);
   if (features.length === 0) throw new Error(`Provider "${state.provider}" exposes no features.`);
   const { head, rest } = splitFirst(args);
   if (!head) {
@@ -188,6 +194,12 @@ export function planFeature(args: string, state: AgentState): Plan {
       title: feature.label,
       icon: "SlidersHorizontal",
       items: featureValueEntries(agentId, feature),
+    };
+  }
+  if (rest === "--default") {
+    return {
+      kind: "run",
+      control: { op: "feature", agentId, featureId: feature.id, value: null },
     };
   }
   if (feature.type === "toggle") {
@@ -217,6 +229,7 @@ const PROFILE_KEYS = new Set([
   "modeId",
   "thinkingOptionId",
   "featureValues",
+  "options",
 ]);
 
 function trimmed(value: unknown): string {
@@ -269,12 +282,13 @@ export function profileControl(
     }
   }
 
-  const featureValues: Record<string, unknown> = {};
-  for (const [id, value] of Object.entries(profile.featureValues ?? {})) {
-    if (state.features.some((feature) => feature.id === id)) featureValues[id] = value;
+  const features = optionFeatures(state);
+  const options: Record<string, unknown> = {};
+  for (const [id, value] of Object.entries(profile.options ?? profile.featureValues ?? {})) {
+    if (features.some((feature) => feature.id === id)) options[id] = value;
     else ignored.push(`feature "${id}"`);
   }
-  if (Object.keys(featureValues).length > 0) config.featureValues = featureValues;
+  if (Object.keys(options).length > 0) config.options = options;
 
   for (const key of Object.keys(profile)) {
     if (!PROFILE_KEYS.has(key)) ignored.push(key);

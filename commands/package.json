@@ -24,14 +24,14 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test shared/*.test.ts server/*.test.ts"
+    "test": "node --experimental-strip-types --test shared/*.test.ts client/*.test.ts server/*.test.ts"
   },
   "dependencies": {
-    "@getpaseo/client": "0.15.1",
+    "@getpaseo/client": "0.17.4",
     "ws": "^8.18.3"
   },
   "devDependencies": {
-    "@getpaseo/plugin": "0.15.1",
+    "@getpaseo/plugin": "0.17.4",
     "@types/node": "^24.13.5",
     "@types/react": "~19.2.0",
     "@types/ws": "^8.18.1",

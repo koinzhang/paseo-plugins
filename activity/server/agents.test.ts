@@ -57,6 +57,8 @@ describe("agentRowFromHook", () => {
         provider: "claude",
         cwd: "/tmp",
         title: "Hello",
+        background: false,
+        metadata: {},
       },
       { createdAt: "2026-09-18T00:00:00.000Z" },
     );

@@ -27,6 +27,7 @@ import {
 } from "../shared/popover-geometry.ts";
 import type { AgentControl } from "../shared/rpc.ts";
 import { MenuList, type PickerLeaf } from "./menu-list.tsx";
+import { openPickerPopover } from "./popover-lifecycle.ts";
 
 type PickerPlan = Extract<Plan, { kind: "picker" }>;
 /** Applies a control and resolves to a message to show, if any. */
@@ -128,7 +129,9 @@ function PickerPopover({
   const [trigger, setTrigger] = useState<Rect | null>(null);
   const [content, setContent] = useState<Size | null>(null);
   const progress = useRef(new Animated.Value(0)).current;
+  const surfaceRef = useRef<View>(null);
   const surface = useMemo(() => surfaceStyle(theme), [theme]);
+  const close = state.close;
 
   useEffect(() => {
     if (!state.open) {
@@ -154,6 +157,11 @@ function PickerPopover({
       ? placePopover({ trigger, content: visible, window: viewport, side: "top", offset: POPOVER.offset })
       : null;
   const placed = position !== null;
+
+  useEffect(() => {
+    if (Platform.OS !== "web" || !state.open || !placed) return undefined;
+    return openPickerPopover(surfaceRef.current, close) ?? undefined;
+  }, [close, placed, state.open]);
 
   useEffect(() => {
     if (!placed) {
@@ -182,9 +190,20 @@ function PickerPopover({
         onPress={state.close}
       />
       <Animated.View
+        ref={surfaceRef}
         accessibilityRole="menu"
         style={[
           surface,
+          Platform.OS === "web"
+            ? {
+                right: "auto" as const,
+                bottom: "auto" as const,
+                width: visible?.width,
+                height: visible?.height,
+                margin: 0,
+                padding: 0,
+              }
+            : null,
           {
             left: position?.x ?? -9999,
             top: position?.y ?? -9999,

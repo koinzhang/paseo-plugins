@@ -5,6 +5,16 @@ All notable changes to `@koinzhang/paseo-plugin-inbox` are documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Requires Paseo **>= 0.17.4**.
+
+### Changed
+
+- Pin the plugin SDK, daemon client, and protocol development dependency to 0.17.4; workspace recovery now uses that client's terminal-response waiting behavior.
+- Refresh connected clients after Inbox writes through the SDK's subscription API. Events contain only an invalidation signal; clients re-read current data after subscribing or reconnecting. Slow clients coalesce notifications without blocking writes, and cleanup releases subscriptions and retries.
+- Remove the deprecated workspace panel context registration and use host-scoped workspace references for cached panel lookup. Keep archived/missing handling, project keys, saved tabs, and the SQLite schema unchanged.
+
 ## [0.2.0] - 2026-11-05
 
 Requires Paseo **>= 0.15.0**.

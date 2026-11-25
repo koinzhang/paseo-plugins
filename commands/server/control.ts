@@ -1,4 +1,6 @@
 import type { DaemonClient } from "@getpaseo/client/internal/daemon-client";
+import { createPaseoApi, type PaseoAgentHandle } from "@getpaseo/client";
+import { assertSupportedOptions } from "../shared/agent-options.ts";
 import type { AgentControl } from "../shared/rpc.ts";
 
 type Notice = { type: "info" | "warning" | "error"; message: string } | null;
@@ -16,9 +18,11 @@ export async function runAgentControl(
       return { notice: await client.setAgentThinkingOption(agentId, input.thinkingOptionId) };
     case "mode":
       return { notice: await client.setAgentMode(agentId, input.modeId) };
-    case "feature":
-      await client.setAgentFeature(agentId, input.featureId, input.value);
+    case "feature": {
+      const options = { [input.featureId]: input.value };
+      await withSupportedOptions(client, agentId, options, (agent) => agent.setOptions(options));
       return { notice: null };
+    }
     case "config":
       return { notice: await applyConfig(client, agentId, input.config) };
     case "rename":
@@ -35,19 +39,31 @@ async function applyConfig(
   agentId: string,
   config: Extract<AgentControl, { op: "config" }>["config"],
 ): Promise<Notice> {
-  if (client.getLastServerInfoMessage()?.features?.agentConfigApply === true) {
-    return client.applyAgentConfig(agentId, config);
+  if (client.getLastServerInfoMessage()?.features?.agentConfigApply !== true) {
+    throw new Error("Update the host to apply an agent profile as one config bundle.");
   }
-  // Older daemons: apply the same bundle one field at a time, model first so
-  // thinking options are validated against the new model.
-  let notice: Notice = null;
-  if (config.modelId) await client.setAgentModel(agentId, config.modelId);
-  if (config.modeId) notice = (await client.setAgentMode(agentId, config.modeId)) ?? notice;
-  if (config.thinkingOptionId) {
-    notice = (await client.setAgentThinkingOption(agentId, config.thinkingOptionId)) ?? notice;
+  if (config.options && Object.keys(config.options).length > 0) {
+    return withSupportedOptions(client, agentId, config.options, () =>
+      client.applyAgentConfig(agentId, config),
+    );
   }
-  for (const [featureId, value] of Object.entries(config.featureValues ?? {})) {
-    await client.setAgentFeature(agentId, featureId, value);
+  return client.applyAgentConfig(agentId, config);
+}
+
+async function withSupportedOptions<Result>(
+  client: DaemonClient,
+  agentId: string,
+  options: Record<string, unknown>,
+  run: (agent: PaseoAgentHandle) => Promise<Result>,
+): Promise<Result> {
+  const paseo = createPaseoApi(client);
+  try {
+    const agent = paseo.agents.ref(agentId);
+    const result = await agent.refresh();
+    if (!result?.agent) throw new Error("Agent not found.");
+    assertSupportedOptions(result.agent, options);
+    return await run(agent);
+  } finally {
+    await paseo.dispose();
   }
-  return notice;
 }

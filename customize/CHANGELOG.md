@@ -5,6 +5,16 @@ All notable changes to `@koinzhang/paseo-plugin-customize` are documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Requires Paseo **>= 0.17.4**.
+
+### Changed
+
+- Align the development SDK and its client/protocol peers with Paseo 0.17.4; the minimum supported host is now 0.17.4.
+- Resolve the last workspace's project through the public SDK workspace handle instead of plugin-owned pagination with a 21-page cutoff. Keep the existing query cache and project fallback.
+- Use Paseo's public SDK language subscription and translated command labels instead of polling private browser settings and re-registering commands. The board now follows the app language on native as well as web; existing wording, selections, and scan caches are unchanged.
+
 ## [0.4.0] - 2026-11-05
 
 Requires Paseo **>= 0.15.0**.

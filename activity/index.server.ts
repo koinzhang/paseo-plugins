@@ -123,20 +123,22 @@ export default function contribute(server: PluginServerContext) {
 
   const removeTurnEnded = server.addHook("agent.turn.after", async (event, context) => {
     void background.request(context.paseo);
-    void (async () => {
-      try {
-        const rows = await ingestTurnAfter(store, context.paseo, event.agent, {
-          homeDir: homedir(),
-        });
-        if (rows > 0) {
-          console.log(
-            `[activity] turn.after agent=${event.agent.id} rows=${rows} total=${store.count()}`,
-          );
-        }
-      } catch (error) {
+    const signal = context.signal;
+    try {
+      const rows = await ingestTurnAfter(store, context.paseo, event.agent, event.turnId, {
+        homeDir: homedir(),
+        signal,
+      });
+      if (rows > 0 && !signal.aborted) {
+        console.log(
+          `[activity] turn.after agent=${event.agent.id} rows=${rows} total=${store.count()}`,
+        );
+      }
+    } catch (error) {
+      if (!signal.aborted) {
         console.error("[activity] failed to ingest agent.turn.after", error);
       }
-    })();
+    }
   });
 
   return () => {

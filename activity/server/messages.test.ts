@@ -13,7 +13,7 @@ import { computeStreaks } from "../shared/activity.ts";
 
 type PaseoApi = PluginHandlerContext["paseo"];
 
-const agent = { id: "a1", workspaceId: "w1", parentAgentId: null, provider: "codex", cwd: "/tmp", title: null };
+const agent = { id: "a1", workspaceId: "w1", parentAgentId: null, provider: "codex", cwd: "/tmp", title: null, background: false, metadata: {} };
 const now = "2026-09-19T12:00:00.000Z";
 const earlier = "2026-09-18T12:00:00.000Z";
 const message = { type: "user_message" as const, messageId: "m1", text: "private body" };
