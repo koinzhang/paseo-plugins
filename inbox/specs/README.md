@@ -42,5 +42,6 @@
 | 033 | [`033-untagged-scope-visibility`](./033-untagged-scope-visibility/) | 有选中标签时，无对应标签的条目仍可见 | 实现完成，空选语义由 035 恢复为不过滤 |
 | 034 | [`034-collapsible-list-search`](./034-collapsible-list-search/) | 列表工具栏图标去边框；搜索改为图标点击展开，参考 Activity Agents | 实现完成，89 项测试通过；全局默认样式实机确认，展开及 Workspace 交互待验收 |
 | 035 | [`035-default-unselected-scopes`](./035-default-unselected-scopes/) | Project / Workspace 默认不选中，选中才过滤；回滚 032 | 实现完成，89 项测试通过、插件 running；实机菜单待确认 |
+| 036 | [`036-detail-content-alignment`](./036-detail-content-alignment/) | 详情标题、标签、编辑标题与正文左对齐；compact 导航独立成行 | 实现完成，离线检查与实际界面坐标确认 |
 
 规则同仓库根 `AGENTS.md`：先改 spec / plan 再改代码；每完成一个 task 在 `tasks.md` 勾选并写验证方式；新功能点新开编号目录。
