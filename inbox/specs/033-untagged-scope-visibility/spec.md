@@ -10,7 +10,7 @@
 1. Project 条件由 `project_key IN (...)` 改为 `(project_key IN (...) OR project_key IS NULL)`。
 2. Workspace 条件由 `workspace_id IN (...)` 改为 `(workspace_id IN (...) OR workspace_id IS NULL)`。
 3. 已设置但未勾选的标签仍排除；有 Project、无 Workspace 的条目不受 Workspace 选择限制，有 Workspace、无 Project 的旧数据同理。
-4. 显式空数组仍只显示无对应标签的条目；不再返回有标签的条目。此前“空数组全部无匹配”改为本次用户明确要求。
+4. 035 起显式空数组恢复为不限制；非空数组才按选中标签过滤。
 5. null / undefined 仍不限制，旧单选输入仍保持原有过滤语义。
 
 ## 验收

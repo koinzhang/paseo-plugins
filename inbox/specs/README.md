@@ -37,8 +37,10 @@
 | 028 | [`028-hover-title-width`](./028-hover-title-width/) | 桌面隐藏操作不占位；hover 后按按钮宽度缩略标题，移动端不变 | 实现完成，离线检查通过；未做界面测试 |
 | 029 | [`029-list-resizer-hit-area`](./029-list-resizer-hit-area/) | 恢复全局列表定宽及分隔线拖拽，不被溢出列表命中区覆盖 | 实现完成，离线检查通过；未做界面测试 |
 | 030 | [`030-initial-first-selection`](./030-initial-first-selection/) | 全局首次进入且无选择时打开列表第一项 | 实现完成，84 项测试通过；未做界面测试 |
-| 031 | [`031-multi-scope-filters`](./031-multi-scope-filters/) | 全局 Project / Workspace 多选、无 All | 实现完成，后续默认全选与无标签保留见 032 / 033 |
-| 032 | [`032-default-all-scopes`](./032-default-all-scopes/) | 默认勾选所有 Project / Workspace，主动空选保留无标签条目 | 实现完成，离线检查通过；未做界面测试 |
-| 033 | [`033-untagged-scope-visibility`](./033-untagged-scope-visibility/) | 无 Project / Workspace 的条目不参与对应多选筛选，始终可见 | 实现完成，89 项测试通过；未做界面测试 |
+| 031 | [`031-multi-scope-filters`](./031-multi-scope-filters/) | 全局 Project / Workspace 多选、无 All | 实现完成，默认选择见 035，无标签保留见 033 |
+| 032 | [`032-default-all-scopes`](./032-default-all-scopes/) | 默认勾选所有 Project / Workspace | 已由 035 回滚 |
+| 033 | [`033-untagged-scope-visibility`](./033-untagged-scope-visibility/) | 有选中标签时，无对应标签的条目仍可见 | 实现完成，空选语义由 035 恢复为不过滤 |
+| 034 | [`034-collapsible-list-search`](./034-collapsible-list-search/) | 列表工具栏图标去边框；搜索改为图标点击展开，参考 Activity Agents | 实现完成，89 项测试通过；全局默认样式实机确认，展开及 Workspace 交互待验收 |
+| 035 | [`035-default-unselected-scopes`](./035-default-unselected-scopes/) | Project / Workspace 默认不选中，选中才过滤；回滚 032 | 实现完成，89 项测试通过、插件 running；实机菜单待确认 |
 
 规则同仓库根 `AGENTS.md`：先改 spec / plan 再改代码；每完成一个 task 在 `tasks.md` 勾选并写验证方式；新功能点新开编号目录。

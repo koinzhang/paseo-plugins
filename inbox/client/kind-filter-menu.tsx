@@ -31,17 +31,15 @@ export function KindFilterMenu({
         style={({ pressed }) => ({
           flexDirection: "row",
           alignItems: "center",
-          gap: 4,
-          paddingHorizontal: 8,
-          paddingVertical: 8,
-          borderWidth: 1,
-          borderColor: c.border,
-          borderRadius: 8,
+          justifyContent: "center",
+          gap: 2,
+          width: 24,
+          height: 24,
+          borderRadius: 6,
           backgroundColor: pressed || open ? c.surface2 : "transparent",
         })}
       >
-        <Icon name="ListFilter" size={14} color={c.foreground} />
-        <Icon name="ChevronDown" size={12} color={c.foregroundMuted} />
+        <Icon name="ListFilter" size={16} color={c.foregroundMuted} />
       </Pressable>
     </View>
   );
@@ -60,10 +58,10 @@ export function KindFilterMenuPanel({
   value: ItemKind[];
   onChange: (kind: ItemKind) => void;
   projects?: ProjectSummary[];
-  projectKeys?: string[] | null;
+  projectKeys?: string[];
   onProjectChange?: (key: string) => void;
   workspaces?: WorkspaceSummary[];
-  workspaceIds?: string[] | null;
+  workspaceIds?: string[];
   onWorkspaceChange?: (id: string) => void;
   theme: PluginTheme;
 }) {

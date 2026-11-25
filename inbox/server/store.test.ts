@@ -153,9 +153,22 @@ test("multiple project and workspace selections OR within a group and AND across
     assert.deepEqual(bodies({ workspaceIds: ["w1", "w2"] }), ["p1w1", "p1w2", "p2w1", "project only", "untagged"]);
     assert.deepEqual(bodies({ projectKeys: [project.key], workspaceIds: ["w1", "w2"] }), ["p1w1", "p1w2", "project only", "untagged"]);
     assert.deepEqual(bodies({ projectKeys: null, workspaceIds: null }), ["p1w1", "p1w2", "p2w1", "p2w3", "project only", "untagged"]);
-    assert.deepEqual(bodies({ projectKeys: [], workspaceIds: [] }), ["untagged"]);
-    assert.deepEqual(bodies({ projectKeys: [project.key], workspaceIds: [] }), ["project only", "untagged"]);
+    assert.deepEqual(bodies({ projectKeys: [], workspaceIds: [] }), ["p1w1", "p1w2", "p2w1", "p2w3", "project only", "untagged"]);
+    assert.deepEqual(bodies({ projectKeys: [project.key], workspaceIds: [] }), ["p1w1", "p1w2", "project only", "untagged"]);
     assert.deepEqual(bodies({ projectKeys: [project.key], projectKey: other.key, workspaceId: "w1" }), ["p1w1", "p2w1"]);
+  });
+});
+
+test("retagged notes stay visible without scope filters", () => {
+  withStore((store) => {
+    const other = { key: "other", label: "Other" };
+    const note = store.createNote({ body: "retagged", project });
+    store.setTags(note.id, { project: other, workspace: null });
+    const bodies = (filter: Parameters<InboxStore["list"]>[0]) => store.list(filter).map((item) => item.body);
+    assert.deepEqual(bodies({ projectKeys: [], workspaceIds: [] }), ["retagged"]);
+    assert.deepEqual(bodies({ projectKeys: [project.key], workspaceIds: [] }), []);
+    assert.deepEqual(bodies({ projectKeys: [other.key], workspaceIds: [] }), ["retagged"]);
+    assert.deepEqual(bodies({ projectKeys: [], workspaceIds: [] }), ["retagged"]);
   });
 });
 

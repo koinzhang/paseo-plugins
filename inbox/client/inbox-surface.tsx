@@ -12,7 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { PanResponder, Platform, Pressable, Text, View } from "react-native";
+import { Animated, Easing, PanResponder, Platform, Pressable, Text, View } from "react-native";
 import {
   agentCandidates,
   agentStates,
@@ -53,7 +53,6 @@ import {
 import { useInboxFilters } from "./use-inbox-filters.ts";
 import { trackHorizontalDrag } from "./web.ts";
 import { shouldSelectFirstItem } from "./default-selection.ts";
-import { defaultScopeSelection } from "./default-scope-selection.ts";
 
 /**
  * `id` is the open item; `draft` is non-null for an unsaved note.
@@ -97,6 +96,9 @@ const SORTS: Array<{ id: ItemSort; label: string; icon: string }> = [
 ];
 
 const LIST_WIDTH = { initial: 360, min: 280, max: 640 };
+const SEARCH_ANIM_MS = 220;
+const SEARCH_CLOSE_ANIM_MS = 160;
+const TOOLBAR_HEIGHT = 24;
 const clampListWidth = (width: number) => Math.min(LIST_WIDTH.max, Math.max(LIST_WIDTH.min, width));
 /** Keeps the dragged width while the app runs, across surface remounts. */
 let rememberedListWidth = LIST_WIDTH.initial;
@@ -163,6 +165,45 @@ function createStyles(theme: PluginTheme, compact: boolean, workspace: boolean) 
     detailPane: { flex: 1, padding: compact ? 16 : 24, gap: 12 },
     toolbar: { padding: compact ? 12 : 16, gap: 10, overflow: "visible" as const },
     row: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8 },
+    toolbarRow: { flexDirection: "row" as const, alignItems: "center" as const, height: TOOLBAR_HEIGHT },
+    toolbarSearchSlot: {
+      flex: 1,
+      minWidth: 0,
+      height: TOOLBAR_HEIGHT,
+      flexDirection: "row" as const,
+      justifyContent: "flex-end" as const,
+      overflow: "hidden" as const,
+    },
+    toolbarSearchField: {
+      height: TOOLBAR_HEIGHT,
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 6,
+      paddingHorizontal: 10,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: TOOLBAR_HEIGHT / 2,
+      backgroundColor: c.surface1,
+      overflow: "hidden" as const,
+    },
+    toolbarSearchInput: {
+      flex: 1,
+      minWidth: 0,
+      height: TOOLBAR_HEIGHT - 2,
+      padding: 0,
+      margin: 0,
+      color: c.foreground,
+      fontSize: 12,
+      lineHeight: 18,
+      ...noOutline,
+    },
+    toolbarActions: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 2,
+      flexShrink: 0,
+      marginLeft: 2,
+    },
     itemRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8, position: "relative" as const },
     itemActions: { flexDirection: "row" as const, alignItems: "center" as const, flexShrink: 0 },
     itemActionsOverlay: { position: "absolute" as const, right: 0, top: 0, bottom: 0 },
@@ -256,6 +297,15 @@ function createStyles(theme: PluginTheme, compact: boolean, workspace: boolean) 
       backgroundColor: kind === "primary" ? c.accent : "transparent",
     }),
     iconButton: { paddingHorizontal: 8, paddingVertical: 8 },
+    toolbarIconButton: (active: boolean) => ({
+      width: TOOLBAR_HEIGHT,
+      height: TOOLBAR_HEIGHT,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      borderRadius: 6,
+      backgroundColor: active ? c.surface2 : "transparent",
+      flexShrink: 0,
+    }),
     rowIconButton: (pressed: boolean) => ({
       width: 28,
       height: 28,
@@ -272,6 +322,36 @@ function createStyles(theme: PluginTheme, compact: boolean, workspace: boolean) 
     }),
     empty: { padding: 24, alignItems: "center" as const, gap: 8 },
   };
+}
+
+function ToolbarIconButton({
+  styles,
+  theme,
+  icon,
+  accessibilityLabel,
+  onPress,
+  active = false,
+}: {
+  styles: Styles;
+  theme: PluginTheme;
+  icon?: string;
+  accessibilityLabel: string;
+  onPress: () => void;
+  active?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={Platform.OS === "web" ? accessibilityLabel : undefined}
+      accessibilityState={{ expanded: active }}
+      hitSlop={8}
+      onPress={onPress}
+      style={({ pressed }) => styles.toolbarIconButton(active || pressed)}
+    >
+      {icon ? <Icon name={icon} size={16} color={theme.colors.foregroundMuted} /> : null}
+    </Pressable>
+  );
 }
 
 function RowIconButton({
@@ -1389,9 +1469,13 @@ export function InboxView({
   updateFilters.current = filters.update;
   const shown = filters.values ? visibleInboxFilters(filters.values, { workspaceId: workspace?.id }) : null;
   const kinds = shown?.kinds ?? [];
-  const projectKeys = shown?.projectKeys ?? null;
-  const scope = shown?.workspaceIds ?? null;
+  const projectKeys = shown?.projectKeys ?? [];
+  const scope = shown?.workspaceIds ?? [];
   const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchSlotWidth, setSearchSlotWidth] = useState(0);
+  const searchProgress = useRef(new Animated.Value(0)).current;
+  const searchInputRef = useRef<{ focus?: () => void } | null>(null);
   const [picking, setPicking] = useState(false);
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const filterTriggerRef = useRef<View>(null);
@@ -1436,13 +1520,51 @@ export function InboxView({
   const selectedId = selection?.id ?? null;
   const select = (id: string | null) => setSelection(id ? { id, draft: null, session: nextSession() } : null);
 
+  useEffect(() => {
+    searchProgress.stopAnimation();
+    searchProgress.setValue(0);
+    setSearchOpen(false);
+    setQuery("");
+  }, [workspace?.id, searchProgress]);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    const id = setTimeout(() => searchInputRef.current?.focus?.(), SEARCH_ANIM_MS);
+    return () => clearTimeout(id);
+  }, [searchOpen]);
+
+  function openSearch() {
+    if (searchOpen) return;
+    setSearchOpen(true);
+    Animated.timing(searchProgress, {
+      toValue: 1,
+      duration: SEARCH_ANIM_MS,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }
+
+  function closeSearch() {
+    if (!searchOpen) return;
+    Animated.timing(searchProgress, {
+      toValue: 0,
+      duration: SEARCH_CLOSE_ANIM_MS,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start(({ finished }) => {
+      if (!finished) return;
+      setSearchOpen(false);
+      setQuery("");
+    });
+  }
+
   // A command can request a selection while the surface is already mounted.
   useEffect(() => {
     if (workspace) return;
     return onSelectionRequest(() => {
       const next = toSelection(takeSelection());
       if (!next) return;
-      updateFilters.current({ kinds: ["agent", "note"], projectKeys: null, workspaceIds: null });
+      updateFilters.current({ kinds: ["agent", "note"], projectKeys: [], workspaceIds: [] });
       setQuery("");
       setSelection(next);
       void queryClient.invalidateQueries({ queryKey: LIST_KEY });
@@ -1492,21 +1614,10 @@ export function InboxView({
     [archivedData],
   );
 
-  useEffect(() => {
-    const current = filters.values;
-    if (workspace || !current || !itemsQuery.data || itemsQuery.isPlaceholderData) return;
-    const projectKeys = defaultScopeSelection({ selected: current.projectKeys, available: itemsQuery.data.projects.map((entry) => entry.key), isPlaceholderData: itemsQuery.isPlaceholderData });
-    const workspaceIds = defaultScopeSelection({ selected: current.workspaceIds, available: itemsQuery.data.workspaces.map((entry) => entry.id), isPlaceholderData: itemsQuery.isPlaceholderData });
-    if (projectKeys !== current.projectKeys || workspaceIds !== current.workspaceIds) {
-      updateFilters.current({ projectKeys, workspaceIds });
-    }
-  }, [filters.values, itemsQuery.data, itemsQuery.isPlaceholderData, workspace]);
-
   // No item of this kind carries the selected tag: its chip is gone, so clear the saved choice.
   useEffect(() => {
     const current = filters.values;
     if (workspace || !itemsQuery.data || itemsQuery.isPlaceholderData || !current) return;
-    if (current.projectKeys === null || current.workspaceIds === null) return;
     const projectKeys = current.projectKeys.filter((key) => itemsQuery.data!.projects.some((entry) => entry.key === key));
     const workspaceIds = current.workspaceIds.filter((id) => itemsQuery.data!.workspaces.some((entry) => entry.id === id));
     if (projectKeys.length !== current.projectKeys.length || workspaceIds.length !== current.workspaceIds.length) {
@@ -1540,12 +1651,12 @@ export function InboxView({
   const createNote = () => {
     filters.update(workspace
       ? { panelKinds: ["agent", "note"] }
-      : { kinds: ["agent", "note"], projectKeys: null, workspaceIds: null });
+      : { kinds: ["agent", "note"], projectKeys: [], workspaceIds: [] });
     setSelection({ id: null, draft: workspace ? { workspaceId: workspace.id } : {}, session: nextSession() });
   };
 
   const noteButton = (
-    <Button
+    <ToolbarIconButton
       styles={styles}
       theme={theme}
       icon="FilePlus2"
@@ -1577,44 +1688,90 @@ export function InboxView({
           style={[styles.listPane, styles.listChrome, compact ? { flex: 1 } : { width: listWidth }]}
         >
           <View style={styles.toolbar}>
-            <View style={styles.row}>
-              <Field
-                styles={styles}
-                style={[styles.input, { flex: 1, minWidth: 0 }]}
-                value={query}
-                onChangeText={setQuery}
-                placeholder="Search"
-                accessibilityLabel="Search Inbox"
-              />
-              <View ref={filterTriggerRef} collapsable={false}>
-                <KindFilterMenu
-                  value={kinds}
-                  theme={theme}
-                  open={filterMenuOpen}
-                  onOpenChange={setFilterMenuOpen}
-                />
+            <View style={styles.toolbarRow}>
+              <View
+                style={styles.toolbarSearchSlot}
+                onLayout={(event) => {
+                  const next = event.nativeEvent.layout.width;
+                  setSearchSlotWidth((current) => (current === next ? current : next));
+                }}
+              >
+                <Animated.View
+                  pointerEvents={searchOpen ? "auto" : "none"}
+                  style={[
+                    styles.toolbarSearchField,
+                    {
+                      width: searchProgress.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, Math.max(0, searchSlotWidth - 8)],
+                      }),
+                      opacity: searchProgress,
+                      marginLeft: searchProgress.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, 8],
+                      }),
+                    },
+                  ]}
+                >
+                  <Icon name="Search" size={14} color={theme.colors.foregroundMuted} />
+                  <TextInput
+                    ref={searchInputRef as never}
+                    value={query}
+                    onChangeText={setQuery}
+                    placeholder="Search"
+                    placeholderTextColor={theme.colors.foregroundMuted}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="search"
+                    editable={searchOpen}
+                    style={styles.toolbarSearchInput}
+                    accessibilityLabel="Search Inbox"
+                  />
+                </Animated.View>
               </View>
-              {noteButton}
-              {workspace ? (
-                <Button
+              <View style={styles.toolbarActions}>
+                <ToolbarIconButton
                   styles={styles}
                   theme={theme}
-                  icon={picking ? "X" : "Star"}
-                  accessibilityLabel={picking ? "Done" : "Add agent"}
-                  onPress={() => setPicking((open) => !open)}
-                />
-              ) : (
-                <Button
-                  styles={styles}
-                  theme={theme}
-                  icon={SORTS.find((option) => option.id === sort)!.icon}
-                  accessibilityLabel={`Sort: ${SORTS.find((option) => option.id === sort)!.label}`}
+                  icon={searchOpen ? "X" : "Search"}
+                  accessibilityLabel={searchOpen ? "Close search" : "Search Inbox"}
+                  active={searchOpen}
                   onPress={() => {
-                    const index = SORTS.findIndex((option) => option.id === sort);
-                    filters.update({ sort: SORTS[(index + 1) % SORTS.length]!.id });
+                    if (searchOpen) closeSearch();
+                    else openSearch();
                   }}
                 />
-              )}
+                <View ref={filterTriggerRef} collapsable={false}>
+                  <KindFilterMenu
+                    value={kinds}
+                    theme={theme}
+                    open={filterMenuOpen}
+                    onOpenChange={setFilterMenuOpen}
+                  />
+                </View>
+                {noteButton}
+                {workspace ? (
+                  <ToolbarIconButton
+                    styles={styles}
+                    theme={theme}
+                    icon={picking ? "X" : "Star"}
+                    accessibilityLabel={picking ? "Done" : "Add agent"}
+                    active={picking}
+                    onPress={() => setPicking((open) => !open)}
+                  />
+                ) : (
+                  <ToolbarIconButton
+                    styles={styles}
+                    theme={theme}
+                    icon={SORTS.find((option) => option.id === sort)!.icon}
+                    accessibilityLabel={`Sort: ${SORTS.find((option) => option.id === sort)!.label}`}
+                    onPress={() => {
+                      const index = SORTS.findIndex((option) => option.id === sort);
+                      filters.update({ sort: SORTS[(index + 1) % SORTS.length]!.id });
+                    }}
+                  />
+                )}
+              </View>
             </View>
             {workspace && picking ? (
               <AgentPicker
@@ -1680,14 +1837,14 @@ export function InboxView({
                 value={kinds}
                 projects={workspace ? undefined : projects}
                 projectKeys={projectKeys}
-                onProjectChange={workspace ? undefined : (key) => filters.update({ projectKeys: toggleInboxSelection(projectKeys ?? [], key) })}
+                onProjectChange={workspace ? undefined : (key) => filters.update({ projectKeys: toggleInboxSelection(projectKeys, key) })}
                 workspaces={workspace ? undefined : workspaces}
                 workspaceIds={scope}
-                onWorkspaceChange={workspace ? undefined : (id) => filters.update({ workspaceIds: toggleInboxSelection(scope ?? [], id) })}
+                onWorkspaceChange={workspace ? undefined : (id) => filters.update({ workspaceIds: toggleInboxSelection(scope, id) })}
                 theme={theme}
                 onChange={(next) => {
                   const selected = toggleInboxKind(kinds, next);
-                  filters.update(workspace ? { panelKinds: selected } : { kinds: selected, projectKeys: null, workspaceIds: null });
+                  filters.update(workspace ? { panelKinds: selected } : { kinds: selected, projectKeys: [], workspaceIds: [] });
                 }}
               />
             </View>

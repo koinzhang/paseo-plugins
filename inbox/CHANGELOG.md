@@ -22,7 +22,7 @@ Requires Paseo **>= 0.17.4**.
 - Remove detail action borders and agent message boxes; notes remain borderless with a title/body separator.
 - Advance note update time only for actual title or body edits, not pin, tag, or identical-content saves; remove the New note button's green primary styling.
 - Keep desktop row action disabled states independent of hover so moving onto the icons does not recreate their pointer targets.
-- Move global Project / Workspace scope chips into the search-bar Filter menu alongside Agents / Notes. All scopes support multi-selection, default to all available tags, and leave untagged items visible; selections, counts, archived labels, and persistence remain.
+- Move global Project / Workspace scope chips into the search-bar Filter menu alongside Agents / Notes. All scopes support multi-selection; Project / Workspace filters start unselected, only apply when selected, and leave untagged items visible. Counts, archived labels, and persistence remain.
 - Open the first item when entering the global Inbox without a selection. Desktop row actions reserve title width only while visible; restore horizontal list / detail resizing and use the Explorer surface background for workspace panels.
 - Use single-document FileText icons for notes and FilePlus2 for note creation instead of notebook-style icons.
 - Use a PanelsTopLeft icon for Workspace tags instead of the Git branch symbol; Project keeps its Folder icon.

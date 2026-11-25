@@ -1,5 +1,7 @@
 # 032 Default all Project and Workspace selections
 
+> 035 已按用户要求回滚本规格；此文件仅保留历史决策。
+
 ## 需求
 
 - 全局 Inbox 的 Project 和 Workspace 默认全部勾选，而不是默认全部不勾选。

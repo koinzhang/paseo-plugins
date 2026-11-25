@@ -16,7 +16,7 @@ test("missing filter settings parse as the defaults", () => {
 test("version 1 documents keep their fields for the current schema", () => {
   assert.deepEqual(migrateInboxFilters({ kind: "note" }, 1), {
     kinds: ["note"], panelKinds: ["agent", "note"],
-    projectKeys: null, workspaceIds: null,
+    projectKeys: [], workspaceIds: [],
   });
 });
 
@@ -36,9 +36,17 @@ test("scratch filters migrate to all without discarding other settings", () => {
     projectKeys: ["repo"], workspaceIds: ["ws"], sort: "name",
     kinds: ["agent", "note"], panelKinds: ["agent", "note"],
   });
-  assert.deepEqual(migrateInboxFilters({ projectKeys: [], workspaceIds: [], kinds: ["note"] }, 5), {
-    projectKeys: [], workspaceIds: [], kinds: ["note"],
-  });
+});
+
+test("default-all scope selections reset once without changing types or sort", () => {
+  const previous = {
+    kinds: ["note"], panelKinds: ["agent"], sort: "name",
+    projectKeys: ["repo", "other"], workspaceIds: ["ws"],
+  };
+  const expected = { ...previous, projectKeys: [], workspaceIds: [] };
+  assert.deepEqual(migrateInboxFilters(previous, 5), expected);
+  assert.deepEqual(migrateInboxFilters(previous, 6), expected);
+  assert.equal(inboxFilterSettings.version, 7);
 });
 
 test("a document saved before sort existed defaults to updated", () => {
@@ -87,18 +95,19 @@ test("explorer panel uses its own group and ignores the global chips", () => {
   assert.equal(inboxListSort(filters, { workspaceId: "ws" }), "updated");
 });
 
-test("empty old scope selections become defaults while selected scopes migrate to arrays", () => {
+test("legacy single scope selections migrate to arrays", () => {
   assert.deepEqual(migrateInboxFilters({ kinds: ["note"], projectKey: "repo", workspaceId: null, sort: "updated" }, 4), {
-    kinds: ["note"], panelKinds: ["agent", "note"], projectKeys: ["repo"], workspaceIds: null, sort: "updated",
+    kinds: ["note"], panelKinds: ["agent", "note"], projectKeys: ["repo"], workspaceIds: [], sort: "updated",
   });
   const parsed = inboxFilterSettings.schema.parse(migrateInboxFilters({ kind: "agent", projectKey: "repo", workspaceId: "ws" }, 1));
   assert.deepEqual(visibleInboxFilters(parsed, {}).projectKeys, ["repo"]);
   assert.deepEqual(visibleInboxFilters(parsed, {}).workspaceIds, ["ws"]);
-  assert.deepEqual(visibleInboxFilters(INBOX_FILTER_DEFAULTS, {}).projectKeys, null);
-  assert.deepEqual(visibleInboxFilters(INBOX_FILTER_DEFAULTS, {}).workspaceIds, null);
+  assert.deepEqual(visibleInboxFilters(INBOX_FILTER_DEFAULTS, {}).projectKeys, []);
+  assert.deepEqual(visibleInboxFilters(INBOX_FILTER_DEFAULTS, {}).workspaceIds, []);
   assert.deepEqual(migrateInboxFilters({ kinds: ["note"], projectKeys: [], workspaceIds: ["ws"] }, 5), {
-    kinds: ["note"], projectKeys: [], workspaceIds: ["ws"],
+    kinds: ["note"], projectKeys: [], workspaceIds: [],
   });
+  assert.deepEqual(inboxFilterSettings.schema.parse(migrateInboxFilters({ workspaceId: null }, 1)), INBOX_FILTER_DEFAULTS);
 });
 
 test("Agents and Notes are independently selectable, including neither", () => {

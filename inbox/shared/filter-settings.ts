@@ -6,10 +6,11 @@ const FilterKinds = z.array(z.enum(["agent", "note"]));
 
 /** Older documents have no `sort`; the schema default fills it in. */
 export function migrateInboxFilters(values: unknown, fromVersion: number): unknown {
-  if (fromVersion >= 5 || !values || typeof values !== "object" || Array.isArray(values)) return values;
+  if (!values || typeof values !== "object" || Array.isArray(values)) return values;
   const filters = values as Record<string, unknown>;
+  if (fromVersion >= 5) return { ...filters, projectKeys: [], workspaceIds: [] };
   const migrateKind = (kind: unknown) => Array.isArray(kind) ? kind : kind === "agent" || kind === "note" ? [kind] : ["agent", "note"];
-  const selected = (value: unknown) => typeof value === "string" ? [value] : null;
+  const selected = (value: unknown) => typeof value === "string" ? [value] : [];
   return {
     ...("sort" in filters ? { sort: filters.sort } : {}),
     kinds: migrateKind(filters.kind ?? filters.kinds),
@@ -23,11 +24,11 @@ export function migrateInboxFilters(values: unknown, fromVersion: number): unkno
 export const inboxFilterSettings = defineSettings({
   id: "list-filters",
   scope: "host",
-  version: 6,
+  version: 7,
   schema: z.object({
     kinds: FilterKinds.default(["agent", "note"]),
-    projectKeys: z.array(z.string()).nullable().default(null),
-    workspaceIds: z.array(z.string()).nullable().default(null),
+    projectKeys: z.array(z.string()).default([]),
+    workspaceIds: z.array(z.string()).default([]),
     panelKinds: FilterKinds.default(["agent", "note"]),
     /** Global page sort. The Explorer panel always lists by last update. */
     sort: ItemSort.default("updated"),
@@ -39,8 +40,8 @@ export type InboxFilters = z.infer<typeof inboxFilterSettings.schema>;
 
 export const INBOX_FILTER_DEFAULTS: InboxFilters = {
   kinds: ["agent", "note"],
-  projectKeys: null,
-  workspaceIds: null,
+  projectKeys: [],
+  workspaceIds: [],
   panelKinds: ["agent", "note"],
   sort: "updated",
 };
@@ -63,7 +64,7 @@ export function inboxListSort(filters: InboxFilters, surface: { workspaceId?: st
 export interface VisibleInboxFilters {
   kinds: InboxFilters["kinds"];
   projectKeys: string[] | null;
-  workspaceIds: string[] | null;
+  workspaceIds: string[];
 }
 
 /**

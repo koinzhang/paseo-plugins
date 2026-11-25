@@ -215,7 +215,6 @@ export class InboxStore {
       where.push("project_key = ?");
       params.push(filter.projectKey);
     }
-    if (filter.projectKeys && filter.projectKeys.length === 0 && !filter.projectKey) where.push("project_key IS NULL");
     const workspaceIds = [...new Set([...(filter.workspaceIds ?? []), ...(filter.workspaceId ? [filter.workspaceId] : [])])];
     if (filter.workspaceIds && filter.workspaceIds.length > 0) {
       where.push(`(workspace_id IN (${workspaceIds.map(() => "?").join(", ")}) OR workspace_id IS NULL)`);
@@ -224,7 +223,6 @@ export class InboxStore {
       where.push("workspace_id = ?");
       params.push(filter.workspaceId);
     }
-    if (filter.workspaceIds && filter.workspaceIds.length === 0 && !filter.workspaceId) where.push("workspace_id IS NULL");
     if (filter.inboxOf) {
       const { workspaceId, projectKey } = filter.inboxOf;
       if (projectKey) {
