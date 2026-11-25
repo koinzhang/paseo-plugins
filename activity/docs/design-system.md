@@ -108,6 +108,7 @@ Global KPI 的上一窗口对比与 label 共用 `label` 12 的字体角色，�
 - **composer popover**：宽度 `popoverFrame(compact)` — regular 300–380（`POPOVER_WIDTH`），compact 由宿主铺满
 - **菜单**：宽 `MENU_WIDTH`（232）、`RADIUS.overlay`、`surface1` 底、1px `border`、轻阴影；行高 compact 40 / regular 28
 - **图表动画**（081，`CHART_MOTION`）：排行条与 Daily Activity 柱首次从 0 增长、数值变化时从当前值过渡（`grow` 400ms，ease-out）；Activity Calendar 首次按周列从左到右淡入（仅染色格子；空格子静止不闪）（`reveal` 700ms），切换指标 / 范围 / 模式时以 `refreshFloor` 为底再扫一遍（`refresh` 450ms）；Hourly Activity 面积图整体自基线 `scaleY` 增长（首次 `reveal`，切指标 / provider 用 `refresh`）；数据轮询刷新不重播扫入 / 增长
+- **运行中圆环**（088）：800ms / 圈；iOS / Android 使用原生驱动，Web 使用 JS 驱动——当前宿主 Web 原生动画循环只到达终点，统一使用原生驱动会导致圆环静止
 - **Provider 下拉**（069 / 077）：触发器右对齐于筛选行；浮层开在触发器下方并右对齐（向左展开），`minWidth` 200、`RADIUS.overlay`、`surface1`；web 用全屏透明 backdrop 点外部关闭；超过 10 行浮层内滚动
 
 ## 7. 状态

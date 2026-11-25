@@ -16,6 +16,7 @@ Requires Paseo **>= 0.17.4**.
 
 ### Fixed
 
+- Restore the Workspace running ring's continuous rotation on Web by using the JS animation driver there; iOS and Android retain the native driver (088).
 - Derive timeline item types from the actual refetch result instead of the removed `agent.turn.after.timeline` field.
 - Await real turn ingestion in the hook and honor its cancellation signal, preventing late responses from writing after SQLite closes.
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import { Animated, Easing, type ViewStyle } from "react-native";
+import { Animated, Easing, Platform, type ViewStyle } from "react-native";
 import type { WorkspaceTheme } from "./constants.ts";
+import { shouldUseNativeDriver } from "./running-indicator-motion.ts";
 
 const SPIN_SIZE = 10;
 const SPIN_DURATION_MS = 800;
@@ -21,7 +22,7 @@ export function RunningIndicator({
         toValue: 1,
         duration: SPIN_DURATION_MS,
         easing: Easing.linear,
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver(Platform.OS),
       }),
     );
     animation.start();

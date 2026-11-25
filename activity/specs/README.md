@@ -114,6 +114,7 @@
 | [085-hourly-metric-exit-animation](./085-hourly-metric-exit-animation/) | 已实现，页面验收待完成 | Hourly Activity 切换指标时旧折线向下收回基线，再展开新折线 |
 | [086-paseo-0.15-adaptation](./086-paseo-0.15-adaptation/) | 已实现，实机验收待完成 | 五个插件对齐 SDK 0.15.1 / Paseo >=0.15.0；screens、sidebar items、addAgentPanel、addHook；turn.after 用 timeline.refetch 采集 |
 | [087-paseo-0.17-adaptation](./087-paseo-0.17-adaptation/) | 已实现，0.17.4 全量验证通过，升级后实机待主 Agent | 实际锁定 SDK 0.17.4 / Paseo >=0.17.4；完整 turn 与严格 turnId 过滤；新 hook 类型与取消保护；后台 500 条分页不变；第一阶段实机已验收 |
+| [088-web-running-ring-animation](./088-web-running-ring-animation/) | 已实现 | 修复 084 引入的 Web 原生驱动停转；Web 恢复 JS 驱动，iOS / Android 保留原生驱动 |
 ## 约定
 
 每个编号目录通常含：
