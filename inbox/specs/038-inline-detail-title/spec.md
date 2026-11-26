@@ -1,4 +1,4 @@
-# 037 Inline detail title
+# 038 Inline detail title
 
 ## 背景
 

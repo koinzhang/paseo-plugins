@@ -1,4 +1,4 @@
-# 037 Plan
+# 038 Plan
 
 1. 在 `client/inbox-surface.tsx` 用原 `heading` 样式派生无边框标题输入样式，保留 flex 与省略行为。
 2. `Detail` 根据条目类型选择 note 标题输入框或 agent 静态标题，复用现有 `title` / `setTitle`。

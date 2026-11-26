@@ -44,6 +44,6 @@
 | 035 | [`035-default-unselected-scopes`](./035-default-unselected-scopes/) | Project / Workspace 默认不选中，选中才过滤；回滚 032 | 实现完成，89 项测试通过、插件 running；实机菜单待确认 |
 | 036 | [`036-detail-content-alignment`](./036-detail-content-alignment/) | 详情标题、标签、编辑标题与正文左对齐；compact 导航独立成行 | 标题拆行已由 037 回滚，返回箭头对齐由 037 修正 |
 | 037 | [`037-detail-header-alignment`](./037-detail-header-alignment/) | compact 详情标题回到导航行；返回箭头、标签与编辑区左对齐 | 实现完成，89 项测试通过，实机确认左对齐 |
-| 037 | [`037-inline-detail-title`](./037-inline-detail-title/) | 去掉 note 正文区的 Title 项，直接在详情页头编辑标题 | 实现完成，89 项测试通过；桌面端确认只有页头标题输入项 |
+| 038 | [`038-inline-detail-title`](./038-inline-detail-title/) | 去掉 note 正文区的 Title 项，直接在详情页头编辑标题 | 实现完成，89 项测试通过；桌面端确认只有页头标题输入项 |
 
 规则同仓库根 `AGENTS.md`：先改 spec / plan 再改代码；每完成一个 task 在 `tasks.md` 勾选并写验证方式；新功能点新开编号目录。
