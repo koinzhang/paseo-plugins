@@ -163,7 +163,7 @@ function createStyles(theme: PluginTheme, compact: boolean, workspace: boolean) 
     },
     dividerLine: { width: 1, flex: 1, backgroundColor: c.border },
     detailPane: { flex: 1, padding: compact ? 16 : 24, gap: 12 },
-    detailHeader: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8 },
+    detailBack: { marginLeft: -6 },
     toolbar: { padding: compact ? 12 : 16, gap: 10, overflow: "visible" as const },
     row: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8 },
     toolbarRow: { flexDirection: "row" as const, alignItems: "center" as const, height: TOOLBAR_HEIGHT },
@@ -1313,32 +1313,27 @@ function Detail({
 
   return (
     <ScrollView contentContainerStyle={{ flexGrow: 1, gap: 12 }}>
-      <View style={[styles.detailHeader, onBack ? { gap: 4 } : null]}>
+      <View style={styles.row}>
         {onBack ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={onBack}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+            onPress={onBack}
+            style={styles.detailBack}
+          >
             <Icon name="ChevronLeft" size={20} color={theme.colors.foreground} />
           </Pressable>
-        ) : null}
-        {onBack ? (
-          <Text style={styles.muted}>/</Text>
         ) : null}
         {item?.kind === "agent" ? (
           <AgentIcon state={state} live={live} size={18} theme={theme} />
         ) : (
           <Icon name={KIND_ICON[item?.kind ?? "note"]} size={18} color={theme.colors.foregroundMuted} />
         )}
-        {!onBack ? (
-          <Text style={[styles.heading, { flex: 1, minWidth: 0 }]} numberOfLines={1} ellipsizeMode="tail">
-            {item ? itemTitle(item) : "New note"}
-          </Text>
-        ) : null}
-        {item?.kind === "agent" ? <PermissionBadge state={state} live={live} theme={theme} /> : null}
-      </View>
-      {onBack ? (
-        <Text style={styles.heading} numberOfLines={1} ellipsizeMode="tail">
+        <Text style={[styles.heading, { flex: 1, minWidth: 0 }]} numberOfLines={1} ellipsizeMode="tail">
           {item ? itemTitle(item) : "New note"}
         </Text>
-      ) : null}
+        {item?.kind === "agent" ? <PermissionBadge state={state} live={live} theme={theme} /> : null}
+      </View>
       {item ? <TagEditor item={item} archived={archived} styles={styles} theme={theme} actions={
         <View style={styles.itemActions}>
           {item.kind === "agent" ? (
