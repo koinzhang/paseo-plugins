@@ -117,7 +117,7 @@ const resizeCursor = Platform.OS === "web" ? ({ cursor: "col-resize" } as object
 /** Swaps the accent focus ring for a muted border on bordered inputs. */
 function Field({ styles, style, ...props }: ComponentProps<typeof TextInput> & { styles: Styles }) {
   const [focused, setFocused] = useState(false);
-  const borderless = style === styles.noteTitleInput || style === styles.editor;
+  const borderless = style === styles.detailTitleInput || style === styles.editor;
   return (
     <TextInput
       placeholderTextColor={styles.placeholderColor}
@@ -227,17 +227,18 @@ function createStyles(theme: PluginTheme, compact: boolean, workspace: boolean) 
     placeholderColor: c.foregroundMuted,
     noteEditor: { flex: 1, gap: 10 },
     noteFields: { flex: 1, backgroundColor: "transparent" },
-    noteTitleInput: {
+    detailTitleInput: {
+      flex: 1,
+      minWidth: 0,
       color: c.foreground,
       backgroundColor: "transparent",
       borderWidth: 0,
       paddingHorizontal: 0,
-      paddingTop: 8,
-      paddingBottom: 12,
-      fontSize: 14,
+      paddingVertical: 0,
+      fontSize: compact ? 18 : 20,
+      fontWeight: "600" as const,
       ...noOutline,
     },
-    noteFieldDivider: { borderBottomWidth: 1, borderBottomColor: c.border },
     chip: (active: boolean) => ({
       flexDirection: "row" as const,
       alignItems: "center" as const,
@@ -889,15 +890,6 @@ function NoteEditor({
       <View style={styles.noteFields}>
         <Field
           styles={styles}
-          style={styles.noteTitleInput}
-          value={title}
-          onChangeText={onTitleChange}
-          placeholder="Title (optional)"
-          accessibilityLabel="Title"
-        />
-        <View style={styles.noteFieldDivider} />
-        <Field
-          styles={styles}
           style={styles.editor}
           value={body}
           onChangeText={onBodyChange}
@@ -1329,9 +1321,21 @@ function Detail({
         ) : (
           <Icon name={KIND_ICON[item?.kind ?? "note"]} size={18} color={theme.colors.foregroundMuted} />
         )}
-        <Text style={[styles.heading, { flex: 1, minWidth: 0 }]} numberOfLines={1} ellipsizeMode="tail">
-          {item ? itemTitle(item) : "New note"}
-        </Text>
+        {item?.kind === "agent" ? (
+          <Text style={[styles.heading, { flex: 1, minWidth: 0 }]} numberOfLines={1} ellipsizeMode="tail">
+            {itemTitle(item)}
+          </Text>
+        ) : (
+          <Field
+            styles={styles}
+            style={styles.detailTitleInput}
+            value={title}
+            onChangeText={setTitle}
+            placeholder={item ? "Untitled note" : "New note"}
+            accessibilityLabel="Note title"
+            returnKeyType="next"
+          />
+        )}
         {item?.kind === "agent" ? <PermissionBadge state={state} live={live} theme={theme} /> : null}
       </View>
       {item ? <TagEditor item={item} archived={archived} styles={styles} theme={theme} actions={
