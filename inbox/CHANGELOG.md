@@ -5,7 +5,7 @@ All notable changes to `@koinzhang/paseo-plugin-inbox` are documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.0] - 2026-11-26
 
 Requires Paseo **>= 0.17.4**.
 
@@ -19,7 +19,7 @@ Requires Paseo **>= 0.17.4**.
 ### Changed
 
 - Remove scratch as a separate type: `/inbox <text>` saves a note directly, the Scratch filter and Convert action are gone, and stored scratch entries migrate to notes without losing their content or tags.
-- Remove detail action borders and agent message boxes; notes remain borderless with a title/body separator.
+- Remove detail action borders and agent message boxes; note details keep a borderless editor.
 - Advance note update time only for actual title or body edits, not pin, tag, or identical-content saves; remove the New note button's green primary styling.
 - Keep desktop row action disabled states independent of hover so moving onto the icons does not recreate their pointer targets.
 - Move global Project / Workspace scope chips into the search-bar Filter menu alongside Agents / Notes. All scopes support multi-selection; Project / Workspace filters start unselected, only apply when selected, and leave untagged items visible. Counts, archived labels, and persistence remain.
@@ -27,6 +27,9 @@ Requires Paseo **>= 0.17.4**.
 - Use single-document FileText icons for notes and FilePlus2 for note creation instead of notebook-style icons.
 - Use a PanelsTopLeft icon for Workspace tags instead of the Git branch symbol; Project keeps its Folder icon.
 - Remove the full-width divider between the search toolbar and the note / agent list; keep the inset separators between items.
+- Collapse the list search behind its toolbar icon: click Search to expand and focus it, and close it with X to clear the query. Global and workspace lists share the same toolbar.
+- Edit note titles directly in the detail header; the separate title field and its divider above the body are gone, and agent detail headings stay read-only.
+- Align the compact detail back arrow, tags, and editor, and keep the detail title on the navigation row.
 - Pin the plugin SDK, daemon client, and protocol development dependency to 0.17.4; workspace recovery now uses that client's terminal-response waiting behavior.
 - Refresh connected clients after Inbox writes through the SDK's subscription API. Events contain only an invalidation signal; clients re-read current data after subscribing or reconnecting. Slow clients coalesce notifications without blocking writes, and cleanup releases subscriptions and retries.
 - Remove the deprecated workspace panel context registration and use host-scoped workspace references for cached panel lookup. Keep archived/missing handling, project keys, saved tabs, and the SQLite table unchanged.
@@ -58,6 +61,7 @@ Requires Paseo **>= 0.9.0**.
 - Empty notes are never kept: a new note is saved only once it has a title or text, and a note left empty is removed.
 - Items grouped by project: git remote URL, falling back to the repository root path.
 
-[Unreleased]: https://github.com/koinzhang/paseo-plugins/compare/inbox-v0.2.0...HEAD
+[Unreleased]: https://github.com/koinzhang/paseo-plugins/compare/inbox-v0.3.0...HEAD
+[0.3.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/inbox-v0.3.0
 [0.2.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/inbox-v0.2.0
 [0.1.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/inbox-v0.1.0

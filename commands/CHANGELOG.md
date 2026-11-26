@@ -5,7 +5,7 @@ All notable changes to `@koinzhang/paseo-plugin-commands` are documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.2] - 2026-11-26
 
 Requires Paseo **>= 0.16.0**.
 
@@ -43,6 +43,7 @@ Requires Paseo **>= 0.9.0**.
 - `/resend [text]` agent slash command to resend the latest non-empty user prompt, appending optional text on a new line.
 - Settings → Plugins → commands → Settings: turn each slash command on or off, grouped into Runtime, Session, and Prompt sections, with a short description of what it does.
 
+[0.2.2]: https://github.com/koinzhang/paseo-plugins/releases/tag/commands-v0.2.2
 [0.2.1]: https://github.com/koinzhang/paseo-plugins/releases/tag/commands-v0.2.1
 [0.2.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/commands-v0.2.0
 [0.1.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/commands-v0.1.0

@@ -5,7 +5,7 @@ All notable changes to `@koinzhang/paseo-plugin-customize` are documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.1] - 2026-11-26
 
 Requires Paseo **>= 0.17.4**.
 
@@ -48,6 +48,7 @@ Requires Paseo **>= 0.9.0**.
 - The Rescan icon in the toolbar now matches the search, chevron, and mechanism icons at 14 px.
 - Entry icons in list rows and cards are 14 px and centered with the title; the view toggle no longer shows a hover tooltip.
 
+[0.4.1]: https://github.com/koinzhang/paseo-plugins/releases/tag/customize-v0.4.1
 [0.4.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/customize-v0.4.0
 [0.3.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/customize-v0.3.0
 
