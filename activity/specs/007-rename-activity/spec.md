@@ -79,5 +79,5 @@
 |---|---|---|---|---|
 | 2026-09-19 | npm 发布包名 | `package.json` `name` = `activity` | 已改为 scoped 名 `@koinzhang/paseo-plugin-activity`（移除 `private`、补 `files` 白名单）；插件 ID / 数据目录不变 | npm 上 `activity` 已被无关包占用（v0.1.1），且未 scoped 名不可发布 |
 
-- 不影响插件 ID / 安装 id / 数据目录：Paseo 文档明确 **npm 包名只标识来源，`paseo-plugin.json` 的 `id` 才标识已安装插件**（`.agents/skills/paseo-plugin-doc/references/publishing.md`）。
+- 不影响插件 ID / 安装 id / 数据目录：Paseo 文档明确 **npm 包名只标识来源，`paseo-plugin.json` 的 `id` 才标识已安装插件**（`https://paseo.sh/docs/plugins/publishing.md` 与 `https://paseo.sh/docs/plugins/reference.md`）。
 - 本地改名已完成（T14a）；发布时仅需 `npm publish --access public`（T14b）。
