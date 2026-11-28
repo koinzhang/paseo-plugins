@@ -3,7 +3,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, test } from "node:test";
-import { createUsageStore, type ToolCallRow } from "./store.ts";
+import { DatabaseSync } from "node:sqlite";
+import { createUsageStore, SCHEMA_SQL, type ToolCallRow } from "./store.ts";
 
 const dirs: string[] = [];
 
@@ -47,6 +48,66 @@ test("prefers sqlite driver when node:sqlite is available", () => {
   assert.equal(store.driver, "sqlite");
   store.close();
 });
+
+test("sqlite: upgrades the pre-090 schema and preserves custom-root read attribution", () => {
+  const dir = tempDir();
+  const database = new DatabaseSync(join(dir, "usage.db"));
+  database.exec(SCHEMA_SQL.replace("  skill_uses     TEXT,\n", ""));
+  const insert = database.prepare("INSERT INTO tool_calls (agent_id,call_id,provider,name,detail_type,category,confidence,skill_name,command,file_path,ingested_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
+  insert.run("a1", "shell", "codex", "shell", "shell", "skill", "low", "first", "cat .agents/skills/first/SKILL.md .agents/skills/second/SKILL.md", null, "2026-11-28T00:00:00Z");
+  insert.run("a1", "read", "pi", "read", "read", "skill", "inferred", "custom", null, "/custom/skills/custom/SKILL.md", "2026-11-28T00:00:00Z");
+  database.close();
+  const store = createUsageStore({ dir, driver: "sqlite" });
+  assert.equal(store.getRow("a1", "shell")?.skillUses?.length, 2);
+  assert.equal(store.getRow("a1", "read")?.skillUses?.[0]?.confidence, "inferred");
+  assert.equal(store.count(), 2);
+  store.close();
+});
+
+for (const driver of ["sqlite", "jsonl"] as const) {
+  test(`${driver}: multiple skill evidence persists, filters and replaces without inflating tool count`, () => {
+    const dir = tempDir();
+    const store = createUsageStore({ dir, driver });
+    const skillUses = [
+      { skillName: "first", confidence: "inferred" as const, filePath: ".agents/skills/first/SKILL.md" },
+      { skillName: "second", confidence: "inferred" as const, filePath: ".agents/skills/second/SKILL.md" },
+      { skillName: "search", confidence: "low" as const, filePath: ".agents/skills/search/SKILL.md" },
+    ];
+    store.upsertMany([row({ category: "skill", confidence: "inferred", skillName: "first", skillUses })]);
+    store.upsertMany([row({ category: "skill", confidence: "inferred", skillName: "first", skillUses })]);
+    assert.equal(store.count(), 1);
+    assert.equal(store.select({ skillName: "second" }).length, 1);
+    assert.equal(store.select({ skillName: "search", confidence: "low" }).length, 1);
+    assert.equal(store.select({ skillName: "second", confidence: "low" }).length, 0);
+    assert.equal(store.selectRecent({ category: "skill" }, { limit: 10, scope: "skill-named" }).length, 1);
+    store.close();
+    const reopened = createUsageStore({ dir, driver });
+    assert.deepEqual(reopened.getRow("agent-1", "call-1")?.skillUses, skillUses);
+    reopened.upsertMany([row({ category: "regular", skillUses: [] })]);
+    assert.equal(reopened.select({ skillName: "second" }).length, 0);
+    reopened.close();
+  });
+
+  test(`${driver}: startup migrates old shell reads without changing identity, time or status`, () => {
+    const dir = tempDir();
+    const store = createUsageStore({ dir, driver });
+    const original = row({ category: "skill", confidence: "low", skillName: "first", command: "cat .agents/skills/first/SKILL.md .agents/skills/second/SKILL.md", ts: "2026-09-18T11:00:00.000Z", status: "completed" });
+    store.upsertMany([original]);
+    store.close();
+    const migrated = createUsageStore({ dir, driver });
+    const current = migrated.getRow("agent-1", "call-1")!;
+    assert.equal(current.confidence, "inferred");
+    assert.equal(current.skillUses?.length, 2);
+    assert.equal(current.ts, original.ts);
+    assert.equal(current.ingestedAt, original.ingestedAt);
+    assert.equal(current.status, original.status);
+    assert.equal(migrated.count(), 1);
+    migrated.close();
+    const repeated = createUsageStore({ dir, driver });
+    assert.equal(repeated.generation(), 0);
+    repeated.close();
+  });
+}
 
 test("sqlite: repeated upsert of same agentId+callId stays one row", () => {
   const store = createUsageStore({ dir: tempDir() });

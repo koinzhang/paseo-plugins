@@ -38,8 +38,8 @@ import {
   usageSummaryRpc,
 } from "../shared/usage.ts";
 import { listAllAgentPages } from "../shared/list-agent-pages.ts";
-import { DEFAULT_SKILL_ROOTS, matchSkillFile } from "../shared/classify.ts";
-import { buildHomeSkillRoots, buildSkillRoots, toolCallToRow, ingestUserMessages } from "./ingest.ts";
+import { DEFAULT_SKILL_ROOTS, matchSkillFile, skillUsesForRow } from "../shared/classify.ts";
+import { buildHomeSkillRoots, buildSkillRoots, toolCallToRows, ingestUserMessages } from "./ingest.ts";
 import { normalizeModelId } from "./resolve-model.ts";
 import { resolveMcpServers } from "./mcp-servers.ts";
 import {
@@ -78,10 +78,7 @@ export function summarizeRows(rows: readonly ToolCallRow[]): UsageSummary {
     toolCallsByKind[kind] = (toolCallsByKind[kind] ?? 0) + 1;
 
     if (row.category === "skill") {
-      if (row.confidence === "exact") skillCalls.exact += 1;
-      else if (row.confidence === "inferred") skillCalls.inferred += 1;
-      else if (row.confidence === "low") skillCalls.low += 1;
-      else skillCalls.inferred += 1;
+      for (const use of skillUsesForRow(row)) skillCalls[use.confidence] += 1;
     } else if (row.category === "mcp") {
       mcpCalls += 1;
       if (row.status === "failed") mcpFailures += 1;
@@ -148,6 +145,7 @@ export function createListHandler(store: UsageStore) {
         category: row.category,
         confidence: row.confidence,
         skillName: row.skillName,
+        skillUses: row.skillUses,
         mcpServer: row.mcpServer,
         mcpTool: row.mcpTool,
         command: row.command,
@@ -213,13 +211,14 @@ export function createRecentSkillCallsHandler(store: UsageStore) {
         { workspaceId: input.workspaceId, category: "skill" },
         { limit: input.limit ?? 8, scope: "skill-named" },
       )
-      .map((row) => ({
+      .flatMap((row) => skillUsesForRow(row).filter((use) => use.confidence !== "low" && use.skillName.trim()).map((use) => ({
         agentId: row.agentId,
         agentTitle: titles.get(row.agentId) ?? null,
         callId: row.callId,
-        skillName: row.skillName!.trim(),
+        skillName: use.skillName.trim(),
         calledAt: row.ts ?? row.ingestedAt,
-      }));
+      })))
+      .slice(0, input.limit ?? 8);
     return { items };
   };
 }
@@ -648,7 +647,7 @@ function ingestCanonicalPage(
     }));
     if (entry.item.type !== "tool_call") continue;
     rows.push(
-      toolCallToRow(entry.item, agent, {
+      ...toolCallToRows(entry.item, agent, {
         skillRoots,
         homeDir,
         mcpServers,

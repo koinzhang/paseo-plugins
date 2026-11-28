@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { AgentTimelineItem } from "./host-types.ts";
 import type { PluginHookAgent } from "@getpaseo/plugin/server";
 import { classifyToolCall, DEFAULT_SKILL_ROOTS, type ToolCallInput } from "../shared/classify.ts";
+import { nestedSkillCalls } from "../shared/nested-skill-calls.ts";
 import { resolveMcpServers } from "./mcp-servers.ts";
 import type { ToolCallRow, UserMessageRow, UsageStore } from "./store.ts";
 import { createKeyedTtlCache } from "./ttl-cache.ts";
@@ -86,7 +87,7 @@ export function buildSkillRoots(agent: PluginHookAgent, homeDir: string): string
       expanded.push(root);
     }
   }
-  return [...expanded, ...discoverPaseoPluginSkillRoots(homeDir)];
+  return [...expanded, ...DEFAULT_SKILL_ROOTS, ...discoverPaseoPluginSkillRoots(homeDir)];
 }
 
 /** Home / plugin skill roots only (no project-relative paths). */
@@ -153,6 +154,7 @@ export function toolCallToRow(
     category: hit.category,
     confidence: hit.confidence,
     skillName: hit.skillName,
+    skillUses: hit.skillUses,
     mcpServer: hit.mcpServer,
     mcpTool: hit.mcpTool,
     command: hit.command,
@@ -163,6 +165,21 @@ export function toolCallToRow(
     ts: opts.ts ?? null,
     ingestedAt: opts.ingestedAt,
   };
+}
+
+export function toolCallToRows(
+  item: Extract<AgentTimelineItem, { type: "tool_call" }>,
+  agent: PluginHookAgent,
+  options: Parameters<typeof toolCallToRow>[2],
+): ToolCallRow[] {
+  const rows = [toolCallToRow(item, agent, options)];
+  if (item.name !== "codemode") return rows;
+  const output = (item.detail as ToolCallInput["detail"])?.output;
+  for (const nested of nestedSkillCalls(output)) {
+    if (!nested.callId.startsWith(`${item.callId}/`)) continue;
+    rows.push(toolCallToRow({ type: "tool_call", ...nested, error: null }, agent, options));
+  }
+  return rows;
 }
 
 /**
@@ -189,16 +206,17 @@ export function ingestTimeline(
       : undefined);
   const ingestedAt = now().toISOString();
   const rows: ToolCallRow[] = [];
+  const explicitCalls = new Set(timeline.filter((item) => item.type === "tool_call").map((item) => item.callId));
   for (const item of timeline) {
     if (item.type !== "tool_call") continue;
     rows.push(
-      toolCallToRow(item, agent, {
+      ...toolCallToRows(item, agent, {
         skillRoots,
         homeDir,
         mcpServers,
         turnId,
         ingestedAt,
-      }),
+      }).filter((row) => row.callId === item.callId || !explicitCalls.has(row.callId)),
     );
   }
   return rows;

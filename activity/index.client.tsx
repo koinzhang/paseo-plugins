@@ -1,12 +1,16 @@
 import type { PluginClientContext } from "@getpaseo/plugin/client";
+import { settingsRpc } from "@getpaseo/plugin";
 import { GlobalUsageSurface } from "./client/global-surface.tsx";
 import { UsagePanel } from "./client/panel.tsx";
 import { contributeAttentionPills } from "./client/attention-pill.tsx";
+import { setActivitySettings } from "./client/activity-settings-store.ts";
 import { contributeHeaderButtons } from "./client/header-button.ts";
 import { contributePills } from "./client/pill.tsx";
+import { ActivitySettingsScreen } from "./client/settings-screen.tsx";
 import { ACTIVITY_SCREEN_ID, ActivitySidebarItem } from "./client/sidebar-item.tsx";
 import { WorkspaceActivityPanel } from "./client/workspace-panel.tsx";
 import { currentAppLanguage, watchAppLanguage } from "./client/use-app-language.ts";
+import { activitySettings } from "./shared/activity-settings.ts";
 import { messagesFor } from "./shared/i18n.ts";
 
 const GLOBAL_SCREEN_ID = ACTIVITY_SCREEN_ID;
@@ -41,6 +45,13 @@ function addScopedCommands(client: PluginClientContext): () => void {
 }
 
 export default function contribute(client: PluginClientContext) {
+  const removeSettingsScreen = client.addSettingsScreen({
+    id: "activity",
+    title: "Settings",
+    icon: "Activity",
+    Component: ActivitySettingsScreen,
+  });
+
   client.addScreen({
     id: GLOBAL_SCREEN_ID,
     title: "Activity",
@@ -84,10 +95,45 @@ export default function contribute(client: PluginClientContext) {
     removeScopedCommands = addScopedCommands(client);
   });
 
+  let disposed = false;
+  const readActivitySettings = () => {
+    client
+      .rpc(settingsRpc(activitySettings.id).read, {})
+      .then((result) => {
+        if (disposed || result.status !== "ready") return;
+        const parsed = activitySettings.schema.safeParse(result.values);
+        if (parsed.success) setActivitySettings(parsed.data);
+      })
+      .catch((error) => {
+        if (!disposed) console.error("[activity] failed to read settings", error);
+      });
+  };
+  readActivitySettings();
+  const settingsEvents = client.paseo.observeEvents(["status.plugin_settings_changed"]);
+  const stopSettingsEvents = settingsEvents.subscribe({
+    snapshot: () => {},
+    update: (message) => {
+      if (message.type !== "status") return;
+      const payload = message.payload;
+      if (
+        payload.status !== "plugin_settings_changed" ||
+        payload.settingsId !== activitySettings.id
+      )
+        return;
+      readActivitySettings();
+    },
+  });
+
   const stopUsagePills = contributePills(client);
   const stopAttentionPills = contributeAttentionPills(client);
   const stopHeaderButtons = contributeHeaderButtons(client);
   return () => {
+    disposed = true;
+    stopSettingsEvents();
+    void settingsEvents
+      .release()
+      .catch((error) => console.error("[activity] failed to release settings events", error));
+    removeSettingsScreen();
     stopLanguage();
     removeScopedCommands();
     stopUsagePills();

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { PluginHandlerContext } from "@getpaseo/plugin/server";
@@ -40,6 +40,23 @@ test("successful history checks persist, skip unchanged agents, and rescan chang
     await run(); assert.equal(scans, 2);
     await run(2); assert.equal(scans, 3);
   } finally { f.cleanup(); }
+});
+
+test("090 invalidates old classification checkpoints and fully rescans unchanged active agents", async () => {
+  const fixtureData = fixture();
+  writeFileSync(fixtureData.path, JSON.stringify({ version: 1, agents: { a1: "2026-09-19:" } }));
+  let incremental: boolean | undefined;
+  const sync = createBackgroundSync(fixtureData.store, { path: fixtureData.path, scan: async (_store, _paseo, _ids, _signal, _entries, options) => {
+    incremental = options?.incremental;
+    return { syncedAgents: 1, inserted: 0, errors: [] };
+  } });
+  try {
+    await sync.request(fixtureData.paseo);
+    assert.equal(incremental, false);
+  } finally {
+    sync.stop();
+    fixtureData.cleanup();
+  }
 });
 
 test("failed scans are not checkpointed and retry on the next check", async () => {

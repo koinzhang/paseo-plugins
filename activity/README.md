@@ -28,7 +28,7 @@ Ingests every agent's Paseo timeline into a local SQLite database. Queries read 
 - **Sidebar Activity** — all-time global view by provider (KPI with prev-7d comparison, Activity Calendar heatmap, Daily Activity 30-day histogram, Hourly Activity 168-hour timeline, Providers / Projects rankings, insights, most used)
 - **Explorer → Activity** (or the Activity button in a workspace header; hidden while the panel is open) — workspace agents as a management list (search / sort / group / status / lifecycle / archive), live attention (permission badge, status colors, running spinner; API-owned directory observation + explicit lifecycle/archive fields + 15s reconciliation), open Terminals (list / preview / close), plus workspace KPIs and Skills / MCP ranked or newest-call timeline views (with agent titles and one shared persisted view choice); usage queries get a best-effort refresh hint when agents leave running
 - **Agent workspace panel** — per-agent tool detail (dense KPI including prompts / Skills / MCP toggle / SKILL.md); refreshes on timeline turn terminal events
-- **Composer pills** — Activity: current agent's skill / MCP summary (hidden when empty); **Needs attention**: other same-workspace agents with finished / permission / error (hidden when none; click opens shared list)
+- **Composer pills** — Activity: current agent's skill / MCP summary (hidden when empty); **Needs attention**: other same-workspace agents with finished / permission / error (hidden when none; click opens shared list). Both can be hidden independently in **Settings → Plugins → activity**
 - **Command Center** — Activity · Workspace Activity · Agent Activity
 
 ## Data
@@ -71,6 +71,8 @@ paseo plugin ls
 - Analytics and the agent registry are local to each daemon: every machine keeps its own database, and there is no cross-host aggregation.
 - Numbers are reconstructed from the Paseo timeline; items that do not report a model or skill cannot be attributed for that dimension.
 - Skill classification is heuristic (exact / inferred / low confidence); check the tier before trusting a count.
+- Direct `read`, `cat`, printing `sed -n`, `head`, and `bat` reads of `SKILL.md` under Skill roots count as inferred. Literal shell variables / `for ... in ...` lists can load multiple skills: each distinct skill counts once per tool call, while the tool-call total stays unchanged. Searches, unresolved scripts, and outer-only codemode hints stay low and are excluded from normal counts. Pi's actual nested read/bash calls use the same rules. Existing shell/read history is reclassified automatically at startup (spec 090).
+- Pi canonical codemode `output.details.calls` is expanded using the original nested IDs, so replay no longer loses reads hidden inside the wrapper. Active sessions are backfilled once with the new ingestion version; archived sessions retain the existing registry-only scan policy.
 - Project attribution for the Projects ranking comes from the workspace root recorded while it was listed, or the agent `cwd`; sessions with neither group under **Other**.
 - Workspace Activity focuses on agent operations for the current workspace; heatmap / provider / model breakdowns stay on the global sidebar.
 

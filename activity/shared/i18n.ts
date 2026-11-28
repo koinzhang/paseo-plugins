@@ -187,6 +187,19 @@ function en({ num }: Formatters) {
       agentActivity: "Agent Activity",
       workspaceActivity: "Workspace Activity",
     },
+    settings: {
+      title: "Settings",
+      composerPills: "Composer pills",
+      hideUsagePill: "Hide usage pill",
+      hideUsagePillHint:
+        "Hide the current agent's Skill and MCP summary above the composer. The Activity panel stays available.",
+      hideAttentionPill: "Hide attention pill",
+      hideAttentionPillHint:
+        "Hide finished, permission, and error alerts from other agents in this workspace.",
+      retry: "Couldn't load Activity settings",
+      restoreDefaults: "Restore default settings",
+      reset: "Reset",
+    },
   };
 }
 
@@ -334,6 +347,17 @@ function zhCN({ num }: Formatters): Messages {
     commands: {
       agentActivity: "Agent Activity",
       workspaceActivity: "工作区 Activity",
+    },
+    settings: {
+      title: "设置",
+      composerPills: "Composer pills",
+      hideUsagePill: "隐藏用量 pill",
+      hideUsagePillHint: "隐藏 composer 上当前 Agent 的 Skill / MCP 摘要；Activity 面板仍可正常打开。",
+      hideAttentionPill: "隐藏需要关注 pill",
+      hideAttentionPillHint: "隐藏同 workspace 其他 Agent 的已完成、待处理权限和错误提醒。",
+      retry: "无法加载 Activity 设置",
+      restoreDefaults: "恢复默认设置",
+      reset: "重置",
     },
   };
 }

@@ -23,6 +23,8 @@ test("resolveAppLanguage treats missing or unknown settings like system", () => 
 test("messagesFor returns zh-CN copy and falls back to English", () => {
   assert.equal(messagesFor("zh-CN").common.retry, "重试");
   assert.equal(messagesFor("zh-CN").common.lastUsed("3 分钟前"), "最近 3 分钟前");
+  assert.equal(messagesFor("zh-CN").settings.hideUsagePill, "隐藏用量 pill");
+  assert.equal(messagesFor("en").settings.hideAttentionPill, "Hide attention pill");
   assert.equal(messagesFor("fr").common.retry, messagesFor("en").common.retry);
   assert.equal(messagesFor("en").workspace.state.subagents(1), "1 subagent");
   assert.equal(messagesFor("en").workspace.state.subagents(2), "2 subagents");

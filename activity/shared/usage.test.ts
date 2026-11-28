@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import type { SkillUse } from "./classify.ts";
 import {
   aggregateActivityByHour,
   aggregateActivityByDay,
@@ -23,6 +24,21 @@ import {
   shellCommandHead,
   shellLooksMutating,
 } from "./usage.ts";
+
+describe("multi-skill attribution (090)", () => {
+  it("aggregates each reliable skill and keeps weak evidence separate", () => {
+    const skillUses: SkillUse[] = [
+      { skillName: "review", confidence: "inferred", filePath: ".agents/skills/review/SKILL.md" },
+      { skillName: "commit", confidence: "inferred", filePath: ".agents/skills/commit/SKILL.md" },
+      { skillName: "search", confidence: "low", filePath: ".agents/skills/search/SKILL.md" },
+    ];
+    const rows = [{ category: "skill", confidence: "inferred", skillName: "review", skillUses, ts: null, ingestedAt: "2026-11-28T00:00:00Z" }];
+    const skills = aggregateSkillsByName(rows);
+    assert.equal(skills.reduce((total, item) => total + item.total, 0), 2);
+    assert.equal(skills.find((item) => item.skillName === "search")?.low, 1);
+    assert.equal(formatUsagePillLabel(undefined, skills, []), "Commit + 1");
+  });
+});
 import { summarizeRows } from "../server/handlers.ts";
 import type { ToolCallRow } from "../server/store.ts";
 

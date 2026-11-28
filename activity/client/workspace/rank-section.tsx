@@ -119,7 +119,7 @@ export function RankSection({
               const canOpen = openAgent != null && !archivedAgentIds.has(item.agentId);
               return (
                 <Pressable
-                  key={`${item.agentId}:${item.callId}`}
+                  key={`${item.agentId}:${item.callId}:${item.skillName}`}
                   accessibilityRole={canOpen ? "link" : undefined}
                   accessibilityLabel={
                     canOpen ? m.common.openConversation(item.agentTitle ?? item.agentId) : undefined

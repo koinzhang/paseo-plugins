@@ -1,7 +1,8 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { Category, Confidence } from "../shared/classify.ts";
-import { normalizeProvider } from "../shared/classify.ts";
+import { classifyToolCall, normalizeProvider, skillUsesForRow, type SkillUse } from "../shared/classify.ts";
+import { homedir } from "node:os";
 import { LOG_PREFIX } from "../shared/plugin-id.ts";
 import { resolveActivityDataDir } from "./migrate-data.ts";
 import { replayDuplicateMessageIds } from "./prompt-dedupe.ts";
@@ -17,6 +18,7 @@ export interface ToolCallRow {
   category: Category;
   confidence: Confidence | null;
   skillName: string | null;
+  skillUses?: SkillUse[];
   mcpServer: string | null;
   mcpTool: string | null;
   command: string | null;
@@ -151,6 +153,7 @@ CREATE TABLE IF NOT EXISTS tool_calls (
   category       TEXT NOT NULL,
   confidence     TEXT,
   skill_name     TEXT,
+  skill_uses     TEXT,
   mcp_server     TEXT,
   mcp_tool       TEXT,
   command        TEXT,
@@ -246,14 +249,17 @@ const CLAMP_TS_SQL = ["tool_calls", "user_messages"].map(table =>
 const UPSERT_SQL = `
 INSERT INTO tool_calls (
   agent_id, call_id, workspace_id, provider, turn_id, name, detail_type,
-  category, confidence, skill_name, mcp_server, mcp_tool, command, file_path,
+  category, confidence, skill_name, skill_uses, mcp_server, mcp_tool, command, file_path,
   status, error_message, seq, ts, ingested_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(agent_id, call_id) DO UPDATE SET
   workspace_id  = COALESCE(excluded.workspace_id, tool_calls.workspace_id),
   turn_id       = COALESCE(excluded.turn_id, tool_calls.turn_id),
   detail_type   = COALESCE(excluded.detail_type, tool_calls.detail_type),
   category      = excluded.category,
+  skill_uses    = CASE WHEN excluded.category IS NOT tool_calls.category
+                      THEN excluded.skill_uses
+                      ELSE COALESCE(excluded.skill_uses, tool_calls.skill_uses) END,
   confidence    = CASE
                     WHEN excluded.category IS NOT tool_calls.category
                     THEN excluded.confidence
@@ -335,7 +341,7 @@ function normalizeStoredModel(value: unknown): string | null {
 
 const SELECT_ROW_SQL = `
 SELECT agent_id, call_id, workspace_id, provider, turn_id, name, detail_type,
-       category, confidence, skill_name, mcp_server, mcp_tool, command, file_path,
+       category, confidence, skill_name, skill_uses, mcp_server, mcp_tool, command, file_path,
        status, error_message, seq, ts, ingested_at
 FROM tool_calls
 WHERE agent_id = ? AND call_id = ?
@@ -344,6 +350,29 @@ WHERE agent_id = ? AND call_id = ?
 const TERMINAL_STATUSES = new Set(["completed", "failed", "canceled"]);
 
 type SqliteModule = typeof import("node:sqlite");
+
+function migrateSkillRow(row: ToolCallRow): ToolCallRow | null {
+  if (row.skillUses || row.confidence === "exact" || row.category === "mcp") return null;
+  const source = row.detailType === "shell" ? row.command : row.detailType === "read" ? row.filePath : null;
+  if (!source || !/SKILL\.md/i.test(source)) return null;
+  const hit = classifyToolCall({
+    name: row.name,
+    detail: { type: row.detailType, command: row.command, filePath: row.filePath },
+  }, { provider: row.provider, homeDir: homedir() });
+  if (row.detailType === "read" && row.category === "skill" && hit.category !== "skill") {
+    return { ...row, skillUses: skillUsesForRow(row) };
+  }
+  return {
+    ...row,
+    category: hit.category,
+    confidence: hit.confidence,
+    skillName: hit.skillName,
+    skillUses: hit.skillUses,
+    filePath: hit.filePath,
+    mcpServer: hit.mcpServer,
+    mcpTool: hit.mcpTool,
+  };
+}
 
 /** Ensure upgraded DBs gain `user_messages.model` (CREATE TABLE IF NOT EXISTS will not alter). */
 export function ensureUserMessageModelColumn(
@@ -424,9 +453,12 @@ export function rowMatchesFilter(row: ToolCallRow, filter: QueryFilter = {}): bo
   if (filter.confidence !== undefined) {
     if (filter.confidence === null) {
       if (row.confidence !== null) return false;
+    } else if (row.skillUses) {
+      if (!row.skillUses.some((use) => use.confidence === filter.confidence &&
+          (!filter.skillName || use.skillName === filter.skillName))) return false;
     } else if (row.confidence !== filter.confidence) return false;
   }
-  if (filter.skillName && row.skillName !== filter.skillName) return false;
+  if (filter.skillName && !skillUsesForRow(row).some((use) => use.skillName === filter.skillName)) return false;
   if (filter.mcpServer && row.mcpServer !== filter.mcpServer) return false;
   const t = rowEffectiveTime(row);
   if (filter.from && t < filter.from) return false;
@@ -472,6 +504,7 @@ function rowValues(row: ToolCallRow): Array<string | number | null> {
     row.category,
     row.confidence,
     row.skillName,
+    row.skillUses ? JSON.stringify(row.skillUses) : null,
     row.mcpServer,
     row.mcpTool,
     row.command,
@@ -496,6 +529,7 @@ function rowFromRecord(record: Record<string, unknown>): ToolCallRow {
     category: String(record.category) as Category,
     confidence: record.confidence == null ? null : (String(record.confidence) as Confidence),
     skillName: record.skill_name == null ? null : String(record.skill_name),
+    ...(record.skill_uses == null ? {} : { skillUses: JSON.parse(String(record.skill_uses)) as SkillUse[] }),
     mcpServer: record.mcp_server == null ? null : String(record.mcp_server),
     mcpTool: record.mcp_tool == null ? null : String(record.mcp_tool),
     command: record.command == null ? null : String(record.command),
@@ -576,6 +610,7 @@ function mergeRow(previous: ToolCallRow, next: ToolCallRow): ToolCallRow {
     detailType: next.detailType ?? previous.detailType,
     confidence: categoryChanged ? next.confidence : (next.confidence ?? previous.confidence),
     skillName: categoryChanged ? next.skillName : (next.skillName ?? previous.skillName),
+    skillUses: categoryChanged ? next.skillUses : (next.skillUses ?? previous.skillUses),
     mcpServer: categoryChanged ? next.mcpServer : (next.mcpServer ?? previous.mcpServer),
     mcpTool: categoryChanged ? next.mcpTool : (next.mcpTool ?? previous.mcpTool),
     command: categoryChanged ? next.command : (next.command ?? previous.command),
@@ -589,7 +624,7 @@ function mergeRow(previous: ToolCallRow, next: ToolCallRow): ToolCallRow {
 }
 
 export function rowMatchesRecentScope(row: ToolCallRow, scope: RecentRowScope | undefined): boolean {
-  if (scope === "skill-named") return row.confidence !== "low" && !!row.skillName?.trim();
+  if (scope === "skill-named") return skillUsesForRow(row).some((use) => use.confidence !== "low" && !!use.skillName.trim());
   if (scope === "mcp-named") return !!row.mcpServer?.trim() && !!row.mcpTool?.trim();
   return true;
 }
@@ -602,7 +637,7 @@ function compareRecent(a: ToolCallRow, b: ToolCallRow): number {
 }
 
 const RECENT_SCOPE_SQL: Record<RecentRowScope, string> = {
-  "skill-named": "(confidence IS NULL OR confidence <> 'low') AND TRIM(COALESCE(skill_name, '')) <> ''",
+  "skill-named": "((skill_uses IS NULL AND (confidence IS NULL OR confidence <> 'low') AND TRIM(COALESCE(skill_name, '')) <> '') OR EXISTS (SELECT 1 FROM json_each(skill_uses) WHERE json_extract(value, '$.confidence') <> 'low' AND TRIM(json_extract(value, '$.skillName')) <> ''))",
   "mcp-named": "TRIM(COALESCE(mcp_server, '')) <> '' AND TRIM(COALESCE(mcp_tool, '')) <> ''",
 };
 
@@ -625,8 +660,8 @@ function toolCallWhere(
     params.push(filter.category);
   }
   if (filter.skillName) {
-    clauses.push("skill_name = ?");
-    params.push(filter.skillName);
+    clauses.push("((skill_uses IS NULL AND skill_name = ?) OR EXISTS (SELECT 1 FROM json_each(skill_uses) WHERE json_extract(value, '$.skillName') = ?))");
+    params.push(filter.skillName, filter.skillName);
   }
   if (filter.mcpServer) {
     clauses.push("mcp_server = ?");
@@ -635,8 +670,10 @@ function toolCallWhere(
   if (filter.confidence !== undefined) {
     if (filter.confidence === null) clauses.push("confidence IS NULL");
     else {
-      clauses.push("confidence = ?");
-      params.push(filter.confidence);
+      const named = filter.skillName ? " AND json_extract(value, '$.skillName') = ?" : "";
+      clauses.push(`((skill_uses IS NULL AND confidence = ?) OR EXISTS (SELECT 1 FROM json_each(skill_uses) WHERE json_extract(value, '$.confidence') = ?${named}))`);
+      params.push(filter.confidence, filter.confidence);
+      if (filter.skillName) params.push(filter.skillName);
     }
   }
   if (filter.from) {
@@ -712,12 +749,17 @@ class SqliteUsageStore implements UsageStore {
     this.db = new sqlite.DatabaseSync(filePath, { timeout: 5_000 });
     this.db.exec("PRAGMA journal_mode = WAL");
     this.db.exec(SCHEMA_SQL);
+    const columns = this.db.prepare("PRAGMA table_info(tool_calls)").all() as Array<{ name: string }>;
+    if (!columns.some((column) => column.name === "skill_uses")) this.db.exec("ALTER TABLE tool_calls ADD COLUMN skill_uses TEXT");
     ensureUserMessageModelColumn(this.db);
     ensureAgentProjectColumns(this.db);
     this.db.exec(CLAMP_TS_SQL);
     this.insert = this.db.prepare(UPSERT_SQL);
     this.insertAgent = this.db.prepare(UPSERT_AGENT_SQL);
     this.insertMessage = this.db.prepare(UPSERT_MESSAGE_SQL);
+    const legacy = this.db.prepare("SELECT * FROM tool_calls WHERE skill_uses IS NULL AND detail_type IN ('shell', 'read') AND (command LIKE '%SKILL.md%' OR file_path LIKE '%SKILL.md%')").all() as Record<string, unknown>[];
+    const migrated = legacy.map(rowFromRecord).map(migrateSkillRow).filter((row): row is ToolCallRow => row !== null);
+    this.upsertMany(migrated);
     this.pruneReplayDuplicateMessages();
   }
 
@@ -1025,6 +1067,8 @@ class JsonlUsageStore implements UsageStore {
         }
       }
     }
+    const migrated = [...this.rows.values()].map(migrateSkillRow).filter((row): row is ToolCallRow => row !== null);
+    this.upsertMany(migrated);
     this.pruneReplayDuplicateMessages();
   }
 

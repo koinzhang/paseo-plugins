@@ -43,6 +43,7 @@ import {
   usageSummaryRpc,
 } from "./shared/usage.ts";
 import { explorerAgentDisplaySettings } from "./shared/explorer-agent-display.ts";
+import { activitySettings } from "./shared/activity-settings.ts";
 
 export default function contribute(server: PluginServerContext) {
   const store = createUsageStore();
@@ -50,6 +51,7 @@ export default function contribute(server: PluginServerContext) {
   const cache = createRpcCache({ generation: () => store.generation() });
   console.log(`[activity] store ready (driver=${store.driver})`);
   server.registerSettings(explorerAgentDisplaySettings);
+  server.registerSettings(activitySettings);
 
   /** Cached read RPC that also nudges the background history check. */
   function read<I, O>(

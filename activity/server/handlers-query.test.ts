@@ -15,8 +15,10 @@ import {
   createReadSkillHandler,
   createRecentSkillCallsHandler,
   createSkillsByNameHandler,
+  createSummaryHandler,
 } from "./handlers.ts";
 import { createUsageStore, type ToolCallRow } from "./store.ts";
+import { aggregateAgents, aggregateByProject, formatUsagePillLabel } from "../shared/usage.ts";
 
 type PaseoApi = PluginHandlerContext["paseo"];
 
@@ -75,6 +77,38 @@ test("by-provider and activity-by-day read the local store only", async () => {
     assert.equal(hourly.hours[0]?.total, 0);
     assert.equal(hourly.hours[1]?.skills, 1);
     assert.equal(hourly.hours[1]?.agents, 1);
+  } finally {
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("all Skill views share multi-skill counts and exclude low without inflating calls", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "multi-skill-query-"));
+  const store = createUsageStore({ dir, driver: "sqlite" });
+  try {
+    const skillUses = [
+      { skillName: "first", confidence: "inferred" as const, filePath: ".agents/skills/first/SKILL.md" },
+      { skillName: "second", confidence: "inferred" as const, filePath: ".agents/skills/second/SKILL.md" },
+      { skillName: "search", confidence: "low" as const, filePath: ".agents/skills/search/SKILL.md" },
+    ];
+    store.upsertMany([row({ confidence: "inferred", skillName: "first", skillUses })]);
+    const summary = await createSummaryHandler(store)({});
+    assert.deepEqual(summary.skillCalls, { exact: 0, inferred: 2, low: 1 });
+    assert.equal(Object.values(summary.toolCallsByKind).reduce((total, count) => total + count, 0), 1);
+    const providers = await createByProviderHandler(store)({});
+    assert.equal(providers.providers[0]?.callCount, 1);
+    assert.equal(providers.totals.skillCalls.inferred, 2);
+    assert.equal(providers.providers[0]?.skills.reduce((total, item) => total + item.total, 0), 2);
+    assert.equal(aggregateAgents(store.select())[0]?.skillCalls, 2);
+    assert.equal(aggregateByProject([], store.select(), [], [])[0]?.skillCalls, 2);
+    const daily = await createActivityByDayHandler(store)({});
+    assert.equal(daily.days[0]?.skills, 2);
+    const hourly = await createActivityByHourHandler(store, () => new Date("2026-09-19T12:30:00.000Z"))({ hours: 1 });
+    assert.equal(hourly.hours[0]?.skills, 2);
+    const recent = await createRecentSkillCallsHandler(store)({ workspaceId: "w1", limit: 2 });
+    assert.deepEqual(recent.items.map((item) => item.skillName), ["first", "second"]);
+    assert.equal(formatUsagePillLabel(undefined, providers.providers[0]!.skills, []), "First + 1");
   } finally {
     store.close();
     rmSync(dir, { recursive: true, force: true });

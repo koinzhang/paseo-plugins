@@ -122,7 +122,7 @@ describe("classifyToolCall — skill inferred / low", () => {
     assert.equal(r.skillName, "wecomcli-shared");
   });
 
-  it("shell cat SKILL.md → low", () => {
+  it("shell cat SKILL.md → inferred", () => {
     const r = classifyToolCall(
       {
         name: "Bash",
@@ -134,7 +134,7 @@ describe("classifyToolCall — skill inferred / low", () => {
       { provider: "codex", homeDir },
     );
     assert.equal(r.category, "skill");
-    assert.equal(r.confidence, "low");
+    assert.equal(r.confidence, "inferred");
     assert.equal(r.skillName, "review");
     assert.equal(r.filePath, "/home/u/.codex/skills/review/SKILL.md");
   });
@@ -303,5 +303,62 @@ describe("classifyToolCall — regular shell", () => {
     );
     assert.equal(edit.category, "regular");
     assert.equal(edit.detailType, "edit");
+  });
+});
+
+describe("Skill read attribution (090)", () => {
+  function shell(command: string) {
+    return classifyToolCall({ name: "shell", detail: { type: "shell", command } }, { provider: "codex", homeDir: "/home/u" });
+  }
+
+  it("counts literal cat, sed printing, head and bat reads", () => {
+    for (const prefix of ["cat", "sed -n '1,190p'", "head -100", "bat --plain"]) {
+      const hit = shell(`${prefix} '/home/u/.codex/skills/review/SKILL.md'`);
+      assert.equal(hit.confidence, "inferred");
+      assert.equal(hit.skillUses.length, 1);
+    }
+  });
+
+  it("collects multiple skills and deduplicates repeated paths within a call", () => {
+    const hit = shell("cat .agents/skills/review/SKILL.md .agents/skills/paseo/SKILL.md; head .agents/skills/review/SKILL.md");
+    assert.deepEqual(hit.skillUses.map((use) => [use.skillName, use.confidence]), [["review", "inferred"], ["paseo", "inferred"]]);
+  });
+
+  it("expands literal for lists, base variables, quoted concatenation and HOME", () => {
+    const hit = shell('base=.agents/skills; for skill in workflow/aipay-harness workspace/subrepo-context docs/iwiki-doc dev/gongfeng; do sed -n \'1,190p\' "$base/${skill}/SKILL.md"; done; cat "$HOME/.pi/agent/skills/paseo/SKILL.md"');
+    assert.deepEqual(hit.skillUses.map((use) => use.skillName), ["aipay-harness", "subrepo-context", "iwiki-doc", "gongfeng", "paseo"]);
+    assert.ok(hit.skillUses.every((use) => use.confidence === "inferred"));
+  });
+
+  it("does not promote search, mentions, writes, unknown control flow or dynamic paths", () => {
+    for (const command of [
+      "rg -n foo .agents/skills/review/SKILL.md",
+      "grep foo .agents/skills/review/SKILL.md",
+      "echo 'cat .agents/skills/review/SKILL.md'",
+      "printf '%s' .agents/skills/review/SKILL.md",
+      "sed -i 's/foo/bar/' .agents/skills/review/SKILL.md",
+      'cat ".agents/skills/$skill/SKILL.md"',
+      "for skill in $(ls .agents/skills); do cat .agents/skills/$skill/SKILL.md; done",
+      "if false; then cat .agents/skills/review/SKILL.md; fi",
+      "read_skill() {\ncat .agents/skills/review/SKILL.md\n}",
+      "cat <<'EOF'\ncat .agents/skills/review/SKILL.md\nEOF",
+      "cat .agents/skills/review/../../../other/SKILL.md",
+    ]) assert.ok(shell(command).skillUses.every((use) => use.confidence === "low"), command);
+  });
+
+  it("keeps mixed reliable and weak evidence separate", () => {
+    const hit = shell("rg foo .agents/skills/search/SKILL.md; cat .agents/skills/review/SKILL.md");
+    assert.equal(hit.confidence, "inferred");
+    assert.deepEqual(hit.skillUses.map((use) => [use.skillName, use.confidence]), [["review", "inferred"], ["search", "low"]]);
+  });
+
+  it("keeps malformed Codex display quotes conservative", () => {
+    const hit = shell('"pwd\nfor skill in workflow/aipay-harness workspace/subrepo-context; do sed -n \'1,190p\' \\".agents/skills/"\'$skill/SKILL.md"; done\'');
+    assert.ok(hit.skillUses.every((use) => use.confidence === "low"));
+  });
+
+  it("records outer-only codemode literals as low rather than claiming execution", () => {
+    const hit = classifyToolCall({ name: "codemode", detail: { type: "unknown", input: { code: 'await tools.read({path: ".agents/skills/review/SKILL.md"}); await tools.bash({command: "cat .agents/skills/paseo/SKILL.md"});' } } }, { provider: "pi" });
+    assert.deepEqual(hit.skillUses.map((use) => [use.skillName, use.confidence]), [["review", "low"], ["paseo", "low"]]);
   });
 });

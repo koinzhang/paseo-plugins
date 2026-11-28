@@ -5,6 +5,24 @@ All notable changes to `@koinzhang/paseo-plugin-activity` are documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.2] - 2026-11-28
+
+Requires Paseo **>= 0.17.4**.
+
+### Added
+
+- Composer pill visibility settings: the usage pill and the needs-attention pill can be hidden independently in **Settings → Plugins → activity**. The host-scoped choice persists across reloads and daemon restarts.
+
+### Changed
+
+- Skill attribution now counts direct shell reads of `SKILL.md` as inferred evidence, supports literal variables and `for ... in ...` lists, and records each distinct Skill once per tool call. Existing shell/read history is reclassified at startup.
+- Pi codemode replay expands nested `read` / `bash` calls from `output.details.calls` using the original nested IDs and deduplicates calls already exposed in the timeline.
+- Summary, provider, agent, project, day/hour, recent-call, and composer-pill views share the same multi-Skill counting rules; `low` evidence stays out of normal counts.
+
+### Fixed
+
+- Correct Codex and Pi Skill usage undercounts caused by shell reads being classified as low confidence, batch reads retaining only the first Skill, relative Skill roots being missed, and Pi codemode replay hiding nested calls.
+
 ## [0.8.1] - 2026-11-26
 
 Requires Paseo **>= 0.17.4**.
@@ -217,7 +235,8 @@ Last release that supports Paseo **0.8.0**. Later versions require Paseo **>= 0.
 - Command Center entries: open panels and export a markdown usage report.
 - Plugin renamed from `tool-usage` to `activity`, migrating the old data directory automatically.
 
-[Unreleased]: https://github.com/koinzhang/paseo-plugins/compare/activity-v0.8.1...HEAD
+[Unreleased]: https://github.com/koinzhang/paseo-plugins/compare/activity-v0.8.2...HEAD
+[0.8.2]: https://github.com/koinzhang/paseo-plugins/releases/tag/activity-v0.8.2
 [0.8.1]: https://github.com/koinzhang/paseo-plugins/releases/tag/activity-v0.8.1
 [0.8.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/activity-v0.8.0
 [0.7.0]: https://github.com/koinzhang/paseo-plugins/releases/tag/activity-v0.7.0

@@ -1,6 +1,6 @@
 import { defineRpc } from "@getpaseo/plugin";
 import { z } from "zod";
-import { CategorySchema, ConfidenceSchema, normalizeProvider } from "./classify.ts";
+import { CategorySchema, ConfidenceSchema, SkillUseSchema, countedSkillUses, normalizeProvider, skillUsesForRow, type SkillUse } from "./classify.ts";
 import { formatDisplayName } from "./format.ts";
 
 export const usageSummaryRpc = defineRpc({
@@ -53,6 +53,7 @@ export const usageListRpc = defineRpc({
         category: z.string(),
         confidence: z.string().nullable(),
         skillName: z.string().nullable(),
+        skillUses: z.array(SkillUseSchema).optional(),
         mcpServer: z.string().nullable(),
         mcpTool: z.string().nullable(),
         command: z.string().nullable(),
@@ -693,6 +694,7 @@ export function aggregateByProvider(
     category: string;
     confidence: string | null;
     skillName: string | null;
+    skillUses?: readonly SkillUse[];
     mcpServer: string | null;
     mcpTool: string | null;
     detailType: string | null;
@@ -736,6 +738,7 @@ export function aggregateByProvider(
       category: string;
       skillName: string | null;
       confidence: string | null;
+      skillUses?: readonly SkillUse[];
       ts: string | null;
       ingestedAt: string;
       filePath?: string | null;
@@ -802,15 +805,9 @@ export function aggregateByProvider(
 
     if (row.category === "skill") {
       acc.skillRows.push(row);
-      if (row.confidence === "exact") {
-        acc.skillCalls.exact += 1;
-        totals.skillCalls.exact += 1;
-      } else if (row.confidence === "low") {
-        acc.skillCalls.low += 1;
-        totals.skillCalls.low += 1;
-      } else {
-        acc.skillCalls.inferred += 1;
-        totals.skillCalls.inferred += 1;
+      for (const use of skillUsesForRow(row)) {
+        acc.skillCalls[use.confidence] += 1;
+        totals.skillCalls[use.confidence] += 1;
       }
     } else if (row.category === "mcp") {
       acc.mcpRows.push(row);
@@ -904,6 +901,7 @@ export function aggregateAgents(
     provider: string;
     category: string;
     confidence: string | null;
+    skillUses?: readonly SkillUse[];
     detailType: string | null;
     command?: string | null;
     ts: string | null;
@@ -961,7 +959,7 @@ export function aggregateAgents(
     const acc = ensure(row.agentId, row.provider);
     acc.callCount += 1;
     if (row.category === "skill") {
-      if (row.confidence !== "low") acc.skillCalls += 1;
+      acc.skillCalls += countedSkillUses(row);
     } else if (row.category === "mcp") {
       acc.mcpCalls += 1;
     }
@@ -1034,6 +1032,7 @@ export function aggregateSkillsByName(
     category: string;
     skillName: string | null;
     confidence: string | null;
+    skillUses?: readonly SkillUse[];
     ts: string | null;
     ingestedAt: string;
     filePath?: string | null;
@@ -1042,34 +1041,28 @@ export function aggregateSkillsByName(
   const map = new Map<string, SkillByNameItem>();
   for (const row of rows) {
     if (row.category !== "skill") continue;
-    const name = row.skillName?.trim();
-    if (!name) continue;
-    let item = map.get(name);
-    if (!item) {
-      item = {
-        skillName: name,
-        exact: 0,
-        inferred: 0,
-        low: 0,
-        total: 0,
-        lastUsedAt: null,
-        skillPath: null,
-      };
-      map.set(name, item);
+    for (const use of skillUsesForRow(row)) {
+      const name = use.skillName.trim();
+      if (!name) continue;
+      let item = map.get(name);
+      if (!item) {
+        item = {
+          skillName: name,
+          exact: 0,
+          inferred: 0,
+          low: 0,
+          total: 0,
+          lastUsedAt: null,
+          skillPath: null,
+        };
+        map.set(name, item);
+      }
+      item[use.confidence] += 1;
+      if (use.confidence !== "low") item.total += 1;
+      const at = row.ts ?? row.ingestedAt;
+      if (!item.lastUsedAt || at > item.lastUsedAt) item.lastUsedAt = at;
+      item.skillPath = preferSkillPath(item.skillPath, use.filePath);
     }
-    if (row.confidence === "exact") {
-      item.exact += 1;
-      item.total += 1;
-    } else if (row.confidence === "low") {
-      item.low += 1;
-      // low is tracked but not counted in total / call counts
-    } else {
-      item.inferred += 1;
-      item.total += 1;
-    }
-    const at = row.ts ?? row.ingestedAt;
-    if (!item.lastUsedAt || at > item.lastUsedAt) item.lastUsedAt = at;
-    item.skillPath = preferSkillPath(item.skillPath, row.filePath);
   }
   return [...map.values()].sort(
     (a, b) => b.total - a.total || a.skillName.localeCompare(b.skillName),
@@ -1273,6 +1266,7 @@ export function aggregateActivityByDay(
     provider: string;
     category: string;
     confidence: string | null;
+    skillUses?: readonly SkillUse[];
     ts: string | null;
     ingestedAt: string;
   }>,
@@ -1289,12 +1283,12 @@ export function aggregateActivityByDay(
   for (const row of rows) {
     if (providerFilter && normalizeProvider(row.provider) !== providerFilter) continue;
     if (row.category !== "skill" && row.category !== "mcp") continue;
-    if (row.category === "skill" && row.confidence === "low") continue;
+    if (row.category === "skill" && countedSkillUses(row) === 0) continue;
 
     const key = localDayKey(row.ts ?? row.ingestedAt);
     if (!key) continue;
     const bucket = map.get(key) ?? { skills: 0, mcp: 0, agents: 0, messages: 0 };
-    if (row.category === "skill") bucket.skills += 1;
+    if (row.category === "skill") bucket.skills += countedSkillUses(row);
     else bucket.mcp += 1;
     map.set(key, bucket);
   }
@@ -1340,6 +1334,7 @@ export function aggregateActivityByHour(
     provider: string;
     category: string;
     confidence: string | null;
+    skillUses?: readonly SkillUse[];
     ts: string | null;
     ingestedAt: string;
   }>,
@@ -1380,10 +1375,10 @@ export function aggregateActivityByHour(
   for (const row of rows) {
     if (!accepts(row.provider)) continue;
     if (row.category !== "skill" && row.category !== "mcp") continue;
-    if (row.category === "skill" && row.confidence === "low") continue;
+    if (row.category === "skill" && countedSkillUses(row) === 0) continue;
     const bucket = bucketAt(row.ts ?? row.ingestedAt);
     if (!bucket) continue;
-    if (row.category === "skill") bucket.skills += 1;
+    if (row.category === "skill") bucket.skills += countedSkillUses(row);
     else bucket.mcp += 1;
   }
   for (const agent of opts.agents ?? []) {
@@ -1486,7 +1481,7 @@ export function resolveAgentProjects(
 
 export function aggregateByProject(
   agents: ReadonlyArray<{ agentId: string; provider: string; cwd?: string | null; projectRoot?: string | null }>,
-  rows: ReadonlyArray<{ agentId: string; provider: string; category: string; confidence: string | null }>,
+  rows: ReadonlyArray<{ agentId: string; provider: string; category: string; confidence: string | null; skillUses?: readonly SkillUse[] }>,
   messages: ReadonlyArray<{ agentId: string; provider: string }>,
   projects: readonly ProjectRef[],
   options: { provider?: string } = {},
@@ -1520,7 +1515,7 @@ export function aggregateByProject(
   }
   for (const row of rows) {
     if (!matches(row.provider)) continue;
-    if (row.category === "skill" && row.confidence !== "low") ensure(row.agentId).skillCalls += 1;
+    if (row.category === "skill") ensure(row.agentId).skillCalls += countedSkillUses(row);
     else if (row.category === "mcp") ensure(row.agentId).mcpCalls += 1;
   }
   return [...map.values()].sort(

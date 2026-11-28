@@ -11,7 +11,7 @@ import { resyncAgents } from "./handlers.ts";
 type PaseoApi = PluginHandlerContext["paseo"];
 
 // Bump when historical ingestion semantics change, not on UI-only releases.
-const BACKFILL_VERSION = 1;
+const BACKFILL_VERSION = 2;
 const CHECK_INTERVAL_MS = 5 * 60_000;
 const AGENT_LIST_PAGE_LIMIT = 200;
 

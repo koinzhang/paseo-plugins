@@ -2,6 +2,10 @@ import { createHiddenPillRecheck } from "./hidden-pill-recheck.ts";
 import { writePillDataCache } from "./pill-data-cache.ts";
 import { watchPillDirectory } from "./pill-directory.ts";
 import {
+  getActivitySettings,
+  subscribeActivitySettings,
+} from "./activity-settings-store.ts";
+import {
   type PluginButtonContentProps,
   type PluginButtonIconProps,
   type PluginButtonRegistration,
@@ -27,6 +31,7 @@ const EMPTY_GRACE_MS_RECHECK = 4_000;
 type PillEntry = {
   registration?: PluginButtonRegistration;
   recheck?: () => Promise<void>;
+  workspaceId: string;
   /** Host unmounted the icon after a settled empty hide. */
   hidden: boolean;
   /** Already completed one empty grace → hide cycle for this agent. */
@@ -122,6 +127,7 @@ function createPillIcon(agentId: string, entry: PillEntry) {
 
 export function contributePills(client: PluginClientContext) {
   const pills = new Map<string, PillEntry>();
+  let settings = getActivitySettings();
 
   function UsagePopoverContent(props: PluginButtonContentProps) {
     return (
@@ -144,14 +150,13 @@ export function contributePills(client: PluginClientContext) {
     );
   }
 
-  function addPill(agentId: string, workspaceId: string) {
-    // Agent updates fire every turn — do not re-register (unmounts icon / refires query).
-    if (pills.has(agentId)) return;
-
-    const entry: PillEntry = { hidden: false, settledEmpty: false };
+  function registerPill(agentId: string, entry: PillEntry) {
+    if (settings.hideUsagePill || entry.registration) return;
+    entry.hidden = false;
+    entry.settledEmpty = false;
     entry.registration = client.addComposerPill({
       id: "usage",
-      workspaceId,
+      workspaceId: entry.workspaceId,
       agentId,
       button: {
         title: TITLE,
@@ -164,6 +169,24 @@ export function contributePills(client: PluginClientContext) {
         },
       },
     });
+  }
+
+  function unregisterPill(entry: PillEntry) {
+    const registration = entry.registration;
+    entry.registration = undefined;
+    entry.hidden = true;
+    registration?.remove();
+  }
+
+  function addPill(agentId: string, workspaceId: string) {
+    // Agent updates fire every turn — do not re-register (unmounts icon / refires query).
+    const existing = pills.get(agentId);
+    if (existing) {
+      existing.workspaceId = workspaceId;
+      return;
+    }
+
+    const entry: PillEntry = { workspaceId, hidden: false, settledEmpty: false };
     pills.set(agentId, entry);
     entry.recheck = createHiddenPillRecheck(async () => {
       const [skills, mcp] = await Promise.all([
@@ -171,14 +194,19 @@ export function contributePills(client: PluginClientContext) {
         client.rpc(usageMcpByToolRpc, { agentId }),
       ]);
       return { skills: skills.items, mcpTools: mcp.items };
-    }, () => pills.get(agentId) === entry && entry.hidden, (data) => {
+    }, () =>
+      !settings.hideUsagePill &&
+      pills.get(agentId) === entry &&
+      entry.hidden, (data) => {
       writePillDataCache(agentId, data);
       reviveHiddenPill(agentId);
     });
+    registerPill(agentId, entry);
   }
 
   function removePill(agentId: string) {
-    pills.get(agentId)?.registration?.remove();
+    const entry = pills.get(agentId);
+    if (entry) unregisterPill(entry);
     pills.delete(agentId);
     clearPillDataCache(agentId);
   }
@@ -186,10 +214,20 @@ export function contributePills(client: PluginClientContext) {
   /** Remount a previously hidden pill so icon can re-query after turn_ended ingest. */
   function reviveHiddenPill(agentId: string) {
     const entry = pills.get(agentId);
-    if (!entry?.hidden || !entry.registration) return;
+    if (settings.hideUsagePill || !entry?.hidden || !entry.registration) return;
     entry.hidden = false;
     entry.registration.update({ label: TITLE, visible: true });
   }
+
+  const stopSettings = subscribeActivitySettings((next) => {
+    const wasHidden = settings.hideUsagePill;
+    settings = next;
+    if (wasHidden === next.hideUsagePill) return;
+    for (const [agentId, entry] of pills) {
+      if (settings.hideUsagePill) unregisterPill(entry);
+      else registerPill(agentId, entry);
+    }
+  });
 
   const unsubscribe = watchPillDirectory(client.paseo.agents, (agent) => {
     const { id, workspaceId, status } = agent;
@@ -204,8 +242,9 @@ export function contributePills(client: PluginClientContext) {
   });
 
   return () => {
+    stopSettings();
     unsubscribe();
-    pills.forEach((entry) => entry.registration?.remove());
+    pills.forEach((entry) => unregisterPill(entry));
     pills.clear();
   };
 }

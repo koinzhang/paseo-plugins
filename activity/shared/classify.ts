@@ -1,10 +1,36 @@
 import { z } from "zod";
+import { codeModeSkillReads, shellSkillReads, type SkillReadEvidence } from "./skill-reads.ts";
+import { nestedSkillCalls } from "./nested-skill-calls.ts";
 
 export const CategorySchema = z.enum(["skill", "mcp", "regular"]);
 export type Category = z.infer<typeof CategorySchema>;
 
 export const ConfidenceSchema = z.enum(["exact", "inferred", "low"]);
 export type Confidence = z.infer<typeof ConfidenceSchema>;
+
+export const SkillUseSchema = z.object({
+  skillName: z.string(),
+  confidence: ConfidenceSchema,
+  filePath: z.string().nullable(),
+});
+export type SkillUse = z.infer<typeof SkillUseSchema>;
+
+export function skillUsesForRow(row: {
+  category: string;
+  confidence: string | null;
+  skillName?: string | null;
+  filePath?: string | null;
+  skillUses?: readonly SkillUse[];
+}): SkillUse[] {
+  if (row.skillUses) return [...row.skillUses];
+  if (row.category !== "skill") return [];
+  const confidence = row.confidence === "exact" || row.confidence === "low" ? row.confidence : "inferred";
+  return [{ skillName: row.skillName?.trim() ?? "", confidence, filePath: row.filePath ?? null }];
+}
+
+export function countedSkillUses(row: Parameters<typeof skillUsesForRow>[0]): number {
+  return skillUsesForRow(row).filter((use) => use.confidence !== "low").length;
+}
 
 export const ClassifyResultSchema = z.object({
   category: CategorySchema,
@@ -15,6 +41,7 @@ export const ClassifyResultSchema = z.object({
   mcpTool: z.string().nullable(),
   command: z.string().nullable(),
   filePath: z.string().nullable(),
+  skillUses: z.array(SkillUseSchema),
 });
 export type ClassifyResult = z.infer<typeof ClassifyResultSchema>;
 
@@ -89,8 +116,6 @@ export interface ClassifyContext {
 
 const ACP_PROVIDERS = new Set(["cursor", "codebuddy", "copilot"]);
 const DOTTED_MCP_PROVIDERS = new Set(["codex", "pi"]);
-const SHELL_SKILL_READ_PATTERN = /\b(cat|sed|head|bat|grep|rg)\b[\s\S]*SKILL\.md/i;
-const SKILL_FILE_NAME = "SKILL.md";
 
 function result(partial: Partial<ClassifyResult> & { category: Category }): ClassifyResult {
   return {
@@ -101,6 +126,7 @@ function result(partial: Partial<ClassifyResult> & { category: Category }): Clas
     mcpTool: null,
     command: null,
     filePath: null,
+    skillUses: [],
     ...partial,
   };
 }
@@ -144,7 +170,15 @@ export function matchSkillFile(
   roots: readonly string[] = DEFAULT_SKILL_ROOTS,
   homeDir?: string,
 ): string | null {
-  const normalized = expandHome(filePath, homeDir).replace(/\\/g, "/");
+  const expanded = expandHome(filePath, homeDir).replace(/\\/g, "/");
+  if (/[$`*?{}]/.test(expanded)) return null;
+  const segments: string[] = [];
+  for (const segment of expanded.split("/")) {
+    if (segment === ".") continue;
+    if (segment === "..") segments.pop();
+    else segments.push(segment);
+  }
+  const normalized = segments.join("/");
   if (!/\/SKILL\.md$/i.test(normalized)) return null;
 
   for (const root of roots) {
@@ -183,19 +217,23 @@ function parentSkillNameFromPath(token: string): string | null {
   return match?.[1] ?? null;
 }
 
-function matchSkillInCommand(
-  command: string,
+function classifySkillReads(
+  evidence: readonly SkillReadEvidence[],
   roots: readonly string[],
   homeDir?: string,
-): { skillName: string; filePath: string } | null {
-  if (!SHELL_SKILL_READ_PATTERN.test(command)) return null;
-  for (const token of command.split(/[\s|;&()<>'"]+/)) {
-    if (!/SKILL\.md$/i.test(token)) continue;
-    const skillName =
-      matchSkillFile(token, roots, homeDir) ?? parentSkillNameFromPath(token);
-    if (skillName) return { skillName, filePath: token };
+): SkillUse[] {
+  const uses = new Map<string, SkillUse>();
+  for (const entry of evidence) {
+    const rootedName = matchSkillFile(entry.filePath, roots, homeDir);
+    const skillName = rootedName ?? parentSkillNameFromPath(entry.filePath);
+    if (!skillName) continue;
+    const confidence = rootedName ? entry.confidence : "low";
+    const previous = uses.get(skillName);
+    if (!previous || (previous.confidence === "low" && confidence !== "low")) {
+      uses.set(skillName, { skillName, confidence, filePath: entry.filePath });
+    }
   }
-  return null;
+  return [...uses.values()].sort((first, second) => Number(first.confidence === "low") - Number(second.confidence === "low"));
 }
 
 function classifySkillExact(item: ToolCallInput, detailType: string): ClassifyResult | null {
@@ -205,6 +243,7 @@ function classifySkillExact(item: ToolCallInput, detailType: string): ClassifyRe
     confidence: "exact",
     detailType,
     skillName: asString(field(item.detail, "label")),
+    skillUses: [{ skillName: asString(field(item.detail, "label")) ?? "", confidence: "exact", filePath: null }],
   });
 }
 
@@ -348,6 +387,7 @@ export function classifyToolCall(item: ToolCallInput, context: ClassifyContext):
         detailType,
         skillName,
         filePath,
+        skillUses: [{ skillName, confidence: "inferred", filePath }],
       });
     }
   }
@@ -355,20 +395,40 @@ export function classifyToolCall(item: ToolCallInput, context: ClassifyContext):
   if (detailType === "shell") {
     const command = asString(field(detail, "command"));
     if (command) {
-      const hit = matchSkillInCommand(command, roots, context.homeDir);
-      if (hit) {
+      const skillUses = classifySkillReads(shellSkillReads(command, context.homeDir), roots, context.homeDir);
+      const first = skillUses[0];
+      if (first) {
         return result({
           category: "skill",
-          confidence: "low",
+          confidence: first.confidence,
           detailType,
-          skillName: hit.skillName,
-          filePath: hit.filePath,
+          skillName: first.skillName,
+          filePath: first.filePath,
+          skillUses,
           command,
         });
       }
       return result({ category: "regular", detailType, command });
     }
     return result({ category: "regular", detailType });
+  }
+
+  if (item.name === "codemode") {
+    if (nestedSkillCalls(field(detail, "output")).length > 0) return result({ category: "regular", detailType });
+    const input = field(detail, "input");
+    const code = input && typeof input === "object" ? asString(field(input as Record<string, unknown>, "code")) : null;
+    if (code) {
+      const skillUses = classifySkillReads(codeModeSkillReads(code), roots, context.homeDir);
+      const first = skillUses[0];
+      return result({
+        category: first ? "skill" : "regular",
+        detailType,
+        skillUses,
+        skillName: first?.skillName ?? null,
+        confidence: first?.confidence ?? null,
+        filePath: first?.filePath ?? null,
+      });
+    }
   }
 
   const mcp = classifyMcp(item, detailType, provider, context);

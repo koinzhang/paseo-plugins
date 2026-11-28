@@ -20,6 +20,10 @@ import {
   publishAttentionStatuses,
   useAttentionStatuses,
 } from "./attention-status-store.ts";
+import {
+  getActivitySettings,
+  subscribeActivitySettings,
+} from "./activity-settings-store.ts";
 import { watchAgentDirectory } from "./agent-directory.ts";
 import { agentStatusInfo } from "./workspace/list-host-agents.ts";
 import type { AgentStatusInfo } from "./workspace/constants.ts";
@@ -44,6 +48,7 @@ function attentionSignature(
 /** Entry-owned directory drives pill registrations and attention, with 15s reconciliation. */
 export function contributeAttentionPills(client: PluginClientContext): () => void {
   const pills = new Map<string, PillEntry>();
+  let settings = getActivitySettings();
   function applyPill(
     agentId: string,
     entry: PillEntry,
@@ -112,9 +117,16 @@ export function contributeAttentionPills(client: PluginClientContext): () => voi
   function addPill(agentId: string, workspaceId: string) {
     if (pills.has(agentId)) return;
     const entry: PillEntry = { workspaceId, signature: "" };
+    pills.set(agentId, entry);
+    registerPill(agentId, entry);
+  }
+
+  function registerPill(agentId: string, entry: PillEntry) {
+    if (settings.hideAttentionPill || entry.registration) return;
+    entry.signature = "";
     entry.registration = client.addComposerPill({
       id: PILL_ID,
-      workspaceId,
+      workspaceId: entry.workspaceId,
       agentId,
       button: {
         title: attentionTitle(),
@@ -129,15 +141,32 @@ export function contributeAttentionPills(client: PluginClientContext): () => voi
         },
       },
     });
-    pills.set(agentId, entry);
-    const cached = getAttentionStatuses(workspaceId);
+    const cached = getAttentionStatuses(entry.workspaceId);
     if (cached) applyPill(agentId, entry, cached);
   }
 
+  function unregisterPill(entry: PillEntry) {
+    const registration = entry.registration;
+    entry.registration = undefined;
+    entry.signature = "";
+    registration?.remove();
+  }
+
   function removePill(agentId: string) {
-    pills.get(agentId)?.registration?.remove();
+    const entry = pills.get(agentId);
+    if (entry) unregisterPill(entry);
     pills.delete(agentId);
   }
+
+  const stopSettings = subscribeActivitySettings((next) => {
+    const wasHidden = settings.hideAttentionPill;
+    settings = next;
+    if (wasHidden === next.hideAttentionPill) return;
+    for (const [agentId, entry] of pills) {
+      if (settings.hideAttentionPill) unregisterPill(entry);
+      else registerPill(agentId, entry);
+    }
+  });
 
   const stopDirectory = watchAgentDirectory(client.paseo.agents, (snapshot) => {
     const workspaces = new Map<string, Record<string, AgentStatusInfo>>();
@@ -165,9 +194,10 @@ export function contributeAttentionPills(client: PluginClientContext): () => voi
   });
 
   return () => {
+    stopSettings();
     stopLanguage();
     stopDirectory();
-    pills.forEach((entry) => entry.registration?.remove());
+    pills.forEach((entry) => unregisterPill(entry));
     pills.clear();
     clearAttentionStatuses();
   };

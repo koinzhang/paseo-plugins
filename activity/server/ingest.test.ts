@@ -3,6 +3,7 @@ import { test } from "node:test";
 import type { AgentTimelineItem } from "./host-types.ts";
 import type { PluginHookAgent } from "@getpaseo/plugin/server";
 import { ingestTimeline } from "./ingest.ts";
+import { aggregateSkillsByName } from "../shared/usage.ts";
 import type { ToolCallRow, UsageStore } from "./store.ts";
 
 const agent: PluginHookAgent = {
@@ -240,4 +241,40 @@ test("ingestTimeline rows upsert idempotently through the store", () => {
 test("ingestTimeline returns empty array for timelines without tool calls", () => {
   const rows = ingestTimeline([{ type: "user_message", text: "hi" }], agent, null, {}, fixedNow);
   assert.deepEqual(rows, []);
+});
+
+test("Pi codemode nested read/bash remain counted once, outer code remains low", () => {
+  const timeline: AgentTimelineItem[] = [
+    { type: "tool_call", callId: "parent", name: "codemode", status: "completed", error: null, detail: { type: "unknown", input: { code: 'await tools.read({path: ".agents/skills/review/SKILL.md"});' }, output: null } },
+    { type: "tool_call", callId: "parent/1", name: "read", status: "completed", error: null, detail: { type: "read", filePath: ".agents/skills/review/SKILL.md" } },
+    { type: "tool_call", callId: "parent/2", name: "bash", status: "completed", error: null, detail: { type: "shell", command: "cat .agents/skills/paseo/SKILL.md .agents/skills/commit/SKILL.md" } },
+  ];
+  const rows = ingestTimeline(timeline, { ...agent, provider: "pi" }, null, { homeDir: "/home/u" }, fixedNow);
+  assert.equal(rows.length, 3);
+  const items = aggregateSkillsByName(rows);
+  assert.equal(items.reduce((total, item) => total + item.total, 0), 3);
+  assert.equal(items.find((item) => item.skillName === "review")?.total, 1);
+  assert.equal(rows[0]?.confidence, "low");
+});
+
+test("Pi canonical codemode output expands actual nested calls and deduplicates explicit entries", () => {
+  const parent: AgentTimelineItem = {
+    type: "tool_call", callId: "parent", name: "codemode", status: "completed", error: null,
+    detail: { type: "unknown", input: { code: 'await tools.read({path: ".agents/skills/review/SKILL.md"});' }, output: {
+      details: { calls: [
+        { id: "parent/1", name: "read", args: '{"path":".agents/skills/review/SKILL.md"}', status: "ok" },
+        { id: "parent/2", name: "bash", args: { command: "cat .agents/skills/paseo/SKILL.md .agents/skills/commit/SKILL.md" }, status: "ok" },
+        { id: "parent/3", name: "read", args: "invalid json", status: "ok" },
+      ] },
+    } },
+  };
+  const snapshot = { ...agent, provider: "pi" };
+  const rows = ingestTimeline([parent], snapshot, null, { homeDir: "/home/u" }, fixedNow);
+  assert.deepEqual(rows.map((row) => row.callId), ["parent", "parent/1", "parent/2"]);
+  assert.equal(rows[0]?.category, "regular");
+  assert.equal(aggregateSkillsByName(rows).reduce((sum, item) => sum + item.total, 0), 3);
+  const explicit: AgentTimelineItem = { type: "tool_call", callId: "parent/1", name: "read", status: "completed", error: null, detail: { type: "read", filePath: ".agents/skills/review/SKILL.md" } };
+  const combined = ingestTimeline([parent, explicit], snapshot, null, { homeDir: "/home/u" }, fixedNow);
+  assert.equal(combined.length, 3);
+  assert.equal(aggregateSkillsByName(combined).reduce((sum, item) => sum + item.total, 0), 3);
 });
