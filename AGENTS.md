@@ -82,6 +82,27 @@ paseo plugin reload activity-dev
 - 两个实例共库（同一 `usage.db`，SQLite WAL + busy timeout 保证并发写不报错），且会出现两个 Activity 入口
 - 要完全隔离数据只能跑第二个 daemon（独立配置目录）
 
+## 调试 Paseo UI（浏览器）
+
+插件 UI 可以直接在浏览器里调试，不必开桌面端：宿主 web 客户端（https://app.paseo.sh）连上本机 daemon 后，插件 surface 照常加载，布局 / design tokens / 文案 / 数据都能在浏览器 devtools 里看。
+
+```bash
+paseo daemon status                # 取 serverId（形如 srv_xxxx）
+paseo daemon pair                  # 打印配对链接 + 二维码；首次连浏览器时用
+paseo plugin reload activity       # 改完插件源码
+```
+
+- 打开 https://app.paseo.sh ，连过的 host 会直接恢复上次位置；地址栏形如 `https://app.paseo.sh/h/<serverId>/...`
+- 直接跳某个插件 surface：`https://app.paseo.sh/h/<serverId>/plugin/<pluginId>/surface/<surfaceId>`（例：`.../plugin/activity/surface/activity`）
+- `paseo plugin reload <pluginId>` 后**刷新页面**，确认新的客户端 bundle 生效（client 代码由 daemon 重新编译、经 RPC 下发到客户端）
+- 插件客户端 bundle 的报错直接出现在浏览器 console
+
+限制：
+
+- 桌面端 daemon 不自带 web UI（打包时排除了 `dist/server/web-ui`）：`paseo daemon config set features.webUi.enabled true` 对它无效，`http://127.0.0.1:6767/` 仍是 404。要自托管 web UI 得用带该产物的 daemon（源码 `npm run build:daemon-web-ui`，部署方式见 paseo 仓库 `public-docs/web-ui.md`）
+- 浏览器是 react-native-web 渲染：`Platform.OS === "web"` 分支、hover、移动端专属面板（bottom sheet / 手势）与 Electron / iOS / Android 表现不同，**不能替代**桌面与真机验收
+- 需要改宿主 app 本身（不是插件）时，才去 paseo 源码跑 `npm run dev` + `npm run dev:app`（Expo web 在 http://localhost:8081，连 dev daemon 6768；本机 checkout 目前未装依赖，首次要 `npm install`）
+
 ## 版本控制（git）
 
 本仓库使用纯 git：`main` 跟踪 `origin/main`，没有 jj（`.jj/` 已移除，`refs/jj/*` 已清理）。
